@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Reset Install Cache</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 40px;
+        color: #5f3f35;
+      }
+      button {
+        padding: 10px 14px;
+        border-radius: 999px;
+        border: 1px solid rgba(95, 74, 62, 0.35);
+        background: #f6e6dc;
+        cursor: pointer;
+        font-weight: 700;
+      }
+      .status {
+        margin-top: 12px;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Reset Install Cache</h2>
+    <p>This clears service workers and site data for this origin.</p>
+    <button id="reset">Reset Now</button>
+    <div class="status" id="status"></div>
+    <script>
+      const statusEl = document.getElementById('status')
+      document.getElementById('reset').addEventListener('click', async () => {
+        statusEl.textContent = 'Clearing…'
+        try {
+          if ('serviceWorker' in navigator) {
+            const regs = await navigator.serviceWorker.getRegistrations()
+            await Promise.all(regs.map((r) => r.unregister()))
+          }
+          if ('caches' in window) {
+            const keys = await caches.keys()
+            await Promise.all(keys.map((k) => caches.delete(k)))
+          }
+          if (window.localStorage) window.localStorage.clear()
+          if (window.sessionStorage) window.sessionStorage.clear()
+          statusEl.textContent = 'Done. Close this tab and reload the app.'
+        } catch (e) {
+          statusEl.textContent = 'Reset failed. Try manually clearing site data.'
+        }
+      })
+    </script>
+  </body>
+</html>

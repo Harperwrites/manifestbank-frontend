@@ -1,26 +1,104 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --marble-cream: #f6f1ea;
+  --marble-ivory: #fbf8f3;
+  --ink: #1f1b16;
+  --ink-soft: #3b332a;
+  --rose-gold: #b67967;
+  --rose-gold-soft: #d8b3a1;
+  --emerald: #1f6b58;
+  --paper: rgba(255, 255, 255, 0.72);
+  --paper-strong: rgba(255, 255, 255, 0.9);
+  --border: rgba(95, 74, 62, 0.22);
+  --shadow: 0 24px 60px rgba(37, 29, 22, 0.12);
+  --shadow-soft: 0 18px 40px rgba(28, 21, 16, 0.12);
+  --glass: rgba(255, 255, 255, 0.68);
+  --muted: rgba(31, 27, 22, 0.6);
+  --font-sans: "Source Sans 3", "Helvetica Neue", Arial, sans-serif;
+  --font-serif: "Cormorant Garamond", "Times New Roman", serif;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--marble-cream);
+  --color-foreground: var(--ink);
+  --font-sans: "Source Sans 3", "Helvetica Neue", Arial, sans-serif;
+  --font-serif: "Cormorant Garamond", "Times New Roman", serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  color: var(--ink);
+  background-color: #1b1713;
+  font-family: var(--font-sans);
+  line-height: 1.55;
+  min-height: 100vh;
+  background-image: url("/Marble%20Veins.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: repeat;
+  background-attachment: scroll;
+}
+
+a {
+  color: inherit;
+}
+
+::selection {
+  background: rgba(182, 121, 103, 0.2);
+}
+
+.fade-up {
+  animation: fadeUp 0.7s ease both;
+}
+
+.fade-delay-1 {
+  animation-delay: 0.08s;
+}
+
+.fade-delay-2 {
+  animation-delay: 0.16s;
+}
+
+.fade-delay-3 {
+  animation-delay: 0.24s;
+}
+
+.kpi-grid {
+  --kpi-columns: repeat(3, minmax(0, 1fr));
+  --kpi-areas: "welcome balances wealth";
+}
+
+.ether-profile-layout {
+  --ether-profile-columns: minmax(0, 260px) minmax(0, 1fr);
+}
+
+@media (max-width: 900px) {
+  .kpi-grid {
+    --kpi-columns: 1fr;
+    --kpi-areas:
+      "welcome"
+      "balances"
+      "wealth";
+  }
+
+  .ether-profile-layout {
+    --ether-profile-columns: minmax(0, 1fr);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
