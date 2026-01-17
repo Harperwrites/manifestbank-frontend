@@ -18,11 +18,13 @@ export function Container({ children }: { children: React.ReactNode }) {
 /** Card */
 export function Card({
   title,
+  subtitle,
   children,
   right,
   tone = 'default',
 }: {
   title?: string
+  subtitle?: string
   children: React.ReactNode
   right?: React.ReactNode
   tone?: 'default' | 'soft' | 'deep'
@@ -64,7 +66,10 @@ export function Card({
             marginBottom: 14,
           }}
         >
-          <div style={{ fontWeight: 600, fontSize: 18, fontFamily: 'var(--font-serif)' }}>{title}</div>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: 18, fontFamily: 'var(--font-serif)' }}>{title}</div>
+            {subtitle ? <div style={{ marginTop: 4, fontSize: 12, opacity: 0.7 }}>{subtitle}</div> : null}
+          </div>
           {right ? <div>{right}</div> : null}
         </div>
       ) : null}
