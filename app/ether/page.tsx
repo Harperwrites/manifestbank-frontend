@@ -63,6 +63,8 @@ type SyncRequest = {
   target_profile_id: number
   status: string
   created_at: string
+  requester_display_name?: string | null
+  requester_avatar_url?: string | null
 }
 
 const IMAGE_FALLBACK =
