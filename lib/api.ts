@@ -1,18 +1,16 @@
-import axios from "axios";
+import axios, { AxiosHeaders } from "axios";
 
 export const api = axios.create({
-  baseURL: "http://127.0.0.1:8001",
+  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8001",
 });
 
 api.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
     const token = localStorage.getItem("access_token");
     if (token) {
-      if (config.headers && typeof (config.headers as any).set === "function") {
-        (config.headers as any).set("Authorization", `Bearer ${token}`);
-      } else {
-        config.headers = { ...(config.headers ?? {}), Authorization: `Bearer ${token}` };
-      }
+      const headers = AxiosHeaders.from(config.headers ?? {});
+      headers.set("Authorization", `Bearer ${token}`);
+      config.headers = headers;
     }
   }
   return config;
