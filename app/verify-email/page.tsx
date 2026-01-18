@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { api } from '@/lib/api'
 import { useAuth } from '@/app/providers'
 import { Button, Card } from '@/app/components/ui'
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const router = useRouter()
   const params = useSearchParams()
   const { me } = useAuth()
@@ -123,5 +123,13 @@ export default function VerifyEmailPage() {
         ) : null}
       </Card>
     </main>
+  )
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={<main style={{ maxWidth: 520, margin: '90px auto', padding: 24 }}>Loading…</main>}>
+      <VerifyEmailContent />
+    </Suspense>
   )
 }
