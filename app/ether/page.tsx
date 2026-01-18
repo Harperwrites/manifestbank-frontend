@@ -2027,10 +2027,13 @@ export default function EtherPage() {
                             transition: 'color 150ms ease, text-decoration-color 150ms ease',
                           }}
                         >
-                          {post.kind.toUpperCase()} · {post.author_display_name ?? 'Member'}
+                          {post.author_display_name ?? 'Member'}
                         </div>
                       </button>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: 0.3 }}>
+                          {post.kind.toUpperCase()}
+                        </div>
                         <div style={{ fontSize: 12, opacity: 0.7 }}>{new Date(post.created_at).toLocaleString()}</div>
                         {profile?.id === post.author_profile_id ? (
                           <button

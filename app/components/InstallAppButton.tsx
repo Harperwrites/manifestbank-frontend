@@ -122,7 +122,7 @@ export default function InstallAppButton() {
       </button>
       <div style={{ fontSize: 11, opacity: 0.7 }}>{microcopy}</div>
       {notice ? <div style={{ fontSize: 11, color: '#7b5144' }}>{notice}</div> : null}
-      {installStatus !== 'ready' ? (
+      {!ios && !safari && installStatus !== 'ready' ? (
         <div style={{ fontSize: 11, opacity: 0.6 }}>
           {installStatus === 'installed'
             ? 'Already installed on this device.'
@@ -131,23 +131,25 @@ export default function InstallAppButton() {
             : 'Install prompt not available yet. Try from the homepage or after a hard refresh.'}
         </div>
       ) : null}
-      <button
-        type="button"
-        onClick={() => setShowDiagnostics((prev) => !prev)}
-        style={{
-          border: 'none',
-          background: 'transparent',
-          padding: 0,
-          cursor: 'pointer',
-          fontSize: 11,
-          color: '#6f4a3a',
-          textDecoration: 'underline',
-          textUnderlineOffset: 2,
-        }}
-      >
-        Why can’t I install?
-      </button>
-      {showDiagnostics ? (
+      {!ios && !safari && installStatus !== 'ready' ? (
+        <button
+          type="button"
+          onClick={() => setShowDiagnostics((prev) => !prev)}
+          style={{
+            border: 'none',
+            background: 'transparent',
+            padding: 0,
+            cursor: 'pointer',
+            fontSize: 11,
+            color: '#6f4a3a',
+            textDecoration: 'underline',
+            textUnderlineOffset: 2,
+          }}
+        >
+          Why can’t I install?
+        </button>
+      ) : null}
+      {showDiagnostics && !ios && !safari ? (
         <div style={{ fontSize: 11, opacity: 0.7 }}>
           {isStandalone()
             ? 'You’re already running the installed app.'

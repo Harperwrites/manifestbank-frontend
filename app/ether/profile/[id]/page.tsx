@@ -66,6 +66,7 @@ export default function EtherProfilePage() {
   const [commentLoading, setCommentLoading] = useState<Record<number, boolean>>({})
   const [commentMsg, setCommentMsg] = useState<Record<number, string>>({})
   const [confirmAction, setConfirmAction] = useState<null | 'unsync' | 'cancel'>(null)
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null)
 
   useEffect(() => {
     if (!profileId) return
@@ -351,26 +352,36 @@ export default function EtherProfilePage() {
                   <div style={{ fontSize: 12, opacity: 0.7 }}>Loading profile…</div>
                 ) : profile ? (
                   <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <div
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (profile.avatar_url) {
+                          setAvatarPreviewUrl(profile.avatar_url)
+                        }
+                      }}
                       style={{
-                        width: 64,
-                        height: 64,
+                        width: 72,
+                        height: 72,
                         borderRadius: '50%',
                         border: '1px solid rgba(95, 74, 62, 0.35)',
-                        background: 'rgba(255,255,255,0.85)',
+                        background: 'rgba(255,255,255,0.9)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         overflow: 'hidden',
                         fontWeight: 700,
+                        cursor: profile.avatar_url ? 'pointer' : 'default',
+                        padding: 0,
+                        boxShadow: '0 0 18px rgba(182, 121, 103, 0.45)',
                       }}
+                      aria-label="View profile photo"
                     >
                       {profile.avatar_url ? (
                         <img src={profile.avatar_url} alt={profile.display_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       ) : (
                         <span>{profile.display_name?.slice(0, 1)?.toUpperCase() ?? '◎'}</span>
                       )}
-                    </div>
+                    </button>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     <div style={{ fontWeight: 600 }}>{profile.display_name}</div>
@@ -492,10 +503,45 @@ export default function EtherProfilePage() {
                             }}
                           >
                             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                              <div style={{ fontWeight: 600, fontSize: 12 }}>
-                                {post.kind.toUpperCase()} · {post.author_display_name ?? 'Member'}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <div
+                                  style={{
+                                    width: 22,
+                                    height: 22,
+                                    borderRadius: '50%',
+                                    border: '1px solid rgba(95, 74, 62, 0.25)',
+                                    background: 'rgba(255,255,255,0.9)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    overflow: 'hidden',
+                                    fontSize: 10,
+                                    fontWeight: 600,
+                                  }}
+                                >
+                                  {post.author_avatar_url ? (
+                                    <img
+                                      src={post.author_avatar_url}
+                                      alt={post.author_display_name ?? 'Member'}
+                                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                      onError={(e) => {
+                                        e.currentTarget.src = IMAGE_FALLBACK
+                                      }}
+                                    />
+                                  ) : (
+                                    (post.author_display_name ?? 'M').slice(0, 1).toUpperCase()
+                                  )}
+                                </div>
+                                <div style={{ fontWeight: 600, fontSize: 12 }}>
+                                  {post.author_display_name ?? 'Member'}
+                                </div>
                               </div>
-                              <div style={{ fontSize: 12, opacity: 0.7 }}>{new Date(post.created_at).toLocaleString()}</div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: 0.3 }}>
+                                  {post.kind.toUpperCase()}
+                                </div>
+                                <div style={{ fontSize: 12, opacity: 0.7 }}>{new Date(post.created_at).toLocaleString()}</div>
+                              </div>
                             </div>
                             <div style={{ marginTop: 6, fontSize: 13 }}>{renderLinkedText(post.content)}</div>
                             {post.image_url ? (
@@ -839,6 +885,40 @@ export default function EtherProfilePage() {
                   Confirm
                 </button>
               </div>
+            </div>
+          </div>
+        ) : null}
+
+        {avatarPreviewUrl ? (
+          <div
+            onClick={() => setAvatarPreviewUrl(null)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(21, 16, 12, 0.45)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 70,
+              padding: 20,
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: 'min(360px, 100%)',
+                borderRadius: 24,
+                background: 'rgba(255, 255, 255, 0.96)',
+                border: '1px solid rgba(95, 74, 62, 0.2)',
+                boxShadow: 'var(--shadow)',
+                padding: 16,
+              }}
+            >
+              <img
+                src={avatarPreviewUrl}
+                alt="Profile"
+                style={{ width: '100%', height: 'auto', borderRadius: 18, display: 'block' }}
+              />
             </div>
           </div>
         ) : null}
