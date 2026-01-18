@@ -811,10 +811,22 @@ export default function DashboardPage() {
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 6,
-                    fontWeight: 600,
                   }}
                 >
-                  The Ether
+                  <span
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: 999,
+                      border: '1px solid rgba(182, 121, 103, 0.55)',
+                      background: 'linear-gradient(135deg, rgba(182,121,103,0.25), rgba(255,255,255,0.75))',
+                      boxShadow: '0 0 16px rgba(182, 121, 103, 0.55)',
+                      color: '#5d3d32',
+                      fontWeight: 700,
+                      letterSpacing: 0.2,
+                    }}
+                  >
+                    Enter The Ether
+                  </span>
                 </Link>
               </div>
             ) : (
