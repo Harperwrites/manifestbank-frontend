@@ -357,11 +357,7 @@ function EtherNavbar({
 
       <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
         <Link href="/ether" style={{ display: 'inline-flex', alignItems: 'center' }}>
-          <img
-            src="/ChatGPT%20Image%20Jan%2014,%202026%20at%2002_42_13%20AM.png"
-            alt="The Ether"
-            style={{ height: 180, width: 'auto' }}
-          />
+          <img src="/ether-logo.png" alt="The Ether" style={{ height: 180, width: 'auto' }} />
         </Link>
       </div>
 

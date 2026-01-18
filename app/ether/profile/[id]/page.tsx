@@ -316,7 +316,7 @@ export default function EtherProfilePage() {
                   }}
                 >
                   <img
-                    src="/Affirmation and Healing Coloring Journal Stand up.png"
+                    src="/affirmation-coloring-journal.png"
                     alt="Affirmation and Healing Coloring Journal"
                     style={{
                       width: '100%',
