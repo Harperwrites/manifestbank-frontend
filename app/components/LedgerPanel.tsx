@@ -229,7 +229,9 @@ export default function LedgerPanel({
     }
   }, [selectedEntry])
 
-  const visibleEntries = entries.filter((entry) => entry.entry_type !== 'scheduled')
+  const visibleEntries = entries.filter(
+    (entry) => !(entry.entry_type === 'scheduled' && entry.status !== 'posted')
+  )
   const runningBalances = computeRunningBalances(entries, balance?.balance)
 
   return (
