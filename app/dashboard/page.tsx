@@ -142,6 +142,9 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState<any>(null)
   const [wealthTarget, setWealthTarget] = useState<number | null>(null)
   const [selectedActivity, setSelectedActivity] = useState<ActivityItem | null>(null)
+  const [pendingModalOpen, setPendingModalOpen] = useState(false)
+  const [pendingDetail, setPendingDetail] = useState<PendingCredit | null>(null)
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null)
   const [balancesPeekOpen, setBalancesPeekOpen] = useState(false)
   const [verificationMsg, setVerificationMsg] = useState('')
   const [verificationSending, setVerificationSending] = useState(false)
@@ -433,16 +436,23 @@ export default function DashboardPage() {
             const res = await api.get(`/accounts/${acct.id}/scheduled-entries`)
             const entries = Array.isArray(res.data) ? res.data : []
             return entries
-              .filter((entry) => entry?.direction === 'credit' || entry?.direction === 'debit')
-              .map((entry) => ({
-                id: entry.id,
-                account_id: acct.id,
-                account_name: acct.name ?? `Account #${acct.id}`,
-                amount: entry.amount ?? '0',
-                scheduled_for: entry.scheduled_for,
-                memo: entry.memo ?? null,
-                direction: entry.direction ?? 'credit',
-              }))
+              .filter((entry) => entry?.direction)
+              .map((entry) => {
+                const rawDirection = String(entry.direction ?? 'credit').toLowerCase()
+                const normalized =
+                  rawDirection === 'debit' || rawDirection === 'withdrawal' || rawDirection === 'expense'
+                    ? 'debit'
+                    : 'credit'
+                return {
+                  id: entry.id,
+                  account_id: acct.id,
+                  account_name: acct.name ?? `Account #${acct.id}`,
+                  amount: entry.amount ?? '0',
+                  scheduled_for: entry.scheduled_for,
+                  memo: entry.memo ?? null,
+                  direction: normalized,
+                }
+              })
           } catch {
             return []
           }
@@ -676,13 +686,13 @@ export default function DashboardPage() {
   }, [accounts])
 
   useEffect(() => {
-    if (!selectedActivity) return
+    if (!selectedActivity && !pendingModalOpen && !pendingDetail && !avatarPreviewUrl) return
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {
       document.body.style.overflow = prev
     }
-  }, [selectedActivity])
+  }, [selectedActivity, pendingModalOpen, pendingDetail, avatarPreviewUrl])
 
   const accountsCount = summary?.accounts_count ?? '—'
   const ledgerCount = summary?.ledger_entries_count ?? '—'
@@ -760,28 +770,29 @@ export default function DashboardPage() {
           </div>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
             {isVerified ? (
-              <Link
-                href="/ether"
-                style={{
-                  textDecoration: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                }}
-              >
-                <div
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!profile?.avatar_url) return
+                    setAvatarPreviewUrl(profile.avatar_url)
+                  }}
                   style={{
-                    width: 44,
-                    height: 44,
+                    width: 64,
+                    height: 64,
                     borderRadius: '50%',
                     border: '1px solid rgba(95, 74, 62, 0.35)',
-                    background: 'rgba(255,255,255,0.85)',
+                    background: 'rgba(255,255,255,0.9)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     overflow: 'hidden',
                     fontWeight: 700,
+                    cursor: profile?.avatar_url ? 'pointer' : 'default',
+                    padding: 0,
+                    boxShadow: '0 0 18px rgba(182, 121, 103, 0.45)',
                   }}
+                  aria-label="View profile photo"
                 >
                   {profile?.avatar_url ? (
                     <img
@@ -792,9 +803,20 @@ export default function DashboardPage() {
                   ) : (
                     <span>{profile?.display_name?.slice(0, 1)?.toUpperCase() ?? '◎'}</span>
                   )}
-                </div>
-                <span style={{ fontWeight: 600 }}>The Ether</span>
-              </Link>
+                </button>
+                <Link
+                  href="/ether"
+                  style={{
+                    textDecoration: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    fontWeight: 600,
+                  }}
+                >
+                  The Ether
+                </Link>
+              </div>
             ) : (
               <button
                 type="button"
@@ -1388,25 +1410,43 @@ export default function DashboardPage() {
             )}
           </Card>
 
-          <Card
-            title="Pending Credits & Deposits"
-            tone="soft"
-            right={<Pill>{pendingCredits.length} scheduled</Pill>}
+          <div
+            onClick={() => setPendingModalOpen(true)}
+            style={{ cursor: 'pointer' }}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                setPendingModalOpen(true)
+              }
+            }}
           >
+            <Card
+              title="Pending Deposits & Expenses"
+              tone="soft"
+              right={<Pill>{pendingCredits.length} scheduled</Pill>}
+            >
             {pendingCreditsLoading ? (
-              <div style={{ fontSize: 12, opacity: 0.7 }}>Loading scheduled deposits…</div>
+              <div style={{ fontSize: 12, opacity: 0.7 }}>Loading pending activity…</div>
             ) : pendingCredits.length === 0 ? (
-              <div style={{ fontSize: 12, opacity: 0.7 }}>No scheduled deposits on file.</div>
+              <div style={{ fontSize: 12, opacity: 0.7 }}>No pending deposits or expenses on file.</div>
             ) : (
               <div style={{ display: 'grid', gap: 10 }}>
                 {pendingCredits.slice(0, 2).map((entry) => (
                   <div
                     key={entry.id}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      setPendingModalOpen(false)
+                      setPendingDetail(entry)
+                    }}
                     style={{
                       padding: 12,
                       borderRadius: 16,
                       border: '1px solid rgba(95, 74, 62, 0.2)',
                       background: 'rgba(255, 255, 255, 0.7)',
+                      cursor: 'pointer',
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
@@ -1431,11 +1471,16 @@ export default function DashboardPage() {
               </div>
             )}
             <div style={{ marginTop: 12, textAlign: 'right' }}>
-              <a href="#accounts" style={{ textDecoration: 'none', fontSize: 12, opacity: 0.75 }}>
+              <a
+                href="#accounts"
+                onClick={(event) => event.stopPropagation()}
+                style={{ textDecoration: 'none', fontSize: 12, opacity: 0.75 }}
+              >
                 View all pending →
               </a>
             </div>
-          </Card>
+            </Card>
+          </div>
         </section>
 
         <section
@@ -1598,6 +1643,207 @@ export default function DashboardPage() {
                 />
               </div>
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {pendingModalOpen ? (
+        <div
+          onClick={() => setPendingModalOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(21, 16, 12, 0.45)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 70,
+            padding: 20,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: 'min(560px, 100%)',
+              maxHeight: 'min(85vh, 720px)',
+              overflow: 'auto',
+              borderRadius: 20,
+              background:
+                'linear-gradient(135deg, rgba(199, 140, 122, 0.96), rgba(220, 193, 179, 0.98)), radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.7), transparent 52%), radial-gradient(circle at 78% 10%, rgba(255, 255, 255, 0.45), transparent 58%), linear-gradient(25deg, rgba(80, 58, 48, 0.35) 0%, rgba(255, 255, 255, 0.12) 22%, rgba(80, 58, 48, 0.32) 40%, rgba(255, 255, 255, 0.1) 58%, rgba(80, 58, 48, 0.28) 100%), linear-gradient(115deg, rgba(90, 66, 54, 0.32) 0%, rgba(255, 255, 255, 0.1) 20%, rgba(90, 66, 54, 0.3) 42%, rgba(255, 255, 255, 0.1) 60%, rgba(90, 66, 54, 0.26) 100%), linear-gradient(160deg, rgba(66, 47, 38, 0.28) 0%, rgba(255, 255, 255, 0.08) 25%, rgba(66, 47, 38, 0.26) 48%, rgba(255, 255, 255, 0.08) 70%, rgba(66, 47, 38, 0.22) 100%)',
+              border: '1px solid rgba(95, 74, 62, 0.2)',
+              boxShadow: 'var(--shadow)',
+              padding: 20,
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+              <div style={{ fontWeight: 600, fontSize: 18, fontFamily: 'var(--font-serif)' }}>
+                Pending Deposits & Expenses
+              </div>
+              <button
+                type="button"
+                onClick={() => setPendingModalOpen(false)}
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  fontSize: 14,
+                  opacity: 0.7,
+                }}
+              >
+                Close
+              </button>
+            </div>
+            <div style={{ marginTop: 14 }}>
+              {pendingCreditsLoading ? (
+                <div style={{ fontSize: 12, opacity: 0.7 }}>Loading pending activity…</div>
+              ) : pendingCredits.length === 0 ? (
+                <div style={{ fontSize: 12, opacity: 0.7 }}>No pending deposits or expenses on file.</div>
+              ) : (
+                <div style={{ display: 'grid', gap: 12 }}>
+                  {pendingCredits.map((entry) => (
+                    <div
+                      key={entry.id}
+                      onClick={() => {
+                        setPendingModalOpen(false)
+                        setPendingDetail(entry)
+                      }}
+                      style={{
+                        padding: 12,
+                        borderRadius: 16,
+                        border: '1px solid rgba(95, 74, 62, 0.2)',
+                        background: 'rgba(255, 255, 255, 0.78)',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                        <div>
+                          <div style={{ fontWeight: 600 }}>
+                            {entry.memo || (entry.direction === 'debit' ? 'Scheduled expense' : 'Scheduled deposit')}
+                          </div>
+                          <div style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>{entry.account_name}</div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontWeight: 600 }}>
+                            {entry.direction === 'debit' ? '-' : '+'}
+                            {moneyFormatter.format(Number(entry.amount ?? 0))}
+                          </div>
+                          <div style={{ fontSize: 12, opacity: 0.7 }}>
+                            {entry.scheduled_for ? new Date(entry.scheduled_for).toLocaleString() : 'Scheduled'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {pendingDetail ? (
+        <div
+          onClick={() => setPendingDetail(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(21, 16, 12, 0.45)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 70,
+            padding: 20,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: 'min(520px, 100%)',
+              maxHeight: 'min(85vh, 720px)',
+              overflow: 'auto',
+              borderRadius: 20,
+              background:
+                'linear-gradient(135deg, rgba(199, 140, 122, 0.96), rgba(220, 193, 179, 0.98)), radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.7), transparent 52%), radial-gradient(circle at 78% 10%, rgba(255, 255, 255, 0.45), transparent 58%), linear-gradient(25deg, rgba(80, 58, 48, 0.35) 0%, rgba(255, 255, 255, 0.12) 22%, rgba(80, 58, 48, 0.32) 40%, rgba(255, 255, 255, 0.1) 58%, rgba(80, 58, 48, 0.28) 100%), linear-gradient(115deg, rgba(90, 66, 54, 0.32) 0%, rgba(255, 255, 255, 0.1) 20%, rgba(90, 66, 54, 0.3) 42%, rgba(255, 255, 255, 0.1) 60%, rgba(90, 66, 54, 0.26) 100%), linear-gradient(160deg, rgba(66, 47, 38, 0.28) 0%, rgba(255, 255, 255, 0.08) 25%, rgba(66, 47, 38, 0.26) 48%, rgba(255, 255, 255, 0.08) 70%, rgba(66, 47, 38, 0.22) 100%)',
+              border: '1px solid rgba(95, 74, 62, 0.2)',
+              boxShadow: 'var(--shadow)',
+              padding: 20,
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+              <div style={{ fontWeight: 600, fontSize: 18, fontFamily: 'var(--font-serif)' }}>
+                Pending Movement
+              </div>
+              <button
+                type="button"
+                onClick={() => setPendingDetail(null)}
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  fontSize: 14,
+                  opacity: 0.7,
+                }}
+              >
+                Close
+              </button>
+            </div>
+            <div style={{ marginTop: 14, display: 'grid', gap: 10 }}>
+              <div style={{ fontWeight: 600 }}>
+                {pendingDetail.memo ||
+                  (pendingDetail.direction === 'debit' ? 'Scheduled expense' : 'Scheduled deposit')}
+              </div>
+              <div style={{ fontSize: 12, opacity: 0.7 }}>
+                {pendingDetail.scheduled_for
+                  ? new Date(pendingDetail.scheduled_for).toLocaleString()
+                  : 'Scheduled'}
+              </div>
+              <div style={{ display: 'grid', gap: 8 }}>
+                <BalanceRow label="Account" value={pendingDetail.account_name} />
+                <BalanceRow
+                  label="Amount"
+                  value={`${pendingDetail.direction === 'debit' ? '-' : '+'}${moneyFormatter.format(
+                    Number(pendingDetail.amount ?? 0)
+                  )}`}
+                />
+                <BalanceRow label="Type" value={pendingDetail.direction === 'debit' ? 'Expense' : 'Deposit'} />
+                <BalanceRow label="Status" value="scheduled" />
+                <BalanceRow label="Entry ID" value={String(pendingDetail.id)} />
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {avatarPreviewUrl ? (
+        <div
+          onClick={() => setAvatarPreviewUrl(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(21, 16, 12, 0.45)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 70,
+            padding: 20,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: 'min(360px, 100%)',
+              borderRadius: 24,
+              background: 'rgba(255, 255, 255, 0.96)',
+              border: '1px solid rgba(95, 74, 62, 0.2)',
+              boxShadow: 'var(--shadow)',
+              padding: 16,
+            }}
+          >
+            <img
+              src={avatarPreviewUrl}
+              alt="Profile"
+              style={{ width: '100%', height: 'auto', borderRadius: 18, display: 'block' }}
+            />
           </div>
         </div>
       ) : null}

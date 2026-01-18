@@ -229,6 +229,7 @@ export default function LedgerPanel({
     }
   }, [selectedEntry])
 
+  const visibleEntries = entries.filter((entry) => entry.entry_type !== 'scheduled' && entry.status !== 'scheduled')
   const runningBalances = computeRunningBalances(entries, balance?.balance)
 
   return (
@@ -276,10 +277,10 @@ export default function LedgerPanel({
       </div>
 
       <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
-        {entries.length === 0 ? (
+        {visibleEntries.length === 0 ? (
           <div style={{ fontSize: 13, opacity: 0.75 }}>No entries yet.</div>
         ) : (
-          entries.map((e) => (
+          visibleEntries.map((e) => (
             <div
               key={e.id}
               style={{
@@ -309,37 +310,6 @@ export default function LedgerPanel({
           ))
         )}
       </div>
-
-      {scheduled.length ? (
-        <div style={{ marginTop: 16 }}>
-          <div style={{ fontWeight: 700, marginBottom: 8 }}>Scheduled Movements</div>
-          <div style={{ display: 'grid', gap: 10 }}>
-            {scheduled.map((s) => (
-              <div
-                key={s.id}
-                style={{
-                  padding: 12,
-                  borderRadius: 16,
-                  border: '1px solid rgba(95, 74, 62, 0.2)',
-                  background: 'rgba(255, 255, 255, 0.7)',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                  <div style={{ fontWeight: 700 }}>
-                    {s.direction === 'credit' ? 'DEPOSIT' : 'WITHDRAWAL'}{' '}
-                    {formatCurrency(s.amount, s.currency)}
-                  </div>
-                  <div style={{ fontSize: 12, opacity: 0.7 }}>#{s.id}</div>
-                </div>
-                <div style={{ fontSize: 12, opacity: 0.75, marginTop: 6 }}>
-                  Scheduled for {new Date(s.scheduled_for).toLocaleString()}
-                </div>
-                {s.memo ? <div style={{ fontSize: 12, opacity: 0.85, marginTop: 6 }}>{s.memo}</div> : null}
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
 
       {showDeposit && typeof document !== 'undefined'
         ? createPortal(

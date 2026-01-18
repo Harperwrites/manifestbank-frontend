@@ -727,6 +727,7 @@ export default function EtherPage() {
   const [avatarOffsetStart, setAvatarOffsetStart] = useState({ x: 0, y: 0 })
   const [avatarDragging, setAvatarDragging] = useState(false)
   const [avatarOptionsOpen, setAvatarOptionsOpen] = useState(false)
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null)
   const avatarReuploadRef = useRef<HTMLInputElement | null>(null)
   const [tabInitialized, setTabInitialized] = useState(false)
   const [commentsOpen, setCommentsOpen] = useState<Record<number, boolean>>({})
@@ -741,6 +742,7 @@ export default function EtherPage() {
   const [focusPostId, setFocusPostId] = useState<number | null>(null)
   const [focusPostOpenComments, setFocusPostOpenComments] = useState<number | null>(null)
   const [focusCommentId, setFocusCommentId] = useState<number | null>(null)
+  const [hoveredPostAuthorId, setHoveredPostAuthorId] = useState<number | null>(null)
 
   async function load() {
     setLoading(true)
@@ -1767,13 +1769,19 @@ export default function EtherPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <button
               type="button"
-              onClick={() => setAvatarOptionsOpen(true)}
+              onClick={() => {
+                if (profile?.avatar_url) {
+                  setAvatarPreviewUrl(profile.avatar_url)
+                } else {
+                  setAvatarOptionsOpen(true)
+                }
+              }}
               style={{
-                width: 44,
-                height: 44,
+                width: 64,
+                height: 64,
                 borderRadius: '50%',
                 border: '1px solid rgba(95, 74, 62, 0.35)',
-                background: 'rgba(255,255,255,0.85)',
+                background: 'rgba(255,255,255,0.9)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -1781,8 +1789,9 @@ export default function EtherPage() {
                 fontWeight: 700,
                 cursor: 'pointer',
                 padding: 0,
+                boxShadow: '0 0 18px rgba(182, 121, 103, 0.45)',
               }}
-              aria-label="Edit profile photo"
+              aria-label={profile?.avatar_url ? 'View profile photo' : 'Upload profile photo'}
             >
               {profile?.avatar_url ? (
                 <img
@@ -1957,7 +1966,21 @@ export default function EtherPage() {
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/ether/profile/${post.author_profile_id}`)}
+                        onMouseEnter={() => setHoveredPostAuthorId(post.author_profile_id)}
+                        onMouseLeave={() => setHoveredPostAuthorId((prev) => (prev === post.author_profile_id ? null : prev))}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8,
+                          border: 'none',
+                          background: 'transparent',
+                          cursor: 'pointer',
+                          padding: 0,
+                        }}
+                      >
                         <div
                           style={{
                             width: 24,
@@ -1971,6 +1994,11 @@ export default function EtherPage() {
                             overflow: 'hidden',
                             fontSize: 11,
                             fontWeight: 600,
+                            boxShadow:
+                              hoveredPostAuthorId === post.author_profile_id
+                                ? '0 0 12px rgba(182, 121, 103, 0.45)'
+                                : 'none',
+                            transition: 'box-shadow 150ms ease',
                           }}
                         >
                           {post.author_avatar_url ? (
@@ -1986,10 +2014,22 @@ export default function EtherPage() {
                             (post.author_display_name ?? 'M').slice(0, 1).toUpperCase()
                           )}
                         </div>
-                        <div style={{ fontWeight: 600, fontSize: 12 }}>
+                        <div
+                          style={{
+                            fontWeight: 600,
+                            fontSize: 12,
+                            textDecorationLine:
+                              hoveredPostAuthorId === post.author_profile_id ? 'underline' : 'none',
+                            textDecorationColor: 'rgba(182, 121, 103, 0.7)',
+                            textUnderlineOffset: 3,
+                            color:
+                              hoveredPostAuthorId === post.author_profile_id ? '#6f4a3a' : 'inherit',
+                            transition: 'color 150ms ease, text-decoration-color 150ms ease',
+                          }}
+                        >
                           {post.kind.toUpperCase()} · {post.author_display_name ?? 'Member'}
                         </div>
-                      </div>
+                      </button>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div style={{ fontSize: 12, opacity: 0.7 }}>{new Date(post.created_at).toLocaleString()}</div>
                         {profile?.id === post.author_profile_id ? (
@@ -2438,6 +2478,75 @@ export default function EtherPage() {
                 }}
               >
                 {avatarCropSaving ? 'Saving…' : 'Save avatar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {avatarPreviewUrl ? (
+        <div
+          onClick={() => setAvatarPreviewUrl(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(21, 16, 12, 0.45)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 70,
+            padding: 20,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: 'min(360px, 100%)',
+              borderRadius: 24,
+              background: 'rgba(255, 255, 255, 0.96)',
+              border: '1px solid rgba(95, 74, 62, 0.2)',
+              boxShadow: 'var(--shadow)',
+              padding: 16,
+              display: 'grid',
+              gap: 12,
+            }}
+          >
+            <img
+              src={avatarPreviewUrl}
+              alt="Profile"
+              style={{ width: '100%', height: 'auto', borderRadius: 18, display: 'block' }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => setAvatarPreviewUrl(null)}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: 999,
+                  border: '1px solid rgba(95, 74, 62, 0.35)',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                }}
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAvatarPreviewUrl(null)
+                  setAvatarOptionsOpen(true)
+                }}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: 999,
+                  border: '1px solid rgba(95, 74, 62, 0.35)',
+                  background: 'rgba(255,255,255,0.9)',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                }}
+              >
+                Edit photo
               </button>
             </div>
           </div>
