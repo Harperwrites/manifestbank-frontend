@@ -5,6 +5,8 @@ import { useParams, useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { Button, Card, Container, Pill } from '@/app/components/ui'
 
+export const runtime = 'edge'
+
 type Profile = {
   id: number
   display_name: string
