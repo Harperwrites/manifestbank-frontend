@@ -439,7 +439,7 @@ export default function DashboardPage() {
               .filter((entry) => entry?.direction)
               .map((entry) => {
                 const rawDirection = String(entry.direction ?? 'credit').toLowerCase()
-                const normalized =
+                const normalized: 'credit' | 'debit' =
                   rawDirection === 'debit' || rawDirection === 'withdrawal' || rawDirection === 'expense'
                     ? 'debit'
                     : 'credit'
