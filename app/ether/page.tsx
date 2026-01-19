@@ -1963,6 +1963,7 @@ export default function EtherPage() {
                       borderRadius: 14,
                       border: '1px solid rgba(95, 74, 62, 0.2)',
                       background: 'rgba(255, 255, 255, 0.7)',
+                      overflow: 'hidden',
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
@@ -2052,7 +2053,9 @@ export default function EtherPage() {
                         ) : null}
                       </div>
                     </div>
-                    <div style={{ marginTop: 6, fontSize: 13 }}>{renderLinkedText(post.content)}</div>
+                    <div style={{ marginTop: 6, fontSize: 13, overflowWrap: 'anywhere' }}>
+                      {renderLinkedText(post.content)}
+                    </div>
                     {post.image_url ? (
                       <img
                         src={post.image_url}
@@ -2199,7 +2202,7 @@ export default function EtherPage() {
                                     {new Date(comment.created_at).toLocaleString()}
                                   </div>
                                 </div>
-                                <div style={{ fontSize: 13 }}>{comment.content}</div>
+                                <div style={{ fontSize: 13, overflowWrap: 'anywhere' }}>{comment.content}</div>
                                 <div style={{ marginTop: 6, display: 'flex', gap: 8, alignItems: 'center' }}>
                                   <button
                                     type="button"

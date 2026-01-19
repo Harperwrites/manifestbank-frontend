@@ -78,6 +78,10 @@ a {
   --ether-profile-columns: minmax(0, 260px) minmax(0, 1fr);
 }
 
+.dashboard-dual-grid {
+  --dashboard-dual-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
 @media (max-width: 900px) {
   .kpi-grid {
     --kpi-columns: 1fr;
@@ -89,6 +93,10 @@ a {
 
   .ether-profile-layout {
     --ether-profile-columns: minmax(0, 1fr);
+  }
+
+  .dashboard-dual-grid {
+    --dashboard-dual-columns: minmax(0, 1fr);
   }
 }
 

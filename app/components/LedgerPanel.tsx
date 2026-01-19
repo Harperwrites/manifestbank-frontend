@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createPortal } from 'react-dom'
 import { api } from '../../lib/api'
 import { Card, Button } from './ui'
@@ -84,6 +85,7 @@ export default function LedgerPanel({
   const [scheduleDirection, setScheduleDirection] = useState<'credit' | 'debit'>('credit')
   const [scheduleWhen, setScheduleWhen] = useState('')
   const canPost = isVerified !== false
+  const router = useRouter()
 
   async function load() {
     setLoading(true)
@@ -232,6 +234,8 @@ export default function LedgerPanel({
   const visibleEntries = entries.filter(
     (entry) => !(entry.entry_type === 'scheduled' && entry.status !== 'posted')
   )
+  const previewEntries = visibleEntries.slice(0, 3)
+  const hasMoreEntries = visibleEntries.length > previewEntries.length
   const runningBalances = computeRunningBalances(entries, balance?.balance)
 
   return (
@@ -279,10 +283,10 @@ export default function LedgerPanel({
       </div>
 
       <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
-        {visibleEntries.length === 0 ? (
+        {previewEntries.length === 0 ? (
           <div style={{ fontSize: 13, opacity: 0.75 }}>No entries yet.</div>
         ) : (
-          visibleEntries.map((e) => (
+          previewEntries.map((e) => (
             <div
               key={e.id}
               style={{
@@ -312,6 +316,32 @@ export default function LedgerPanel({
           ))
         )}
       </div>
+
+      {hasMoreEntries ? (
+        <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end' }}>
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== 'undefined') {
+                window.sessionStorage.setItem(
+                  'dashboard:last_view',
+                  window.location.pathname + window.location.search
+                )
+              }
+              router.push(`/dashboard/activity/${accountId}`)
+            }}
+            style={{
+              border: 'none',
+              background: 'transparent',
+              cursor: 'pointer',
+              fontSize: 12,
+              opacity: 0.75,
+            }}
+          >
+            View all activity →
+          </button>
+        </div>
+      ) : null}
 
       {showDeposit && typeof document !== 'undefined'
         ? createPortal(

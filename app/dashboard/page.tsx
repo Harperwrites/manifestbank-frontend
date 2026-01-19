@@ -1030,10 +1030,10 @@ export default function DashboardPage() {
           style={{
             marginTop: 24,
             display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
+            gridTemplateColumns: 'var(--dashboard-dual-columns)',
             gap: 16,
           }}
-          className="fade-up fade-delay-2"
+          className="fade-up fade-delay-2 dashboard-dual-grid"
         >
           <Card
             title="Deposit Funds"
@@ -1315,10 +1315,10 @@ export default function DashboardPage() {
           style={{
             marginTop: 24,
             display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
+            gridTemplateColumns: 'var(--dashboard-dual-columns)',
             gap: 16,
           }}
-          className="fade-up fade-delay-3"
+          className="fade-up fade-delay-3 dashboard-dual-grid"
         >
           <Card title="Transfer Funds" tone="soft" right={<Pill>Between accounts</Pill>}>
             {transactionsLocked ? (

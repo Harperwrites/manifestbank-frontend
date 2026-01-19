@@ -500,6 +500,7 @@ export default function EtherProfilePage() {
                               borderRadius: 14,
                               border: '1px solid rgba(95, 74, 62, 0.2)',
                               background: 'rgba(255, 255, 255, 0.7)',
+                              overflow: 'hidden',
                             }}
                           >
                             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
@@ -543,7 +544,9 @@ export default function EtherProfilePage() {
                                 <div style={{ fontSize: 12, opacity: 0.7 }}>{new Date(post.created_at).toLocaleString()}</div>
                               </div>
                             </div>
-                            <div style={{ marginTop: 6, fontSize: 13 }}>{renderLinkedText(post.content)}</div>
+                            <div style={{ marginTop: 6, fontSize: 13, overflowWrap: 'anywhere' }}>
+                              {renderLinkedText(post.content)}
+                            </div>
                             {post.image_url ? (
                               <img
                                 src={post.image_url}
@@ -659,7 +662,7 @@ export default function EtherProfilePage() {
                                             {new Date(comment.created_at).toLocaleString()}
                                           </div>
                                         </div>
-                                        <div style={{ fontSize: 13 }}>{comment.content}</div>
+                                        <div style={{ fontSize: 13, overflowWrap: 'anywhere' }}>{comment.content}</div>
                                         <div style={{ marginTop: 6, display: 'flex', gap: 8, alignItems: 'center' }}>
                                           <Button
                                             variant="outline"
