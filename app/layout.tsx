@@ -9,8 +9,8 @@ export const metadata: Metadata = {
   manifest: '/manifestBank-v2.json?v=20260117b',
   themeColor: '#b67967',
   icons: {
-    icon: '/manifestbank-icon-512.png?v=20260117b',
-    apple: '/manifestbank-icon-512.png?v=20260117b',
+    icon: '/ManifestBank%20Square%20App%20Logo.png?v=20260118a',
+    apple: '/ManifestBank%20Square%20App%20Logo.png?v=20260118a',
   },
 }
 
@@ -25,7 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           rel="stylesheet"
         />
         <meta name="theme-color" content="#b67967" />
-        <link rel="apple-touch-icon" href="/manifestbank-icon-512.png?v=20260117b" />
+        <link rel="apple-touch-icon" href="/ManifestBank%20Square%20App%20Logo.png?v=20260118a" />
       </head>
       <body>
         <AuthProvider>
