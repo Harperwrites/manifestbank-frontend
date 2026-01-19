@@ -6,6 +6,8 @@ import { useParams, useRouter } from 'next/navigation'
 import { api } from '../../../../lib/api'
 import { Button, Card, Container } from '../../../components/ui'
 
+export const runtime = 'edge'
+
 type LedgerEntry = {
   id: number
   account_id: number
