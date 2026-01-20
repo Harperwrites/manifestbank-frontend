@@ -273,11 +273,11 @@ export default function AuthPage() {
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(21, 16, 12, 0.45)',
+            background: 'rgba(18, 12, 10, 0.6)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 60,
+            zIndex: 2147483646,
             padding: 20,
           }}
           onClick={() => setResetOpen(false)}
@@ -288,9 +288,11 @@ export default function AuthPage() {
               background:
                 'linear-gradient(135deg, rgba(199, 140, 122, 0.96), rgba(220, 193, 179, 0.98)), radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.7), transparent 52%), radial-gradient(circle at 78% 10%, rgba(255, 255, 255, 0.45), transparent 58%), linear-gradient(25deg, rgba(80, 58, 48, 0.35) 0%, rgba(255, 255, 255, 0.12) 22%, rgba(80, 58, 48, 0.32) 40%, rgba(255, 255, 255, 0.1) 58%, rgba(80, 58, 48, 0.28) 100%), linear-gradient(115deg, rgba(90, 66, 54, 0.32) 0%, rgba(255, 255, 255, 0.1) 20%, rgba(90, 66, 54, 0.3) 42%, rgba(255, 255, 255, 0.1) 60%, rgba(90, 66, 54, 0.26) 100%), linear-gradient(160deg, rgba(66, 47, 38, 0.28) 0%, rgba(255, 255, 255, 0.08) 25%, rgba(66, 47, 38, 0.26) 48%, rgba(255, 255, 255, 0.08) 70%, rgba(66, 47, 38, 0.22) 100%)',
               borderRadius: 20,
-              border: '1px solid rgba(95, 74, 62, 0.2)',
+              border: '1px solid rgba(95, 74, 62, 0.35)',
               padding: 20,
-              boxShadow: 'var(--shadow)',
+              color: '#2f1f1a',
+              boxShadow:
+                '0 24px 60px rgba(60, 42, 35, 0.35), 0 10px 26px rgba(0, 0, 0, 0.18)',
             }}
             onClick={(e) => e.stopPropagation()}
           >
