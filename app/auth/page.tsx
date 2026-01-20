@@ -18,8 +18,6 @@ export default function AuthPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [resetOpen, setResetOpen] = useState(false)
   const [resetEmail, setResetEmail] = useState('')
-  const [resetPassword, setResetPassword] = useState('')
-  const [resetConfirm, setResetConfirm] = useState('')
   const [resetMsg, setResetMsg] = useState('')
   const [msg, setMsg] = useState<string>('')
   const [loading, setLoading] = useState(false)
@@ -63,17 +61,13 @@ export default function AuthPage() {
   async function submitReset(e: React.FormEvent) {
     e.preventDefault()
     setResetMsg('')
-    if (!resetEmail || !resetPassword) {
-      setResetMsg('❌ Email and new password are required.')
-      return
-    }
-    if (resetPassword !== resetConfirm) {
-      setResetMsg('❌ Passwords do not match.')
+    if (!resetEmail) {
+      setResetMsg('❌ Email is required.')
       return
     }
     try {
-      await api.post('/auth/reset-password', { email: resetEmail, new_password: resetPassword })
-      setResetMsg('✅ Password updated. You can log in now.')
+      await api.post('/auth/password-reset/request', { email: resetEmail })
+      setResetMsg('✅ Check your email for a reset link.')
     } catch (err: any) {
       const detail =
         err?.response?.data?.detail ??
@@ -257,8 +251,6 @@ export default function AuthPage() {
           onClick={() => {
             setResetOpen(true)
             setResetEmail(email)
-            setResetPassword('')
-            setResetConfirm('')
             setResetMsg('')
           }}
           style={{
@@ -305,7 +297,9 @@ export default function AuthPage() {
             <div style={{ fontFamily: 'var(--font-serif)', fontSize: 22, fontWeight: 600 }}>
               Reset password
             </div>
-            <div style={{ opacity: 0.7, marginTop: 4 }}>Update your vault access credentials.</div>
+            <div style={{ opacity: 0.7, marginTop: 4 }}>
+              We’ll email you a secure reset link.
+            </div>
             <form onSubmit={submitReset} style={{ display: 'grid', gap: 10, marginTop: 16 }}>
               <input
                 type="email"
@@ -313,36 +307,6 @@ export default function AuthPage() {
                 value={resetEmail}
                 onChange={(e) => setResetEmail(e.target.value)}
                 required
-                style={{
-                  padding: '10px 12px',
-                  borderRadius: 12,
-                  border: '1px solid rgba(95, 74, 62, 0.3)',
-                  background: 'rgba(255, 255, 255, 0.9)',
-                  fontSize: 13,
-                }}
-              />
-              <input
-                type="password"
-                placeholder="New password"
-                value={resetPassword}
-                onChange={(e) => setResetPassword(e.target.value)}
-                required
-                minLength={6}
-                style={{
-                  padding: '10px 12px',
-                  borderRadius: 12,
-                  border: '1px solid rgba(95, 74, 62, 0.3)',
-                  background: 'rgba(255, 255, 255, 0.9)',
-                  fontSize: 13,
-                }}
-              />
-              <input
-                type="password"
-                placeholder="Confirm new password"
-                value={resetConfirm}
-                onChange={(e) => setResetConfirm(e.target.value)}
-                required
-                minLength={6}
                 style={{
                   padding: '10px 12px',
                   borderRadius: 12,

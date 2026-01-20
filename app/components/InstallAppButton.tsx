@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { api } from '@/lib/api'
 
 const DISMISS_KEY = 'manifestbank_install_dismissed'
@@ -97,6 +98,121 @@ export default function InstallAppButton() {
 
   const microcopy = 'Works offline • No App Store needed • Instant install'
 
+  const iosModal =
+    iosOpen && mounted
+      ? createPortal(
+          <div
+            role="dialog"
+            aria-modal="true"
+            onClick={() => {
+              setIosOpen(false)
+              if (typeof window !== 'undefined') {
+                window.localStorage.setItem(DISMISS_KEY, '1')
+              }
+            }}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(12, 8, 6, 0.92)',
+              zIndex: 2147483647,
+              display: 'grid',
+              placeItems: 'center',
+              padding: 16,
+              height: '100svh',
+              minHeight: '100svh',
+              width: '100vw',
+              overflowY: 'auto',
+              WebkitOverflowScrolling: 'touch',
+              pointerEvents: 'auto',
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                maxWidth: 420,
+                width: '100%',
+                maxHeight: 'calc(100dvh - 32px)',
+                overflowY: 'auto',
+                borderRadius: 18,
+                border: '1px solid rgba(122, 89, 73, 0.45)',
+                background:
+                  'linear-gradient(145deg, rgba(246, 230, 220, 0.98), rgba(220, 193, 179, 0.98) 45%, rgba(255, 255, 255, 0.95))',
+                boxShadow: '0 28px 60px rgba(96, 62, 46, 0.4)',
+                padding: 18,
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontWeight: 700, fontSize: 16 }}>Install ManifestBank App</div>
+                <button
+                  type="button"
+                  onClick={() => setIosOpen(false)}
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    fontSize: 16,
+                    opacity: 0.6,
+                  }}
+                  aria-label="Close"
+                >
+                  ×
+                </button>
+              </div>
+              <div style={{ marginTop: 8, fontSize: 13, opacity: 0.8 }}>
+                On Apple Safari, installation is manual:
+              </div>
+              <ol style={{ marginTop: 10, paddingLeft: 18, fontSize: 13, color: '#5f3f35' }}>
+                {ios ? (
+                  <>
+                    <li>Tap the Share button.</li>
+                    <li>Select “Add to Home Screen”.</li>
+                    <li>Tap “Add” to install.</li>
+                  </>
+                ) : (
+                  <>
+                    <li>Open the File menu.</li>
+                    <li>Select “Add to Dock”.</li>
+                    <li>Confirm to install.</li>
+                  </>
+                )}
+              </ol>
+              <img
+                src="/safari-install-guide.svg"
+                alt="Install guide"
+                style={{
+                  width: '100%',
+                  borderRadius: 12,
+                  border: '1px solid rgba(95, 74, 62, 0.25)',
+                  background: 'rgba(255,255,255,0.85)',
+                  marginTop: 12,
+                }}
+              />
+              <div style={{ marginTop: 10, fontSize: 12, opacity: 0.7 }}>
+                Works offline • No App Store needed • Instant install
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 14 }}>
+                <button
+                  type="button"
+                  onClick={() => setIosOpen(false)}
+                  style={{
+                    borderRadius: 999,
+                    border: '1px solid rgba(122, 89, 73, 0.35)',
+                    background: 'rgba(255,255,255,0.9)',
+                    padding: '6px 12px',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    fontSize: 12,
+                  }}
+                >
+                  Got it
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )
+      : null
+
   return (
     <div style={{ display: 'grid', gap: 4 }}>
       <button
@@ -189,115 +305,7 @@ export default function InstallAppButton() {
         </div>
       ) : null}
 
-      {iosOpen ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          onClick={() => {
-            setIosOpen(false)
-            if (typeof window !== 'undefined') {
-              window.localStorage.setItem(DISMISS_KEY, '1')
-            }
-          }}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(22, 16, 12, 0.35)',
-            zIndex: 80,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 16,
-            height: '100dvh',
-            minHeight: '100vh',
-            overflowY: 'auto',
-            WebkitOverflowScrolling: 'touch',
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              maxWidth: 420,
-              width: '100%',
-              maxHeight: 'calc(100dvh - 32px)',
-              overflowY: 'auto',
-              borderRadius: 18,
-              border: '1px solid rgba(122, 89, 73, 0.45)',
-              background:
-                'linear-gradient(145deg, rgba(246, 230, 220, 0.96), rgba(220, 193, 179, 0.98) 45%, rgba(255, 255, 255, 0.92))',
-              boxShadow: '0 28px 60px rgba(96, 62, 46, 0.35)',
-              padding: 18,
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontWeight: 700, fontSize: 16 }}>Install ManifestBank App</div>
-              <button
-                type="button"
-                onClick={() => setIosOpen(false)}
-                style={{
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  fontSize: 16,
-                  opacity: 0.6,
-                }}
-                aria-label="Close"
-              >
-                ×
-              </button>
-            </div>
-            <div style={{ marginTop: 8, fontSize: 13, opacity: 0.8 }}>
-              On Apple Safari, installation is manual:
-            </div>
-            <ol style={{ marginTop: 10, paddingLeft: 18, fontSize: 13, color: '#5f3f35' }}>
-              {ios ? (
-                <>
-                  <li>Tap the Share button.</li>
-                  <li>Select “Add to Home Screen”.</li>
-                  <li>Tap “Add” to install.</li>
-                </>
-              ) : (
-                <>
-                  <li>Open the File menu.</li>
-                  <li>Select “Add to Dock”.</li>
-                  <li>Confirm to install.</li>
-                </>
-              )}
-            </ol>
-            <img
-              src="/safari-install-guide.svg"
-              alt="Install guide"
-              style={{
-                width: '100%',
-                borderRadius: 12,
-                border: '1px solid rgba(95, 74, 62, 0.25)',
-                background: 'rgba(255,255,255,0.85)',
-                marginTop: 12,
-              }}
-            />
-            <div style={{ marginTop: 10, fontSize: 12, opacity: 0.7 }}>
-              Works offline • No App Store needed • Instant install
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 14 }}>
-              <button
-                type="button"
-                onClick={() => setIosOpen(false)}
-                style={{
-                  borderRadius: 999,
-                  border: '1px solid rgba(122, 89, 73, 0.35)',
-                  background: 'rgba(255,255,255,0.9)',
-                  padding: '6px 12px',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                  fontSize: 12,
-                }}
-              >
-                Got it
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {iosModal}
     </div>
   )
 }
