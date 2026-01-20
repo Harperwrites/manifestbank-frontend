@@ -97,6 +97,8 @@ function EtherNavbar({
   const [settingsBio, setSettingsBio] = useState('')
   const [settingsUsername, setSettingsUsername] = useState('')
   const [profileEditOpen, setProfileEditOpen] = useState(false)
+  const profileEditOpenedRef = useRef(false)
+  const profileEditBodyLockRef = useRef<{ overflow: string; touchAction: string } | null>(null)
   const [portalReady, setPortalReady] = useState(false)
   const [usernameStatus, setUsernameStatus] = useState<
     'idle' | 'checking' | 'available' | 'taken' | 'invalid' | 'current'
@@ -147,13 +149,47 @@ function EtherNavbar({
   }, [])
 
   useEffect(() => {
-    if (!settingsOpen && !profileEditOpen) return
+    if (!settingsOpen && !profileEditOpen) {
+      profileEditOpenedRef.current = false
+      return
+    }
+    const wasOpen = profileEditOpenedRef.current
     setSettingsBio(profile?.bio ?? '')
     setSettingsUsername(me?.username ?? '')
     setUsernameStatus('idle')
-    setSettingsBioNotice('')
-    setSettingsUsernameNotice('')
+    if (!wasOpen) {
+      setSettingsBioNotice('')
+      setSettingsUsernameNotice('')
+    }
+    profileEditOpenedRef.current = true
   }, [settingsOpen, profileEditOpen, profile?.bio, me?.username])
+
+  useEffect(() => {
+    if (!profileEditOpen) {
+      if (profileEditBodyLockRef.current) {
+        document.body.style.overflow = profileEditBodyLockRef.current.overflow
+        document.body.style.touchAction = profileEditBodyLockRef.current.touchAction
+        profileEditBodyLockRef.current = null
+      }
+      return
+    }
+    if (typeof document === 'undefined') return
+    if (!profileEditBodyLockRef.current) {
+      profileEditBodyLockRef.current = {
+        overflow: document.body.style.overflow,
+        touchAction: document.body.style.touchAction,
+      }
+    }
+    document.body.style.overflow = 'hidden'
+    document.body.style.touchAction = 'none'
+    return () => {
+      if (profileEditBodyLockRef.current) {
+        document.body.style.overflow = profileEditBodyLockRef.current.overflow
+        document.body.style.touchAction = profileEditBodyLockRef.current.touchAction
+        profileEditBodyLockRef.current = null
+      }
+    }
+  }, [profileEditOpen])
 
   useEffect(() => {
     if (!accountsOpen) return
@@ -492,18 +528,23 @@ function EtherNavbar({
                 position: 'fixed',
                 inset: 0,
                 height: '100dvh',
+                minHeight: '100vh',
                 background: 'rgba(21, 16, 12, 0.45)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 zIndex: 99999,
                 padding: 20,
+                overflowY: 'auto',
+                WebkitOverflowScrolling: 'touch',
               }}
             >
               <div
                 onClick={(e) => e.stopPropagation()}
                 style={{
                   width: 'min(520px, 100%)',
+                  maxHeight: 'calc(100dvh - 40px)',
+                  overflowY: 'auto',
                   borderRadius: 20,
                   background:
                     'linear-gradient(135deg, rgba(199, 140, 122, 0.96), rgba(220, 193, 179, 0.98)), radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.7), transparent 52%), radial-gradient(circle at 78% 10%, rgba(255, 255, 255, 0.45), transparent 58%), linear-gradient(25deg, rgba(80, 58, 48, 0.35) 0%, rgba(255, 255, 255, 0.12) 22%, rgba(80, 58, 48, 0.32) 40%, rgba(255, 255, 255, 0.1) 58%, rgba(80, 58, 48, 0.28) 100%), linear-gradient(115deg, rgba(90, 66, 54, 0.32) 0%, rgba(255, 255, 255, 0.1) 20%, rgba(90, 66, 54, 0.3) 42%, rgba(255, 255, 255, 0.1) 60%, rgba(90, 66, 54, 0.26) 100%), linear-gradient(160deg, rgba(66, 47, 38, 0.28) 0%, rgba(255, 255, 255, 0.08) 25%, rgba(66, 47, 38, 0.26) 48%, rgba(255, 255, 255, 0.08) 70%, rgba(66, 47, 38, 0.22) 100%)',

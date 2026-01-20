@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '@/lib/api'
 
 const DISMISS_KEY = 'manifestbank_install_dismissed'
@@ -40,6 +40,7 @@ export default function InstallAppButton() {
   const [notice, setNotice] = useState('')
   const [installStatus, setInstallStatus] = useState<'ready' | 'unsupported' | 'dismissed' | 'installed'>('ready')
   const [showDiagnostics, setShowDiagnostics] = useState(false)
+  const iosBodyLockRef = useRef<{ overflow: string; touchAction: string } | null>(null)
 
   const ios = useMemo(() => isIOS(), [])
   const safari = useMemo(() => isSafari(), [])
@@ -64,6 +65,33 @@ export default function InstallAppButton() {
     handleAvailable()
     return () => window.removeEventListener('mb-install-available', handleAvailable)
   }, [])
+
+  useEffect(() => {
+    if (!iosOpen) {
+      if (iosBodyLockRef.current) {
+        document.body.style.overflow = iosBodyLockRef.current.overflow
+        document.body.style.touchAction = iosBodyLockRef.current.touchAction
+        iosBodyLockRef.current = null
+      }
+      return
+    }
+    if (typeof document === 'undefined') return
+    if (!iosBodyLockRef.current) {
+      iosBodyLockRef.current = {
+        overflow: document.body.style.overflow,
+        touchAction: document.body.style.touchAction,
+      }
+    }
+    document.body.style.overflow = 'hidden'
+    document.body.style.touchAction = 'none'
+    return () => {
+      if (iosBodyLockRef.current) {
+        document.body.style.overflow = iosBodyLockRef.current.overflow
+        document.body.style.touchAction = iosBodyLockRef.current.touchAction
+        iosBodyLockRef.current = null
+      }
+    }
+  }, [iosOpen])
 
   if (!mounted || isStandalone()) return null
 
@@ -180,6 +208,10 @@ export default function InstallAppButton() {
             alignItems: 'center',
             justifyContent: 'center',
             padding: 16,
+            height: '100dvh',
+            minHeight: '100vh',
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch',
           }}
         >
           <div
@@ -187,6 +219,8 @@ export default function InstallAppButton() {
             style={{
               maxWidth: 420,
               width: '100%',
+              maxHeight: 'calc(100dvh - 32px)',
+              overflowY: 'auto',
               borderRadius: 18,
               border: '1px solid rgba(122, 89, 73, 0.45)',
               background:
