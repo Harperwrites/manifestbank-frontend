@@ -33,11 +33,13 @@ export function Card({
     default: {
       background: 'var(--paper)',
       border: '1px solid var(--border)',
+      color: 'var(--ink)',
       boxShadow: 'var(--shadow-soft)',
     },
     soft: {
       background: 'var(--paper-strong)',
       border: '1px solid rgba(95, 74, 62, 0.18)',
+      color: 'var(--ink)',
       boxShadow: 'var(--shadow-soft)',
     },
     deep: {
@@ -90,7 +92,7 @@ export function Button({
   children: React.ReactNode
   onClick?: () => void
   disabled?: boolean
-  variant?: 'primary' | 'solid' | 'ghost' | 'danger' | 'outline'
+  variant?: 'primary' | 'solid' | 'ghost' | 'danger' | 'outline' | 'outlineLight'
   type?: 'button' | 'submit'
 }) {
   const base: React.CSSProperties = {
@@ -122,6 +124,12 @@ export function Button({
       background: 'transparent',
       color: 'var(--ink)',
       border: '1px solid rgba(95, 74, 62, 0.35)',
+    },
+    outlineLight: {
+      background: 'rgba(255, 255, 255, 0.2)',
+      color: 'var(--marble-ivory)',
+      border: '1px solid rgba(255, 255, 255, 0.6)',
+      boxShadow: '0 12px 22px rgba(12, 10, 12, 0.3)',
     },
     ghost: { background: 'transparent', color: 'var(--ink)', border: '1px solid transparent' },
     danger: {

@@ -280,8 +280,9 @@ function EtherNavbar({
         position: 'static',
         padding: '6px 20px',
         borderBottom: '1px solid var(--border)',
-        background: 'rgba(255, 255, 255, 0.82)',
+        background: 'rgba(248, 242, 235, 0.96)',
         backdropFilter: 'blur(14px)',
+        color: '#3b2b24',
         display: 'flex',
         alignItems: 'center',
         gap: 12,
@@ -289,11 +290,11 @@ function EtherNavbar({
     >
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12 }}>
         <div ref={accountsRef} style={{ position: 'relative' }}>
-          <button
-            type="button"
-            onClick={() => {
-              setAccountsOpen((open) => {
-                const next = !open
+            <button
+              type="button"
+              onClick={() => {
+                setAccountsOpen((open) => {
+                  const next = !open
                 if (next && accountsRef.current) {
                   setAccountsMenuRect(accountsRef.current.getBoundingClientRect())
                 }
@@ -312,6 +313,7 @@ function EtherNavbar({
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
+              color: 'var(--ink)',
             }}
           >
             ManifestBank
@@ -458,23 +460,23 @@ function EtherNavbar({
                 marginTop: 8,
                 width: 260,
                 borderRadius: 14,
-                border: '1px solid rgba(95, 74, 62, 0.25)',
-                background: 'rgba(255, 255, 255, 0.96)',
-                boxShadow: '0 16px 40px rgba(0, 0, 0, 0.12)',
+                border: '1px solid rgba(182, 121, 103, 0.35)',
+                background: 'linear-gradient(180deg, rgba(245, 234, 223, 0.98), rgba(230, 207, 192, 0.98))',
+                boxShadow: '0 18px 42px rgba(26, 18, 14, 0.2)',
                 padding: 12,
                 display: 'grid',
                 gap: 10,
                 zIndex: 20,
               }}
             >
-              <div style={{ fontWeight: 600 }}>Settings</div>
+              <div style={{ fontWeight: 600, color: '#3b2b24' }}>Settings</div>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
                 <input
                   type="checkbox"
                   checked={profile?.is_public ?? true}
                   onChange={(e) => updateSettings({ is_public: e.target.checked })}
                 />
-                Public profile
+                <span style={{ color: '#3b2b24' }}>Public profile</span>
               </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
                 <input
@@ -495,7 +497,7 @@ function EtherNavbar({
                     }
                   }}
                 />
-                Require approval for Sync
+                <span style={{ color: '#3b2b24' }}>Require approval for Sync</span>
               </label>
               <button
                 type="button"
@@ -1243,7 +1245,18 @@ export default function EtherPage() {
   }, [focusCommentId, commentsByPost])
 
   return (
-    <main>
+    <main
+      style={{
+        minHeight: '100vh',
+        backgroundColor: '#100f10',
+        backgroundImage:
+          "linear-gradient(180deg, rgba(12, 10, 12, 0.82), rgba(12, 10, 12, 0.92)), url('/calacatta-black-vein-800x377.webp')",
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        color: 'var(--marble-ivory)',
+      }}
+    >
       <EtherNavbar profile={profile} updateSettings={updateSettings} onAvatarSelect={openAvatarCrop} />
       <Container>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
@@ -1260,16 +1273,18 @@ export default function EtherPage() {
                     }
                   }}
                   style={{
-                    padding: '4px 8px',
+                    padding: '7px 12px',
                     borderRadius: 999,
-                    border: '1px solid rgba(95, 74, 62, 0.35)',
-                    background: 'rgba(255,255,255,0.9)',
+                    border: '1px solid rgba(255, 255, 255, 0.75)',
+                    background: 'rgba(255, 248, 242, 0.96)',
                     cursor: 'pointer',
                     fontWeight: 600,
-                    fontSize: 10,
+                    fontSize: 13,
+                    color: '#2d1f1a',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 6,
+                    boxShadow: '0 12px 22px rgba(12, 10, 12, 0.35)',
                   }}
                 >
                   Notifications
@@ -1281,7 +1296,7 @@ export default function EtherPage() {
                         borderRadius: 999,
                         background: '#b67967',
                         color: '#fff',
-                        fontSize: 10,
+                        fontSize: 11,
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -1301,10 +1316,11 @@ export default function EtherPage() {
                       marginTop: 10,
                       width: 320,
                       borderRadius: 16,
-                      border: '1px solid rgba(95, 74, 62, 0.2)',
-                      background: 'rgba(255,255,255,0.98)',
-                      boxShadow: '0 16px 40px rgba(0,0,0,0.12)',
+                      border: '1px solid rgba(182, 121, 103, 0.45)',
+                      background: 'linear-gradient(180deg, rgba(252, 245, 239, 0.98), rgba(226, 199, 181, 0.96))',
+                      boxShadow: '0 18px 42px rgba(26, 18, 14, 0.24)',
                       padding: 12,
+                      color: '#3b2b24',
                       zIndex: 20,
                     }}
                   >
@@ -1472,16 +1488,18 @@ export default function EtherPage() {
                   type="button"
                   onClick={() => setSyncMenuOpen((open) => !open)}
                   style={{
-                    padding: '4px 8px',
+                    padding: '7px 12px',
                     borderRadius: 999,
-                    border: '1px solid rgba(95, 74, 62, 0.35)',
-                    background: 'rgba(255,255,255,0.9)',
+                    border: '1px solid rgba(255, 255, 255, 0.75)',
+                    background: 'rgba(255, 248, 242, 0.96)',
                     cursor: 'pointer',
                     fontWeight: 600,
-                    fontSize: 10,
+                    fontSize: 13,
+                    color: '#2d1f1a',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 6,
+                    boxShadow: '0 12px 22px rgba(12, 10, 12, 0.35)',
                   }}
                 >
                   In Sync
@@ -1493,7 +1511,7 @@ export default function EtherPage() {
                         borderRadius: 999,
                         background: '#b67967',
                         color: '#fff',
-                        fontSize: 10,
+                        fontSize: 11,
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -1513,10 +1531,11 @@ export default function EtherPage() {
                       marginTop: 10,
                       width: 320,
                       borderRadius: 16,
-                      border: '1px solid rgba(95, 74, 62, 0.2)',
-                      background: 'rgba(255,255,255,0.98)',
-                      boxShadow: '0 16px 40px rgba(0,0,0,0.12)',
+                      border: '1px solid rgba(182, 121, 103, 0.45)',
+                      background: 'linear-gradient(180deg, rgba(252, 245, 239, 0.98), rgba(226, 199, 181, 0.96))',
+                      boxShadow: '0 18px 42px rgba(26, 18, 14, 0.24)',
                       padding: 12,
+                      color: '#3b2b24',
                       zIndex: 20,
                     }}
                   >
@@ -1960,14 +1979,17 @@ export default function EtherPage() {
 
         <section style={{ marginTop: 20 }}>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
-            <Button variant={activeTab === 'feed' ? 'solid' : 'outline'} onClick={() => setActiveTab('feed')}>
+            <Button variant={activeTab === 'feed' ? 'solid' : 'outlineLight'} onClick={() => setActiveTab('feed')}>
               Public Feed
             </Button>
-            <Button variant={activeTab === 'timeline' ? 'solid' : 'outline'} onClick={() => setActiveTab('timeline')}>
+            <Button
+              variant={activeTab === 'timeline' ? 'solid' : 'outlineLight'}
+              onClick={() => setActiveTab('timeline')}
+            >
               Timeline
             </Button>
             <Button
-              variant={activeTab === 'mine' ? 'solid' : 'outline'}
+              variant={activeTab === 'mine' ? 'solid' : 'outlineLight'}
               onClick={() => {
                 if (profile?.id) {
                   if (typeof window !== 'undefined') {
