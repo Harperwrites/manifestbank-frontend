@@ -13,6 +13,7 @@ type Profile = {
   id: number
   display_name: string
   bio?: string | null
+  links?: string | null
   avatar_url?: string | null
   is_public: boolean
   sync_requires_approval: boolean
@@ -95,6 +96,7 @@ function EtherNavbar({
   const [accountsLoading, setAccountsLoading] = useState(false)
   const [accountsMsg, setAccountsMsg] = useState('')
   const [settingsBio, setSettingsBio] = useState('')
+  const [settingsLinks, setSettingsLinks] = useState('')
   const [settingsUsername, setSettingsUsername] = useState('')
   const [profileEditOpen, setProfileEditOpen] = useState(false)
   const profileEditOpenedRef = useRef(false)
@@ -105,6 +107,7 @@ function EtherNavbar({
   >('idle')
   const [settingsBusy, setSettingsBusy] = useState(false)
   const [settingsBioNotice, setSettingsBioNotice] = useState('')
+  const [settingsLinksNotice, setSettingsLinksNotice] = useState('')
   const [settingsUsernameNotice, setSettingsUsernameNotice] = useState('')
 
   function pushToast(message: string) {
@@ -155,14 +158,16 @@ function EtherNavbar({
     }
     const wasOpen = profileEditOpenedRef.current
     setSettingsBio(profile?.bio ?? '')
+    setSettingsLinks(profile?.links ?? '')
     setSettingsUsername(me?.username ?? '')
     setUsernameStatus('idle')
     if (!wasOpen) {
       setSettingsBioNotice('')
+      setSettingsLinksNotice('')
       setSettingsUsernameNotice('')
     }
     profileEditOpenedRef.current = true
-  }, [settingsOpen, profileEditOpen, profile?.bio, me?.username])
+  }, [settingsOpen, profileEditOpen, profile?.bio, profile?.links, me?.username])
 
   useEffect(() => {
     if (!profileEditOpen) {
@@ -573,6 +578,57 @@ function EtherNavbar({
             </div>
 
             <div style={{ display: 'grid', gap: 12, marginTop: 14 }}>
+              <div style={{ display: 'grid', gap: 6 }}>
+                <label style={{ fontSize: 12, opacity: 0.7 }}>Links</label>
+                <textarea
+                  value={settingsLinks}
+                  onChange={(e) => setSettingsLinks(e.target.value)}
+                  rows={3}
+                  placeholder="Add links (one per line)"
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: 10,
+                    border: '1px solid rgba(95, 74, 62, 0.3)',
+                    background: 'rgba(255, 255, 255, 0.9)',
+                    fontSize: 12,
+                    resize: 'vertical',
+                  }}
+                />
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    setSettingsBusy(true)
+                    setSettingsLinksNotice('')
+                    try {
+                      await updateSettings({ links: settingsLinks })
+                      setSettingsLinksNotice('Links updated.')
+                    } catch (e: any) {
+                      const msg = e?.response?.data?.detail ?? e?.message ?? 'Unable to update links.'
+                      setSettingsLinksNotice(msg)
+                    } finally {
+                      setSettingsBusy(false)
+                    }
+                  }}
+                  disabled={settingsBusy}
+                >
+                  {settingsBusy ? 'Saving…' : 'Save links'}
+                </Button>
+                {settingsLinksNotice ? (
+                  <div
+                    style={{
+                      marginTop: 6,
+                      fontSize: 12,
+                      color: '#5f3f35',
+                      background: 'rgba(255, 255, 255, 0.75)',
+                      border: '1px solid rgba(122, 89, 73, 0.3)',
+                      borderRadius: 10,
+                      padding: '6px 10px',
+                    }}
+                  >
+                    {settingsLinksNotice}
+                  </div>
+                ) : null}
+              </div>
               <div style={{ display: 'grid', gap: 6 }}>
                 <label style={{ fontSize: 12, opacity: 0.7 }}>Bio</label>
                 <textarea
@@ -1138,15 +1194,51 @@ export default function EtherPage() {
   }
 
   function renderLinkedText(text: string) {
-    const urlRegex = /(https?:\/\/[^\s]+)/g
+    const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+|(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s]*)?)/gi
     const parts = text.split(urlRegex)
     return parts.map((part, index) => {
       if (!part) return null
-      if (part.startsWith('http://') || part.startsWith('https://')) {
+      const isLink =
+        part.startsWith('http://') ||
+        part.startsWith('https://') ||
+        part.startsWith('www.') ||
+        /^[a-z0-9-]+(\.[a-z0-9-]+)+/i.test(part)
+      if (isLink) {
+        const punctuationMatch = part.match(/^(.*?)([),.!?:;]+)$/)
+        const linkText = punctuationMatch ? punctuationMatch[1] : part
+        const trailing = punctuationMatch ? punctuationMatch[2] : ''
+        const href = linkText.startsWith('http://')
+          ? linkText
+          : linkText.startsWith('https://')
+            ? linkText
+            : `https://${linkText}`
         return (
-          <a key={`link-${index}`} href={part} style={{ color: '#6f4a3a' }}>
-            {part}
-          </a>
+          <span key={`link-${index}`}>
+            <a
+              href={href}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                color: '#b97e68',
+                textDecorationLine: 'none',
+                textDecorationColor: 'rgba(185, 126, 104, 0.75)',
+                transition: 'color 160ms ease, text-decoration-color 160ms ease',
+              }}
+              onMouseEnter={(event) => {
+                event.currentTarget.style.textDecorationLine = 'underline'
+                event.currentTarget.style.textDecorationColor = 'rgba(185, 126, 104, 0.95)'
+                event.currentTarget.style.color = '#d09a85'
+              }}
+              onMouseLeave={(event) => {
+                event.currentTarget.style.textDecorationLine = 'none'
+                event.currentTarget.style.textDecorationColor = 'rgba(185, 126, 104, 0.75)'
+                event.currentTarget.style.color = '#b97e68'
+              }}
+            >
+              {linkText}
+            </a>
+            {trailing}
+          </span>
         )
       }
       return <span key={`text-${index}`}>{part}</span>
@@ -1866,6 +1958,9 @@ export default function EtherPage() {
             <div>
               <div style={{ fontWeight: 600 }}>{profile?.display_name ?? 'Private Vault'}</div>
               <div style={{ fontSize: 12, opacity: 0.7 }}>{profile?.is_public ? 'Public profile' : 'Private profile'}</div>
+              {profile?.bio ? (
+                <div style={{ marginTop: 6, fontSize: 13, color: 'rgba(52, 39, 33, 0.8)' }}>{renderLinkedText(profile.bio)}</div>
+              ) : null}
             </div>
           </div>
         </div>

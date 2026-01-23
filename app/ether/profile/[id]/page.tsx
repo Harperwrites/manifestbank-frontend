@@ -11,6 +11,7 @@ type Profile = {
   id: number
   display_name: string
   bio?: string | null
+  links?: string | null
   avatar_url?: string | null
   is_public: boolean
   store_url?: string | null
@@ -206,15 +207,51 @@ export default function EtherProfilePage() {
   }
 
   function renderLinkedText(text: string) {
-    const urlRegex = /(https?:\/\/[^\s]+)/g
+    const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+|(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s]*)?)/gi
     const parts = text.split(urlRegex)
     return parts.map((part, index) => {
       if (!part) return null
-      if (part.startsWith('http://') || part.startsWith('https://')) {
+      const isLink =
+        part.startsWith('http://') ||
+        part.startsWith('https://') ||
+        part.startsWith('www.') ||
+        /^[a-z0-9-]+(\.[a-z0-9-]+)+/i.test(part)
+      if (isLink) {
+        const punctuationMatch = part.match(/^(.*?)([),.!?:;]+)$/)
+        const linkText = punctuationMatch ? punctuationMatch[1] : part
+        const trailing = punctuationMatch ? punctuationMatch[2] : ''
+        const href = linkText.startsWith('http://')
+          ? linkText
+          : linkText.startsWith('https://')
+            ? linkText
+            : `https://${linkText}`
         return (
-          <a key={`link-${index}`} href={part} style={{ color: '#6f4a3a' }}>
-            {part}
-          </a>
+          <span key={`link-${index}`}>
+            <a
+              href={href}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                color: '#b97e68',
+                textDecorationLine: 'none',
+                textDecorationColor: 'rgba(185, 126, 104, 0.75)',
+                transition: 'color 160ms ease, text-decoration-color 160ms ease',
+              }}
+              onMouseEnter={(event) => {
+                event.currentTarget.style.textDecorationLine = 'underline'
+                event.currentTarget.style.textDecorationColor = 'rgba(185, 126, 104, 0.95)'
+                event.currentTarget.style.color = '#d09a85'
+              }}
+              onMouseLeave={(event) => {
+                event.currentTarget.style.textDecorationLine = 'none'
+                event.currentTarget.style.textDecorationColor = 'rgba(185, 126, 104, 0.75)'
+                event.currentTarget.style.color = '#b97e68'
+              }}
+            >
+              {linkText}
+            </a>
+            {trailing}
+          </span>
         )
       }
       return <span key={`text-${index}`}>{part}</span>
@@ -477,6 +514,22 @@ export default function EtherProfilePage() {
                       )
                     ) : null}
                   </div>
+                  {profile.links ? (
+                    <div style={{ display: 'grid', gap: 4 }}>
+                      <div style={{ fontSize: 11, opacity: 0.6, textTransform: 'uppercase', letterSpacing: 0.08 }}>
+                        Links
+                      </div>
+                      <div style={{ display: 'grid', gap: 4, fontSize: 12 }}>
+                        {profile.links
+                          .split(/\r?\n/)
+                          .map((link) => link.trim())
+                          .filter(Boolean)
+                          .map((link, index) => (
+                            <div key={`${link}-${index}`}>{renderLinkedText(link)}</div>
+                          ))}
+                      </div>
+                    </div>
+                  ) : null}
                   <div style={{ fontSize: 12, opacity: 0.7 }}>{profile.bio || 'No bio yet.'}</div>
                 </div>
                   </div>
