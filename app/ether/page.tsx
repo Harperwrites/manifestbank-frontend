@@ -847,7 +847,7 @@ export default function EtherPage() {
     setLoading(true)
     setMsg('')
     try {
-      const [pRes, fRes, tlineRes, mineRes, gRes, sRes, syncRes, meRes, tRes, nRes] = await Promise.all([
+      const results = await Promise.allSettled([
         api.get('/ether/me-profile'),
         api.get('/ether/feed'),
         api.get('/ether/timeline'),
@@ -859,16 +859,35 @@ export default function EtherPage() {
         api.get('/ether/threads'),
         api.get('/ether/notifications'),
       ])
-      setProfile(pRes.data)
-      setFeed(fRes.data)
-      setTimeline(tlineRes.data)
-      setMyPosts(mineRes.data)
-      setGroups(gRes.data)
-      setSyncRequests(sRes.data)
-      setSyncs(syncRes.data)
-      setRole(meRes.data?.role ?? 'user')
-      setThreads(tRes.data)
-      setNotifications(nRes.data)
+
+      const [
+        pRes,
+        fRes,
+        tlineRes,
+        mineRes,
+        gRes,
+        sRes,
+        syncRes,
+        meRes,
+        tRes,
+        nRes,
+      ] = results
+
+      if (pRes.status === 'fulfilled') setProfile(pRes.value.data)
+      if (fRes.status === 'fulfilled') setFeed(fRes.value.data)
+      if (tlineRes.status === 'fulfilled') setTimeline(tlineRes.value.data)
+      if (mineRes.status === 'fulfilled') setMyPosts(mineRes.value.data)
+      if (gRes.status === 'fulfilled') setGroups(gRes.value.data)
+      if (sRes.status === 'fulfilled') setSyncRequests(sRes.value.data)
+      if (syncRes.status === 'fulfilled') setSyncs(syncRes.value.data)
+      if (meRes.status === 'fulfilled') setRole(meRes.value.data?.role ?? 'user')
+      if (tRes.status === 'fulfilled') setThreads(tRes.value.data)
+      if (nRes.status === 'fulfilled') setNotifications(nRes.value.data)
+
+      const rejected = results.find((res) => res.status === 'rejected')
+      if (rejected) {
+        setMsg('Some Ether data failed to load. Try refresh.')
+      }
     } catch (e: any) {
       setMsg(e?.response?.data?.detail ?? e?.message ?? 'Failed to load The Ether')
     } finally {
