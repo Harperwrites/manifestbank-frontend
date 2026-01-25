@@ -634,13 +634,19 @@ export default function DashboardPage() {
 
   function syncWealthTarget() {
     const saved = window.localStorage.getItem(targetStorageKey)
-    if (!saved) {
-      setWealthTarget(null)
+    if (saved) {
+      const parsed = Number.parseFloat(saved)
+      if (!Number.isFinite(parsed)) return
+      setWealthTarget(parsed)
       return
     }
-    const parsed = Number.parseFloat(saved)
-    if (!Number.isFinite(parsed)) return
-    setWealthTarget(parsed)
+    const serverTarget = me?.wealth_target_usd
+    if (typeof serverTarget === 'number' && Number.isFinite(serverTarget)) {
+      window.localStorage.setItem(targetStorageKey, String(serverTarget))
+      setWealthTarget(serverTarget)
+      return
+    }
+    setWealthTarget(null)
   }
 
   useEffect(() => {
@@ -670,7 +676,7 @@ export default function DashboardPage() {
       window.removeEventListener('storage', handleStorage)
       window.removeEventListener('wealthTargetChanged', handleCustom)
     }
-  }, [me?.email, targetStorageKey])
+  }, [me?.email, me?.wealth_target_usd, targetStorageKey])
 
   useEffect(() => {
     if (!depositAccountId) {

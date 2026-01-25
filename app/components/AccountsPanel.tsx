@@ -69,6 +69,14 @@ export default function AccountsPanel({
 
   const targetStorageKey = wealthTargetStorageKey ?? 'manifestbank_wealth_target_usd'
 
+  async function persistWealthTarget(value: number | null) {
+    try {
+      await api.patch('/users/wealth-target', { wealth_target_usd: value })
+    } catch {
+      // Keep local storage as source of truth if the API is unreachable.
+    }
+  }
+
   useEffect(() => {
     const saved = window.localStorage.getItem(targetStorageKey)
     if (!saved) return
@@ -675,6 +683,7 @@ export default function AccountsPanel({
                     setWealthTarget(null)
                     setWealthTargetMode('preset')
                     window.localStorage.removeItem(targetStorageKey)
+                    persistWealthTarget(null)
                     window.dispatchEvent(
                       new CustomEvent('wealthTargetChanged', { detail: { value: null } })
                     )
@@ -685,6 +694,7 @@ export default function AccountsPanel({
                     setWealthTargetCustom('')
                     setWealthTarget(null)
                     window.localStorage.removeItem(targetStorageKey)
+                    persistWealthTarget(null)
                     window.dispatchEvent(
                       new CustomEvent('wealthTargetChanged', { detail: { value: null } })
                     )
@@ -695,6 +705,7 @@ export default function AccountsPanel({
                   setWealthTargetMode('preset')
                   setWealthTarget(parsed)
                   window.localStorage.setItem(targetStorageKey, String(parsed))
+                  persistWealthTarget(parsed)
                   if (wealthTargetOwnerEmail) {
                     window.localStorage.setItem(targetOwnerStorageKey, wealthTargetOwnerEmail.toLowerCase())
                   }
@@ -765,6 +776,7 @@ export default function AccountsPanel({
                       if (!Number.isFinite(parsed)) return
                       setWealthTarget(parsed)
                       window.localStorage.setItem(targetStorageKey, String(parsed))
+                      persistWealthTarget(parsed)
                       if (wealthTargetOwnerEmail) {
                         window.localStorage.setItem(targetOwnerStorageKey, wealthTargetOwnerEmail.toLowerCase())
                       }
