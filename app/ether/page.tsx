@@ -1958,9 +1958,6 @@ export default function EtherPage() {
             <div>
               <div style={{ fontWeight: 600 }}>{profile?.display_name ?? 'Private Vault'}</div>
               <div style={{ fontSize: 12, opacity: 0.7 }}>{profile?.is_public ? 'Public profile' : 'Private profile'}</div>
-              {profile?.bio ? (
-                <div style={{ marginTop: 6, fontSize: 13, color: 'rgba(52, 39, 33, 0.8)' }}>{renderLinkedText(profile.bio)}</div>
-              ) : null}
             </div>
           </div>
         </div>

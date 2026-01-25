@@ -514,6 +514,7 @@ export default function EtherProfilePage() {
                       )
                     ) : null}
                   </div>
+                  <div style={{ fontSize: 12, opacity: 0.7 }}>{profile.bio || 'No bio yet.'}</div>
                   {profile.links ? (
                     <div style={{ display: 'grid', gap: 4 }}>
                       <div style={{ fontSize: 11, opacity: 0.6, textTransform: 'uppercase', letterSpacing: 0.08 }}>
@@ -530,7 +531,6 @@ export default function EtherProfilePage() {
                       </div>
                     </div>
                   ) : null}
-                  <div style={{ fontSize: 12, opacity: 0.7 }}>{profile.bio || 'No bio yet.'}</div>
                 </div>
                   </div>
                 ) : (
