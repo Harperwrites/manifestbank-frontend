@@ -24,6 +24,13 @@ function errMsg(err: any) {
 }
 
 const targetOwnerStorageKey = 'manifestbank_wealth_target_owner'
+const persistWealthTarget = async (value: number | null) => {
+  try {
+    await api.patch('/users/wealth-target', { wealth_target_usd: value })
+  } catch {
+    // Keep local storage as source of truth if the API is unreachable.
+  }
+}
 
 export default function AccountsPanel({
   isVerified = true,
@@ -68,14 +75,6 @@ export default function AccountsPanel({
   ]
 
   const targetStorageKey = wealthTargetStorageKey ?? 'manifestbank_wealth_target_usd'
-
-  async function persistWealthTarget(value: number | null) {
-    try {
-      await api.patch('/users/wealth-target', { wealth_target_usd: value })
-    } catch {
-      // Keep local storage as source of truth if the API is unreachable.
-    }
-  }
 
   useEffect(() => {
     const saved = window.localStorage.getItem(targetStorageKey)
