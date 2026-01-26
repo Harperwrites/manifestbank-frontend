@@ -26,7 +26,7 @@ function VerifyEmailContent() {
       .then((res) => {
         if (res.data?.status === 'verified' || res.data?.status === 'already_verified') {
           setStatus('verified')
-          setMessage('✅ Email verified. You can now access full ManifestBank features.')
+          setMessage('✅ Email verified. You can now access full ManifestBank™ features.')
         } else {
           setStatus('error')
           setMessage('Verification failed. Please request a new link.')

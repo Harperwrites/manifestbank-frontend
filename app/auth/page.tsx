@@ -92,7 +92,7 @@ export default function AuthPage() {
         <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: -52 }}>
           <img
             src="/manifestbank-logo-white-granite.png"
-            alt="ManifestBank"
+            alt="ManifestBank™"
             style={{
               maxWidth: 360,
               width: '100%',

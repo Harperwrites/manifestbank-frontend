@@ -62,7 +62,7 @@ function ResetPasswordInner() {
           Reset password
         </div>
         <div style={{ opacity: 0.7, marginTop: 6 }}>
-          Create a new password for your ManifestBank account.
+          Create a new password for your ManifestBank™ account.
         </div>
         <form onSubmit={submit} style={{ display: 'grid', gap: 12, marginTop: 18 }}>
           <input

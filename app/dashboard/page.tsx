@@ -1897,7 +1897,7 @@ export default function DashboardPage() {
               $999 Welcome Deposit
             </div>
             <div style={{ opacity: 0.8, marginTop: 10 }}>
-              Thank you for becoming a Private Vault Member with us at ManifestBank. We would like to extend a warm
+              Thank you for becoming a Private Vault Member with us at ManifestBank™. We would like to extend a warm
               welcome with your first account Deposit!
             </div>
             {welcomeError ? (

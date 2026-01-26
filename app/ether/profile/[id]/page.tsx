@@ -340,7 +340,7 @@ export default function EtherProfilePage() {
                 <div style={{ fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', opacity: 0.7 }}>
                   Featured Store
                 </div>
-                <div style={{ fontWeight: 700, fontSize: 18, marginTop: 6 }}>ManifestBank Picks</div>
+                <div style={{ fontWeight: 700, fontSize: 18, marginTop: 6 }}>ManifestBank™ Picks</div>
                 <button
                   type="button"
                   onClick={() => setStoreConfirmOpen(true)}
@@ -828,7 +828,7 @@ export default function EtherProfilePage() {
                 padding: 18,
               }}
             >
-              <div style={{ fontWeight: 700, fontSize: 16 }}>Leaving ManifestBank</div>
+              <div style={{ fontWeight: 700, fontSize: 16 }}>Leaving ManifestBank™</div>
               <div style={{ marginTop: 8, fontSize: 13, opacity: 0.8 }}>
                 You're about to open our Amazon listing in a new tab. See you in a bit!
               </div>

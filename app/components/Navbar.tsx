@@ -137,7 +137,7 @@ export default function Navbar({ showAccountsDropdown = false }: { showAccountsD
                 gap: 6,
               }}
             >
-              ManifestBank
+              ManifestBank™
               <span style={{ fontSize: 14, opacity: 0.7 }}>▾</span>
             </button>
             {accountsOpen && portalReady
@@ -221,7 +221,7 @@ export default function Navbar({ showAccountsDropdown = false }: { showAccountsD
               fontSize: 18,
             }}
           >
-            ManifestBank
+            ManifestBank™
           </Link>
         )}
         <InstallAppButton />

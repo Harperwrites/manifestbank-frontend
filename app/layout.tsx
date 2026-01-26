@@ -4,8 +4,8 @@ import { AuthProvider } from './providers'
 import PwaRegister from './components/PwaRegister'
 
 export const metadata: Metadata = {
-  title: 'ManifestBank',
-  description: 'ManifestBank App',
+  title: 'ManifestBank™',
+  description: 'ManifestBank™ App',
   manifest: '/manifestBank-v2.json?v=20260117b',
   themeColor: '#b67967',
   icons: {

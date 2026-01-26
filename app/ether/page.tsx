@@ -321,7 +321,7 @@ function EtherNavbar({
               color: 'var(--ink)',
             }}
           >
-            ManifestBank
+            ManifestBank™
             <span style={{ fontSize: 14, opacity: 0.7 }}>▾</span>
           </button>
           {accountsOpen && portalReady

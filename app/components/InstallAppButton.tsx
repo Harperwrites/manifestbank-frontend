@@ -142,7 +142,7 @@ export default function InstallAppButton() {
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ fontWeight: 700, fontSize: 16 }}>Install ManifestBank App</div>
+                <div style={{ fontWeight: 700, fontSize: 16 }}>Install ManifestBank™ App</div>
                 <button
                   type="button"
                   onClick={() => setIosOpen(false)}
@@ -260,9 +260,9 @@ export default function InstallAppButton() {
           color: '#5f3f35',
           boxShadow: '0 10px 20px rgba(96, 62, 46, 0.2)',
         }}
-        aria-label="Install ManifestBank app"
+        aria-label="Install ManifestBank™ app"
       >
-        Install ManifestBank App
+        Install ManifestBank™ App
       </button>
       <div style={{ fontSize: 11, opacity: 0.7 }}>{microcopy}</div>
       {notice ? <div style={{ fontSize: 11, color: '#7b5144' }}>{notice}</div> : null}
@@ -300,7 +300,7 @@ export default function InstallAppButton() {
             : ios || safari
             ? 'Safari doesn’t support the install prompt. Use Share → Add to Home Screen (iOS) or File → Add to Dock (Mac).'
             : canInstall
-            ? 'Install prompt is ready. Click Install ManifestBank App.'
+            ? 'Install prompt is ready. Click Install ManifestBank™ App.'
             : 'Chrome hasn’t offered the install prompt yet. Try the homepage, hard refresh, or clear site data.'}
         </div>
       ) : null}
