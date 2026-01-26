@@ -74,6 +74,7 @@ export default function MyJournalPage() {
   const [draftContent, setDraftContent] = useState('')
   const [draftImageUrl, setDraftImageUrl] = useState('')
   const [draftImageFile, setDraftImageFile] = useState<File | null>(null)
+  const [draftImageName, setDraftImageName] = useState<string | null>(null)
 
   useEffect(() => {
     loadEntries()
@@ -104,6 +105,7 @@ export default function MyJournalPage() {
     setDraftContent('')
     setDraftImageUrl('')
     setDraftImageFile(null)
+    setDraftImageName(null)
   }
 
   function openNewEntry() {
@@ -275,10 +277,27 @@ export default function MyJournalPage() {
                   <input
                     type="file"
                     accept="image/*"
-                    onChange={(event) => setDraftImageFile(event.target.files?.[0] ?? null)}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0] ?? null
+                      setDraftImageFile(file)
+                      setDraftImageName(file?.name ?? null)
+                    }}
                     style={{ display: 'none' }}
                   />
                 </label>
+                {draftImageName ? (
+                  <span
+                    style={{
+                      marginLeft: 10,
+                      fontSize: 14,
+                      fontWeight: 600,
+                      color: '#6b3f2b',
+                      textShadow: '0 0 10px rgba(222, 176, 155, 0.7)',
+                    }}
+                  >
+                    {draftImageName}
+                  </span>
+                ) : null}
                 {draftImageUrl ? (
                   <div style={{ marginTop: 10 }}>
                     <img
