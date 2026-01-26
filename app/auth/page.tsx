@@ -79,31 +79,32 @@ export default function AuthPage() {
   }
 
   return (
-    <main style={{ maxWidth: 460, margin: '80px auto', padding: 24 }}>
+    <main style={{ maxWidth: 420, margin: '4px auto', padding: 16 }}>
       <div
         style={{
-          padding: 24,
+          padding: '16px 20px 24px',
           borderRadius: 24,
           border: '1px solid var(--border)',
           background: 'var(--paper)',
           boxShadow: 'var(--shadow)',
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: -52 }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: -64 }}>
           <img
-            src="/manifestbank-logo-white-granite.png"
+            src="/ManifestBank%E2%84%A2%20Logo.png"
             alt="ManifestBank™"
             style={{
-              maxWidth: 360,
-              width: '100%',
+              maxWidth: 560,
+              width: '140%',
               height: 'auto',
               display: 'block',
-              marginLeft: 0,
-              transform: 'translateY(20px)',
+              marginLeft: -72,
+              transform: 'translateY(-4px)',
+              pointerEvents: 'none',
             }}
           />
         </div>
-        <p style={{ opacity: 0.75, margin: '-28px 0 20px' }}>
+        <p style={{ opacity: 0.75, margin: '-18px 0 20px' }}>
           {mode === 'login' ? 'Enter your private vault.' : 'Establish your vault access.'}
         </p>
 
