@@ -2210,7 +2210,7 @@ export default function EtherPage() {
                           {post.kind.toUpperCase()}
                         </div>
                         <div style={{ fontSize: 12, opacity: 0.7 }}>{new Date(post.created_at).toLocaleString()}</div>
-                        {profile?.id === post.author_profile_id ? (
+                        {profile?.id === post.author_profile_id || role === 'admin' ? (
                           <button
                             type="button"
                             onClick={() => deletePost(post.id)}
