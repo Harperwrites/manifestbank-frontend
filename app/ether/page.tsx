@@ -279,12 +279,32 @@ function EtherNavbar({
     }
   }
 
+  const logoutButton = (
+    <button
+      type="button"
+      onClick={() => {
+        logout()
+        router.push('/auth')
+      }}
+      className="ether-logout-button"
+      style={{
+        padding: '8px 14px',
+        borderRadius: 999,
+        border: '1px solid rgba(95, 74, 62, 0.35)',
+        background: 'transparent',
+        cursor: 'pointer',
+        fontWeight: 600,
+      }}
+    >
+      Logout
+    </button>
+  )
+
   return (
     <div
+      className="ether-navbar"
       style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 120,
+        position: 'relative',
         padding: '6px 16px',
         borderBottom: '1px solid var(--border)',
         background: 'rgba(248, 242, 235, 0.96)',
@@ -431,53 +451,37 @@ function EtherNavbar({
         </Link>
       </div>
 
-      <div
-        style={{
-          flex: '1 1 220px',
-          display: 'flex',
-          justifyContent: 'flex-end',
-          gap: 14,
-          alignItems: 'center',
-          minWidth: 0,
-          flexWrap: 'wrap',
-        }}
-      >
         <div
-          ref={settingsRef}
-          style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, position: 'relative' }}
+          style={{
+            flex: '1 1 220px',
+            display: 'flex',
+            justifyContent: 'flex-end',
+            gap: 14,
+            alignItems: 'center',
+            minWidth: 0,
+            flexWrap: 'wrap',
+          }}
         >
-          <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-            {isLoading ? (
-              <span style={{ opacity: 0.75 }}>Loading…</span>
-            ) : me ? (
-              <>
-                <span style={{ opacity: 0.9 }}>
+          <div
+            ref={settingsRef}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, position: 'relative' }}
+          >
+            <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+              {isLoading ? (
+                <span style={{ opacity: 0.75 }}>Loading…</span>
+              ) : me ? (
+                <>
+                <span style={{ opacity: 0.9, wordBreak: 'break-word' }}>
                   Signed in as <b>{me.email}</b>
                 </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    logout()
-                    router.push('/auth')
-                  }}
-                  style={{
-                    padding: '8px 14px',
-                    borderRadius: 999,
-                    border: '1px solid rgba(95, 74, 62, 0.35)',
-                    background: 'transparent',
-                    cursor: 'pointer',
-                    fontWeight: 600,
-                  }}
-                >
-                  Logout
-                </button>
-              </>
-            ) : (
-              <Link href="/auth" style={{ textDecoration: 'none' }}>
-                Login
-              </Link>
-            )}
-          </div>
+                <div className="ether-logout-desktop">{logoutButton}</div>
+                </>
+              ) : (
+                <Link href="/auth" style={{ textDecoration: 'none' }}>
+                  Login
+                </Link>
+              )}
+            </div>
           <button
             type="button"
             onClick={() => setSettingsOpen((open) => !open)}
@@ -508,7 +512,7 @@ function EtherNavbar({
                 padding: 12,
                 display: 'grid',
                 gap: 10,
-                zIndex: 140,
+                zIndex: 9999,
               }}
             >
               <div style={{ fontWeight: 600, color: '#3b2b24' }}>Settings</div>
@@ -563,6 +567,7 @@ function EtherNavbar({
           ) : null}
         </div>
       </div>
+      {me ? <div className="ether-navbar-mobile-row">{logoutButton}</div> : null}
 
       {profileEditOpen && portalReady
         ? createPortal(

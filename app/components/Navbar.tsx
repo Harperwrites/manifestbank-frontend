@@ -95,10 +95,34 @@ export default function Navbar({ showAccountsDropdown = false }: { showAccountsD
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num)
   }
 
+  const logoutButton = (
+    <button
+      type="button"
+      onClick={() => {
+        logout()
+        router.push('/auth')
+      }}
+      className="mb-logout-button"
+      style={{
+        padding: '8px 14px',
+        borderRadius: 999,
+        border: '1px solid rgba(95, 74, 62, 0.35)',
+        background: 'transparent',
+        cursor: 'pointer',
+        fontWeight: 600,
+      }}
+    >
+      Logout
+    </button>
+  )
+
   return (
     <div
+      className="mb-navbar"
       style={{
-        position: 'static',
+        position: 'sticky',
+        top: 0,
+        zIndex: 200,
         padding: '16px 24px',
         borderBottom: '1px solid var(--border)',
         background: 'rgba(255, 255, 255, 0.8)',
@@ -107,9 +131,11 @@ export default function Navbar({ showAccountsDropdown = false }: { showAccountsD
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: 12,
+        flexWrap: 'wrap',
+        rowGap: 10,
       }}
     >
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+      <div className="mb-navbar-left" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
         {showAccountsDropdown ? (
           <div ref={accountsRef} style={{ position: 'relative' }}>
             <button
@@ -233,7 +259,7 @@ export default function Navbar({ showAccountsDropdown = false }: { showAccountsD
         )}
       </div>
 
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+      <div className="mb-navbar-right" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
         <Link
           href="/myjournal"
           style={{
@@ -251,24 +277,7 @@ export default function Navbar({ showAccountsDropdown = false }: { showAccountsD
             <span style={{ opacity: 0.9 }}>
               Signed in as <b>{me.email}</b>
             </span>
-
-            <button
-              type="button"
-              onClick={() => {
-                logout()
-                router.push('/auth')
-              }}
-              style={{
-                padding: '8px 14px',
-                borderRadius: 999,
-                border: '1px solid rgba(95, 74, 62, 0.35)',
-                background: 'transparent',
-                cursor: 'pointer',
-                fontWeight: 600,
-              }}
-            >
-              Logout
-            </button>
+            <div className="mb-logout-desktop">{logoutButton}</div>
           </>
         ) : (
           <Link href="/auth" style={{ textDecoration: 'none' }}>
@@ -276,6 +285,7 @@ export default function Navbar({ showAccountsDropdown = false }: { showAccountsD
           </Link>
         )}
       </div>
+      {me ? <div className="mb-navbar-mobile-row">{logoutButton}</div> : null}
     </div>
   )
 }
