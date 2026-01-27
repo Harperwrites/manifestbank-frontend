@@ -296,6 +296,7 @@ function EtherNavbar({
         rowGap: 10,
         width: '100%',
         boxSizing: 'border-box',
+        zIndex: 600,
       }}
     >
       <div
@@ -446,7 +447,14 @@ function EtherNavbar({
         >
           <div
             ref={settingsRef}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, position: 'relative' }}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-end',
+              gap: 8,
+              position: 'relative',
+              zIndex: 2000,
+            }}
           >
             <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
               {isLoading ? (
@@ -494,7 +502,7 @@ function EtherNavbar({
                 padding: 12,
                 display: 'grid',
                 gap: 10,
-                zIndex: 9999,
+                zIndex: 100000,
               }}
             >
               <div style={{ fontWeight: 600, color: '#3b2b24' }}>Settings</div>

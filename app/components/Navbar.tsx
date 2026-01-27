@@ -26,9 +26,31 @@ export default function Navbar({ showAccountsDropdown = false }: { showAccountsD
   const [accountsLoaded, setAccountsLoaded] = useState(false)
   const [accountsLoading, setAccountsLoading] = useState(false)
   const [accountsMsg, setAccountsMsg] = useState('')
+  const [treasureOpen, setTreasureOpen] = useState(false)
+  const treasureRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     setPortalReady(true)
+  }, [])
+
+  useEffect(() => {
+    function handleClick(event: MouseEvent) {
+      const target = event.target as Node
+      if (treasureRef.current && !treasureRef.current.contains(target)) {
+        setTreasureOpen(false)
+      }
+    }
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setTreasureOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleKey)
+    }
   }, [])
 
   useEffect(() => {
@@ -239,16 +261,58 @@ export default function Navbar({ showAccountsDropdown = false }: { showAccountsD
       </div>
 
       <div className="mb-navbar-right" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-        <Link
-          href="/myjournal"
-          style={{
-            textDecoration: 'none',
-            fontWeight: 600,
-            color: 'rgba(95, 74, 62, 0.9)',
-          }}
-        >
-          My Journal
-        </Link>
+        <div ref={treasureRef} style={{ position: 'relative' }}>
+          <button
+            type="button"
+            onClick={() => setTreasureOpen((open) => !open)}
+            style={{
+              padding: 0,
+              border: 'none',
+              background: 'transparent',
+              cursor: 'pointer',
+              fontWeight: 600,
+              color: 'rgba(95, 74, 62, 0.9)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              textShadow: '0 0 8px rgba(182, 121, 103, 0.35)',
+            }}
+            aria-haspopup="menu"
+            aria-expanded={treasureOpen}
+          >
+            My Treasure Chest
+            <span style={{ fontSize: 12, opacity: 0.7 }}>▾</span>
+          </button>
+          {treasureOpen ? (
+            <div
+              style={{
+                position: 'absolute',
+                top: '100%',
+                right: 0,
+                marginTop: 8,
+                minWidth: 200,
+                borderRadius: 12,
+                border: '1px solid rgba(95, 74, 62, 0.2)',
+                background: '#ffffff',
+                boxShadow: '0 16px 40px rgba(0, 0, 0, 0.12)',
+                padding: 10,
+                display: 'grid',
+                gap: 8,
+                zIndex: 1000,
+              }}
+              role="menu"
+            >
+              <Link
+                href="/myjournal"
+                style={{ textDecoration: 'none', fontWeight: 600, color: 'rgba(95, 74, 62, 0.9)' }}
+                role="menuitem"
+                onClick={() => setTreasureOpen(false)}
+              >
+                My Journal
+              </Link>
+            </div>
+          ) : null}
+        </div>
         {isLoading ? (
           <span style={{ opacity: 0.75 }}>Loading…</span>
         ) : me ? (
