@@ -493,17 +493,17 @@ export default function EtherProfilePage() {
                             fontSize: 12,
                             fontWeight: 600,
                             cursor: 'pointer',
-                            boxShadow: '0 10px 18px rgba(182, 121, 103, 0.24)',
+                            boxShadow: '0 -8px 16px rgba(182, 121, 103, 0.22)',
                             transition: 'transform 160ms ease, box-shadow 160ms ease',
                           }}
                           onMouseEnter={(e) => {
                             e.currentTarget.style.boxShadow =
-                              '0 12px 22px rgba(182, 121, 103, 0.35)'
+                              '0 -10px 20px rgba(182, 121, 103, 0.32)'
                             e.currentTarget.style.transform = 'translateY(-1px)'
                           }}
                           onMouseLeave={(e) => {
                             e.currentTarget.style.boxShadow =
-                              '0 10px 18px rgba(182, 121, 103, 0.24)'
+                              '0 -8px 16px rgba(182, 121, 103, 0.22)'
                             e.currentTarget.style.transform = 'translateY(0)'
                           }}
                           aria-label="Sync"

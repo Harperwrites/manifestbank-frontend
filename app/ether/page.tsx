@@ -471,7 +471,7 @@ function EtherNavbar({
                 padding: 12,
                 display: 'grid',
                 gap: 10,
-                zIndex: 20,
+                zIndex: 60,
               }}
             >
               <div style={{ fontWeight: 600, color: '#3b2b24' }}>Settings</div>
