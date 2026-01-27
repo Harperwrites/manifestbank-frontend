@@ -286,7 +286,7 @@ function EtherNavbar({
         position: 'relative',
         padding: '6px 16px',
         borderBottom: '1px solid var(--border)',
-        background: 'rgba(248, 242, 235, 0.96)',
+        background: 'rgba(255, 255, 255, 0.8)',
         backdropFilter: 'blur(14px)',
         color: '#3b2b24',
         display: 'flex',
