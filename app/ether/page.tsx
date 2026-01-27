@@ -414,6 +414,7 @@ function EtherNavbar({
       </div>
 
       <div
+        className="ether-nav-logo-wrap"
         style={{
           flex: '1 1 220px',
           display: 'flex',

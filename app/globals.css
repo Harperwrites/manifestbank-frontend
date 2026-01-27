@@ -111,11 +111,19 @@ a {
     flex-wrap: wrap;
     padding: 4px 12px;
     gap: 8px;
-    row-gap: 6px;
+    row-gap: 4px;
+    overflow: visible;
   }
 
   .ether-nav-logo {
-    height: 96px !important;
+    height: 130px !important;
+  }
+
+  .ether-nav-logo-wrap {
+    flex: 1 1 100%;
+    justify-content: center;
+    margin-top: -6px;
+    padding: 0;
   }
 
   .ether-nav-brand {
