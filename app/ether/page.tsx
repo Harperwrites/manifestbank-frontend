@@ -842,6 +842,31 @@ export default function EtherPage() {
   const [focusPostOpenComments, setFocusPostOpenComments] = useState<number | null>(null)
   const [focusCommentId, setFocusCommentId] = useState<number | null>(null)
   const [hoveredPostAuthorId, setHoveredPostAuthorId] = useState<number | null>(null)
+  const [postMenuOpenId, setPostMenuOpenId] = useState<number | null>(null)
+  const postMenuRef = useRef<HTMLDivElement | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
+  const [confirmDeleting, setConfirmDeleting] = useState(false)
+
+  useEffect(() => {
+    if (postMenuOpenId === null) return
+    function handleClick(event: MouseEvent) {
+      const target = event.target as Node
+      if (postMenuRef.current && !postMenuRef.current.contains(target)) {
+        setPostMenuOpenId(null)
+      }
+    }
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setPostMenuOpenId(null)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [postMenuOpenId])
 
   async function load() {
     setLoading(true)
@@ -980,14 +1005,23 @@ export default function EtherPage() {
     }
   }
 
-  async function deletePost(postId: number) {
-    const ok = window.confirm('Delete this post? This cannot be undone.')
-    if (!ok) return
+  function requestDeletePost(postId: number) {
+    setConfirmDeleteId(postId)
+    setPostMenuOpenId(null)
+  }
+
+  async function confirmDeletePost() {
+    if (confirmDeleteId === null) return
+    setConfirmDeleting(true)
+    setMsg('')
     try {
-      await api.delete(`/ether/posts/${postId}`)
+      await api.delete(`/ether/posts/${confirmDeleteId}`)
+      setConfirmDeleteId(null)
       await load()
     } catch (e: any) {
       setMsg(e?.response?.data?.detail ?? e?.message ?? 'Delete failed')
+    } finally {
+      setConfirmDeleting(false)
     }
   }
 
@@ -2211,19 +2245,69 @@ export default function EtherPage() {
                         </div>
                         <div style={{ fontSize: 12, opacity: 0.7 }}>{new Date(post.created_at).toLocaleString()}</div>
                         {profile?.id === post.author_profile_id || role === 'admin' ? (
-                          <button
-                            type="button"
-                            onClick={() => deletePost(post.id)}
-                            style={{
-                              border: 'none',
-                              background: 'transparent',
-                              cursor: 'pointer',
-                              fontSize: 12,
-                              opacity: 0.7,
-                            }}
-                          >
-                            Delete
-                          </button>
+                          <div style={{ position: 'relative' }}>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setPostMenuOpenId((prev) => (prev === post.id ? null : post.id))
+                              }
+                              aria-label="Post options"
+                              style={{
+                                border: '1px solid rgba(95, 74, 62, 0.35)',
+                                background: 'rgba(255,255,255,0.7)',
+                                cursor: 'pointer',
+                                fontSize: 14,
+                                lineHeight: '14px',
+                                width: 28,
+                                height: 28,
+                                borderRadius: 10,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: '#6f4a3a',
+                                boxShadow: '0 6px 14px rgba(24, 18, 12, 0.12)',
+                              }}
+                            >
+                              ⋮
+                            </button>
+                            {postMenuOpenId === post.id ? (
+                              <div
+                                ref={postMenuRef}
+                                style={{
+                                  position: 'absolute',
+                                  right: 0,
+                                  top: '100%',
+                                  marginTop: 8,
+                                  minWidth: 160,
+                                  borderRadius: 12,
+                                  border: '1px solid rgba(95, 74, 62, 0.2)',
+                                  background: 'linear-gradient(160deg, #f7efe9, #efe4dd)',
+                                  boxShadow: '0 16px 30px rgba(24, 18, 12, 0.2)',
+                                  padding: 6,
+                                  zIndex: 25,
+                                }}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => requestDeletePost(post.id)}
+                                  style={{
+                                    width: '100%',
+                                    textAlign: 'left',
+                                    border: 'none',
+                                    background: 'transparent',
+                                    cursor: 'pointer',
+                                    padding: '8px 10px',
+                                    borderRadius: 10,
+                                    fontSize: 12,
+                                    fontWeight: 600,
+                                    color: '#7a2e2e',
+                                  }}
+                                >
+                                  Delete post
+                                </button>
+                              </div>
+                            ) : null}
+                          </div>
                         ) : null}
                       </div>
                     </div>
@@ -2532,6 +2616,83 @@ export default function EtherPage() {
           </Card>
         </section>
       </Container>
+
+      {confirmDeleteId !== null ? (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(21, 16, 12, 0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 90,
+            padding: 20,
+          }}
+          onClick={() => {
+            if (!confirmDeleting) {
+              setConfirmDeleteId(null)
+            }
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: 'min(420px, 100%)',
+              background: 'var(--paper)',
+              borderRadius: 20,
+              border: '1px solid rgba(95, 74, 62, 0.25)',
+              padding: 20,
+              boxShadow: 'var(--shadow)',
+              display: 'grid',
+              gap: 12,
+            }}
+          >
+            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 20, fontWeight: 600 }}>
+              Delete this post?
+            </div>
+            <div style={{ fontSize: 13, opacity: 0.75 }}>
+              This removes the post for everyone. This can’t be undone.
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteId(null)}
+                disabled={confirmDeleting}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: 999,
+                  border: '1px solid rgba(95, 74, 62, 0.35)',
+                  background: 'transparent',
+                  cursor: confirmDeleting ? 'not-allowed' : 'pointer',
+                  fontWeight: 600,
+                  opacity: confirmDeleting ? 0.6 : 1,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeletePost}
+                disabled={confirmDeleting}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: 999,
+                  border: '1px solid rgba(182, 121, 103, 0.6)',
+                  background: 'linear-gradient(135deg, #c88a77, #b67967)',
+                  color: '#fff',
+                  cursor: confirmDeleting ? 'not-allowed' : 'pointer',
+                  fontWeight: 600,
+                  boxShadow: '0 10px 18px rgba(182, 121, 103, 0.35)',
+                  opacity: confirmDeleting ? 0.7 : 1,
+                }}
+              >
+                {confirmDeleting ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {avatarCropOpen && avatarCropSrc ? (
         <div

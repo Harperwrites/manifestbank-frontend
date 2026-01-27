@@ -9,7 +9,7 @@ import { Button, Card } from '@/app/components/ui'
 function VerifyEmailContent() {
   const router = useRouter()
   const params = useSearchParams()
-  const { me } = useAuth()
+  const { me, isLoading } = useAuth()
   const token = params.get('token')
   const nextPath = params.get('next') || '/dashboard'
   const [status, setStatus] = useState<'idle' | 'verifying' | 'verified' | 'error'>('idle')
@@ -42,6 +42,14 @@ function VerifyEmailContent() {
         setMessage(`❌ ${detail}`)
       })
   }, [token])
+
+  useEffect(() => {
+    if (token) return
+    if (isLoading) return
+    if (!me) {
+      router.replace(`/auth?next=${encodeURIComponent(nextPath)}`)
+    }
+  }, [token, isLoading, me, nextPath, router])
 
   useEffect(() => {
     if (status !== 'verified' && !me?.email_verified) return
