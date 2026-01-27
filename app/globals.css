@@ -114,6 +114,13 @@ a {
     height: 128px;
   }
 
+  .treasure-menu {
+    right: auto !important;
+    left: 0 !important;
+    max-width: calc(100vw - 32px);
+    width: max-content;
+  }
+
   .ether-navbar {
     flex-wrap: wrap;
     padding: 4px 12px;

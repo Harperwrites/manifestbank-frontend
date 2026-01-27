@@ -288,6 +288,7 @@ export default function Navbar({ showAccountsDropdown = false }: { showAccountsD
           </button>
           {treasureOpen ? (
             <div
+              className="treasure-menu"
               style={{
                 position: 'absolute',
                 top: '100%',
