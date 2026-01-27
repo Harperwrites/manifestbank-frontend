@@ -16,7 +16,7 @@ type AccountItem = {
 
 export default function Navbar({ showAccountsDropdown = false }: { showAccountsDropdown?: boolean }) {
   const router = useRouter()
-  const { me, isLoading, logout } = useAuth()
+  const { me, isLoading } = useAuth()
   const [accountsOpen, setAccountsOpen] = useState(false)
   const [portalReady, setPortalReady] = useState(false)
   const accountsRef = useRef<HTMLDivElement | null>(null)
@@ -94,27 +94,6 @@ export default function Navbar({ showAccountsDropdown = false }: { showAccountsD
     if (Number.isNaN(num)) return value ?? ''
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num)
   }
-
-  const logoutButton = (
-    <button
-      type="button"
-      onClick={() => {
-        logout()
-        router.push('/auth')
-      }}
-      className="mb-logout-button"
-      style={{
-        padding: '8px 14px',
-        borderRadius: 999,
-        border: '1px solid rgba(95, 74, 62, 0.35)',
-        background: 'transparent',
-        cursor: 'pointer',
-        fontWeight: 600,
-      }}
-    >
-      Logout
-    </button>
-  )
 
   return (
     <div
@@ -277,7 +256,6 @@ export default function Navbar({ showAccountsDropdown = false }: { showAccountsD
             <span style={{ opacity: 0.9 }}>
               Signed in as <b>{me.email}</b>
             </span>
-            <div className="mb-logout-desktop">{logoutButton}</div>
           </>
         ) : (
           <Link href="/auth" style={{ textDecoration: 'none' }}>
@@ -285,7 +263,6 @@ export default function Navbar({ showAccountsDropdown = false }: { showAccountsD
           </Link>
         )}
       </div>
-      {me ? <div className="mb-navbar-mobile-row">{logoutButton}</div> : null}
     </div>
   )
 }

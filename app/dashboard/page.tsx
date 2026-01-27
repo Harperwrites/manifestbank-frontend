@@ -2,10 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import AccountsPanel from '../components/AccountsPanel'
 import Navbar from '../components/Navbar'
 import { api } from '../../lib/api'
 import { Button, Card, Container, Metric, Pill } from '../components/ui'
+import { useAuth } from '../providers'
 
 function pretty(obj: any) {
   try {
@@ -95,6 +97,8 @@ function parseMoneyValue(value: string) {
 }
 
 export default function DashboardPage() {
+  const router = useRouter()
+  const { logout } = useAuth()
   const [me, setMe] = useState<any>(null)
   const [health, setHealth] = useState<any>(null)
   const [summary, setSummary] = useState<any>(null)
@@ -733,6 +737,35 @@ export default function DashboardPage() {
   return (
     <main>
       <Navbar />
+      {me ? (
+        <div
+          style={{
+            padding: '10px 24px 0',
+            display: 'flex',
+            justifyContent: 'flex-end',
+            alignItems: 'center',
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => {
+              logout()
+              router.push('/auth')
+            }}
+            style={{
+              padding: '8px 14px',
+              borderRadius: 999,
+              border: '1px solid rgba(95, 74, 62, 0.35)',
+              background: 'rgba(248, 242, 235, 0.96)',
+              cursor: 'pointer',
+              fontWeight: 600,
+              color: '#3b2b24',
+            }}
+          >
+            Logout
+          </button>
+        </div>
+      ) : null}
       <Container>
         {!isVerified ? (
           <div

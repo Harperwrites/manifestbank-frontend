@@ -84,7 +84,7 @@ function EtherNavbar({
   onAvatarSelect: (file: File) => void
 }) {
   const router = useRouter()
-  const { me, isLoading, logout, refreshMe } = useAuth()
+  const { me, isLoading, refreshMe } = useAuth()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const settingsRef = useRef<HTMLDivElement | null>(null)
   const [accountsOpen, setAccountsOpen] = useState(false)
@@ -279,27 +279,6 @@ function EtherNavbar({
     }
   }
 
-  const logoutButton = (
-    <button
-      type="button"
-      onClick={() => {
-        logout()
-        router.push('/auth')
-      }}
-      className="ether-logout-button"
-      style={{
-        padding: '8px 14px',
-        borderRadius: 999,
-        border: '1px solid rgba(95, 74, 62, 0.35)',
-        background: 'transparent',
-        cursor: 'pointer',
-        fontWeight: 600,
-      }}
-    >
-      Logout
-    </button>
-  )
-
   return (
     <div
       className="ether-navbar"
@@ -474,7 +453,6 @@ function EtherNavbar({
                 <span style={{ opacity: 0.9, wordBreak: 'break-word' }}>
                   Signed in as <b>{me.email}</b>
                 </span>
-                <div className="ether-logout-desktop">{logoutButton}</div>
                 </>
               ) : (
                 <Link href="/auth" style={{ textDecoration: 'none' }}>
@@ -567,7 +545,6 @@ function EtherNavbar({
           ) : null}
         </div>
       </div>
-      {me ? <div className="ether-navbar-mobile-row">{logoutButton}</div> : null}
 
       {profileEditOpen && portalReady
         ? createPortal(
@@ -827,7 +804,7 @@ function EtherNavbar({
 }
 
 export default function EtherPage() {
-  const { me } = useAuth()
+  const { me, logout } = useAuth()
   const router = useRouter()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [feed, setFeed] = useState<EtherPost[]>([])
@@ -1445,6 +1422,35 @@ export default function EtherPage() {
       }}
     >
       <EtherNavbar profile={profile} updateSettings={updateSettings} onAvatarSelect={openAvatarCrop} />
+      {me ? (
+        <div
+          style={{
+            padding: '10px 16px 0',
+            display: 'flex',
+            justifyContent: 'flex-end',
+            alignItems: 'center',
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => {
+              logout()
+              router.push('/auth')
+            }}
+            style={{
+              padding: '8px 14px',
+              borderRadius: 999,
+              border: '1px solid rgba(95, 74, 62, 0.35)',
+              background: 'rgba(248, 242, 235, 0.96)',
+              cursor: 'pointer',
+              fontWeight: 600,
+              color: '#3b2b24',
+            }}
+          >
+            Logout
+          </button>
+        </div>
+      ) : null}
       <Container>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
           <div>
