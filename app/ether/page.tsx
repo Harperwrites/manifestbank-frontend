@@ -282,8 +282,10 @@ function EtherNavbar({
   return (
     <div
       style={{
-        position: 'static',
-        padding: '6px 20px',
+        position: 'sticky',
+        top: 0,
+        zIndex: 120,
+        padding: '6px 16px',
         borderBottom: '1px solid var(--border)',
         background: 'rgba(248, 242, 235, 0.96)',
         backdropFilter: 'blur(14px)',
@@ -291,9 +293,22 @@ function EtherNavbar({
         display: 'flex',
         alignItems: 'center',
         gap: 12,
+        flexWrap: 'wrap',
+        rowGap: 10,
+        width: '100%',
+        boxSizing: 'border-box',
       }}
     >
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div
+        style={{
+          flex: '1 1 220px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          minWidth: 0,
+          flexWrap: 'wrap',
+        }}
+      >
         <div ref={accountsRef} style={{ position: 'relative' }}>
             <button
               type="button"
@@ -398,13 +413,35 @@ function EtherNavbar({
         <InstallAppButton />
       </div>
 
-      <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+      <div
+        style={{
+          flex: '1 1 220px',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minWidth: 0,
+        }}
+      >
         <Link href="/ether" style={{ display: 'inline-flex', alignItems: 'center' }}>
-          <img src="/ether-logo.png" alt="The Ether" style={{ height: 180, width: 'auto' }} />
+          <img
+            src="/ether-logo.png"
+            alt="The Ether"
+            style={{ height: 150, width: 'auto', maxWidth: '100%' }}
+          />
         </Link>
       </div>
 
-      <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', gap: 14, alignItems: 'center' }}>
+      <div
+        style={{
+          flex: '1 1 220px',
+          display: 'flex',
+          justifyContent: 'flex-end',
+          gap: 14,
+          alignItems: 'center',
+          minWidth: 0,
+          flexWrap: 'wrap',
+        }}
+      >
         <div
           ref={settingsRef}
           style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, position: 'relative' }}
@@ -471,7 +508,7 @@ function EtherNavbar({
                 padding: 12,
                 display: 'grid',
                 gap: 10,
-                zIndex: 60,
+                zIndex: 140,
               }}
             >
               <div style={{ fontWeight: 600, color: '#3b2b24' }}>Settings</div>
