@@ -2639,19 +2639,26 @@ export default function EtherPage() {
             onClick={(e) => e.stopPropagation()}
             style={{
               width: 'min(420px, 100%)',
-              background: 'var(--paper)',
+              background: 'linear-gradient(160deg, #fbf4ee, #efe3da)',
               borderRadius: 20,
-              border: '1px solid rgba(95, 74, 62, 0.25)',
+              border: '1px solid rgba(163, 122, 106, 0.35)',
               padding: 20,
               boxShadow: 'var(--shadow)',
               display: 'grid',
               gap: 12,
             }}
           >
-            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 20, fontWeight: 600 }}>
+            <div
+              style={{
+                fontFamily: 'var(--font-serif)',
+                fontSize: 20,
+                fontWeight: 600,
+                color: '#6f4a3a',
+              }}
+            >
               Delete this post?
             </div>
-            <div style={{ fontSize: 13, opacity: 0.75 }}>
+            <div style={{ fontSize: 13, color: 'rgba(95, 74, 62, 0.8)' }}>
               This removes the post for everyone. This can’t be undone.
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
@@ -2662,10 +2669,11 @@ export default function EtherPage() {
                 style={{
                   padding: '8px 12px',
                   borderRadius: 999,
-                  border: '1px solid rgba(95, 74, 62, 0.35)',
-                  background: 'transparent',
+                  border: '1px solid rgba(163, 122, 106, 0.35)',
+                  background: 'rgba(255, 255, 255, 0.7)',
                   cursor: confirmDeleting ? 'not-allowed' : 'pointer',
                   fontWeight: 600,
+                  color: '#6f4a3a',
                   opacity: confirmDeleting ? 0.6 : 1,
                 }}
               >
