@@ -118,25 +118,28 @@ export default function Navbar({ showAccountsDropdown = false }: { showAccountsD
   }
 
   return (
-    <div
-      className="mb-navbar"
-      style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 200,
-        padding: '16px 24px',
-        borderBottom: '1px solid var(--border)',
-        background: 'rgba(255, 255, 255, 0.8)',
-        backdropFilter: 'blur(12px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 12,
-        flexWrap: 'wrap',
-        rowGap: 10,
-      }}
-    >
-      <div className="mb-navbar-left" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+    <>
+      <div
+        className="mb-navbar"
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 200,
+          padding: '16px 24px',
+          borderBottom: '1px solid var(--border)',
+          background: 'rgba(255, 255, 255, 0.8)',
+          backdropFilter: 'blur(12px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+          flexWrap: 'wrap',
+          rowGap: 10,
+        }}
+      >
+        <div className="mb-navbar-left" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
         {showAccountsDropdown ? (
           <div ref={accountsRef} style={{ position: 'relative' }}>
             <button
@@ -275,7 +278,7 @@ export default function Navbar({ showAccountsDropdown = false }: { showAccountsD
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
-              textShadow: '0 0 8px rgba(182, 121, 103, 0.35)',
+              textShadow: '0 0 22px rgba(182, 121, 103, 0.8)',
             }}
             aria-haspopup="menu"
             aria-expanded={treasureOpen}
@@ -326,7 +329,9 @@ export default function Navbar({ showAccountsDropdown = false }: { showAccountsD
             Login
           </Link>
         )}
+        </div>
       </div>
-    </div>
+      <div className="mb-navbar-spacer" />
+    </>
   )
 }
