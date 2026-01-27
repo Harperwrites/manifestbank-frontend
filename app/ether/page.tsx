@@ -320,6 +320,7 @@ function EtherNavbar({
                 return next
               })
             }}
+            className="ether-nav-brand"
             style={{
               padding: 0,
               border: 'none',
@@ -425,6 +426,7 @@ function EtherNavbar({
           <img
             src="/ether-logo.png"
             alt="The Ether"
+            className="ether-nav-logo"
             style={{ height: 150, width: 'auto', maxWidth: '100%' }}
           />
         </Link>
@@ -450,7 +452,7 @@ function EtherNavbar({
                 <span style={{ opacity: 0.75 }}>Loading…</span>
               ) : me ? (
                 <>
-                <span style={{ opacity: 0.9, wordBreak: 'break-word' }}>
+                <span className="ether-nav-signed" style={{ opacity: 0.9, wordBreak: 'break-word' }}>
                   Signed in as <b>{me.email}</b>
                 </span>
                 </>
@@ -463,6 +465,7 @@ function EtherNavbar({
           <button
             type="button"
             onClick={() => setSettingsOpen((open) => !open)}
+            className="ether-nav-menu-button"
             style={{
               padding: 0,
               border: 'none',
