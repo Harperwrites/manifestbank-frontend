@@ -1942,7 +1942,7 @@ export default function EtherPage() {
                             <button
                               type="button"
                               onClick={() => {
-                                approveSyncRequest(req.id)
+                                approveSync(req.id)
                                 setEtherStickyOpen(false)
                               }}
                               style={{
@@ -1958,7 +1958,7 @@ export default function EtherPage() {
                             <button
                               type="button"
                               onClick={() => {
-                                denySyncRequest(req.id)
+                                declineSync(req.id)
                                 setEtherStickyOpen(false)
                               }}
                               style={{
