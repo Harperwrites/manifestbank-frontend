@@ -427,7 +427,7 @@ function EtherNavbar({
         <Link href="/ether" style={{ display: 'inline-flex', alignItems: 'center' }}>
           <img
             src="/ether-logo.png"
-            alt="The Ether"
+            alt="The Ether™"
             className="ether-nav-logo"
             style={{ height: 150, width: 'auto', maxWidth: '100%' }}
           />
@@ -877,6 +877,15 @@ export default function EtherPage() {
   const postMenuRef = useRef<HTMLDivElement | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
   const [confirmDeleting, setConfirmDeleting] = useState(false)
+  const etherNavRef = useRef<HTMLDivElement | null>(null)
+  const [manifestStickyVisible, setManifestStickyVisible] = useState(false)
+  const [manifestStickyOpen, setManifestStickyOpen] = useState(false)
+  const manifestStickyRef = useRef<HTMLDivElement | null>(null)
+  const manifestStickyMenuRef = useRef<HTMLDivElement | null>(null)
+  const [manifestAccounts, setManifestAccounts] = useState<any[]>([])
+  const [manifestAccountsLoaded, setManifestAccountsLoaded] = useState(false)
+  const [manifestAccountsLoading, setManifestAccountsLoading] = useState(false)
+  const [manifestAccountsMsg, setManifestAccountsMsg] = useState('')
 
   useEffect(() => {
     if (postMenuOpenId === null) return
@@ -898,6 +907,84 @@ export default function EtherPage() {
       document.removeEventListener('keydown', handleKey)
     }
   }, [postMenuOpenId])
+
+  useEffect(() => {
+    if (!etherNavRef.current) return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setManifestStickyVisible(!entry.isIntersecting)
+      },
+      { threshold: 0 }
+    )
+    observer.observe(etherNavRef.current)
+    return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
+    if (!manifestStickyOpen) return
+    if (manifestAccountsLoaded || manifestAccountsLoading) return
+    setManifestAccountsLoading(true)
+    setManifestAccountsMsg('')
+    api
+      .get('/accounts')
+      .then(async (res) => {
+        const list = Array.isArray(res.data) ? res.data : []
+        const balances = await Promise.all(
+          list.map(async (acct: any) => {
+            try {
+              const balanceRes = await api.get(`/accounts/${acct.id}/balance?currency=USD`)
+              return { id: acct.id, balance: Number(balanceRes.data?.balance ?? 0) }
+            } catch {
+              return { id: acct.id, balance: 0 }
+            }
+          })
+        )
+        const balanceMap = new Map(balances.map((item) => [item.id, item.balance]))
+        setManifestAccounts(
+          list.map((acct: any) => ({
+            id: acct.id,
+            name: acct.name,
+            balance: balanceMap.get(acct.id) ?? 0,
+          }))
+        )
+        setManifestAccountsLoaded(true)
+      })
+      .catch((e) =>
+        setManifestAccountsMsg(e?.response?.data?.detail ?? e?.message ?? 'Failed to load accounts')
+      )
+      .finally(() => setManifestAccountsLoading(false))
+  }, [manifestStickyOpen, manifestAccountsLoaded, manifestAccountsLoading])
+
+  useEffect(() => {
+    if (!manifestStickyOpen) return
+    function handleClick(event: MouseEvent) {
+      const target = event.target as Node
+      if (
+        manifestStickyRef.current &&
+        !manifestStickyRef.current.contains(target) &&
+        (!manifestStickyMenuRef.current || !manifestStickyMenuRef.current.contains(target))
+      ) {
+        setManifestStickyOpen(false)
+      }
+    }
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setManifestStickyOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [manifestStickyOpen])
+
+  function formatMoney(value: any) {
+    const num = Number(value)
+    if (Number.isNaN(num)) return value ?? ''
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num)
+  }
 
   async function load() {
     setLoading(true)
@@ -945,7 +1032,7 @@ export default function EtherPage() {
         setMsg('Some Ether data failed to load. Try refresh.')
       }
     } catch (e: any) {
-      setMsg(e?.response?.data?.detail ?? e?.message ?? 'Failed to load The Ether')
+      setMsg(e?.response?.data?.detail ?? e?.message ?? 'Failed to load The Ether™')
     } finally {
       setLoading(false)
     }
@@ -1433,7 +1520,105 @@ export default function EtherPage() {
         color: 'var(--marble-ivory)',
       }}
     >
-      <EtherNavbar profile={profile} updateSettings={updateSettings} onAvatarSelect={openAvatarCrop} />
+      <div ref={etherNavRef}>
+        <EtherNavbar profile={profile} updateSettings={updateSettings} onAvatarSelect={openAvatarCrop} />
+      </div>
+      {manifestStickyVisible ? (
+        <div
+          style={{
+            position: 'fixed',
+            top: 'calc(env(safe-area-inset-top) + 8px)',
+            left: 12,
+            zIndex: 1400,
+            padding: 0,
+            background: 'transparent',
+            borderBottom: 'none',
+            boxShadow: 'none',
+          }}
+        >
+          <div ref={manifestStickyRef} style={{ position: 'relative' }}>
+            <button
+              type="button"
+              onClick={() => setManifestStickyOpen((open) => !open)}
+              style={{
+                padding: '6px 12px',
+                borderRadius: 999,
+                border: '1px solid rgba(140, 92, 78, 0.7)',
+                background: 'linear-gradient(135deg, rgba(140, 92, 78, 0.35), rgba(245, 234, 226, 0.95))',
+                cursor: 'pointer',
+                fontWeight: 600,
+                color: '#4a2f26',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                boxShadow: '0 0 16px rgba(140, 92, 78, 0.45)',
+              }}
+              aria-haspopup="menu"
+              aria-expanded={manifestStickyOpen}
+            >
+              ManifestBank™
+              <span style={{ fontSize: 12, opacity: 0.7 }}>▾</span>
+            </button>
+            {manifestStickyOpen ? (
+              <div
+                ref={manifestStickyMenuRef}
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  marginTop: 10,
+                  width: 280,
+                  maxWidth: 'calc(100vw - 24px)',
+                  borderRadius: 14,
+                  border: '1px solid rgba(140, 92, 78, 0.45)',
+                  background: 'rgba(252, 245, 240, 0.98)',
+                  boxShadow: '0 20px 44px rgba(12, 10, 12, 0.32)',
+                  padding: 12,
+                  display: 'grid',
+                  gap: 10,
+                  zIndex: 99999,
+                }}
+                role="menu"
+              >
+                <div style={{ fontWeight: 600, color: '#3b2b24' }}>Accounts</div>
+                {manifestAccountsLoading ? (
+                  <div style={{ fontSize: 12, opacity: 0.7 }}>Loading…</div>
+                ) : manifestAccountsMsg ? (
+                  <div style={{ fontSize: 12, color: '#8c4f3d' }}>{manifestAccountsMsg}</div>
+                ) : manifestAccounts.length ? (
+                  <div style={{ display: 'grid', gap: 8 }}>
+                    {manifestAccounts.map((acct) => (
+                      <div key={acct.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+                        <span style={{ fontSize: 12, color: '#5d3d32' }}>{acct.name ?? 'Account'}</span>
+                        <span style={{ fontWeight: 700, fontSize: 12, color: '#3b2b24' }}>
+                          {formatMoney(acct.balance)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 12, opacity: 0.7 }}>No accounts found.</div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => router.push('/dashboard')}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: 10,
+                    border: '1px solid rgba(140, 92, 78, 0.4)',
+                    background: 'rgba(255, 255, 255, 0.7)',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    color: '#4a2f26',
+                  }}
+                >
+                  Open Dashboard
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
       {me ? (
         <div
           style={{
@@ -1467,7 +1652,7 @@ export default function EtherPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <div style={{ fontFamily: 'var(--font-serif)', fontSize: 28, fontWeight: 600 }}>The Ether</div>
+              <div style={{ fontFamily: 'var(--font-serif)', fontSize: 28, fontWeight: 600 }}>The Ether™</div>
               <div style={{ position: 'relative' }} ref={notificationsRef}>
                 <button
                   type="button"
@@ -2164,7 +2349,7 @@ export default function EtherPage() {
                   />
                 </div>
                 <Button variant="solid" onClick={post} disabled={loading}>
-                  {loading ? 'Posting…' : 'Post to The Ether'}
+                  {loading ? 'Posting…' : 'Post to The Ether™'}
                 </Button>
               </div>
               {postImageUrl ? (

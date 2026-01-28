@@ -87,6 +87,12 @@ a {
   height: 92px;
 }
 
+.ether-portal-chip {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 100px);
+  left: 12px;
+}
+
 @media (max-width: 900px) {
   .kpi-grid {
     --kpi-columns: 1fr;
@@ -112,6 +118,11 @@ a {
 
   .mb-navbar-spacer {
     height: 128px;
+  }
+
+  .ether-portal-chip {
+    top: calc(env(safe-area-inset-top) + 136px);
+    left: 10px;
   }
 
   .treasure-menu {

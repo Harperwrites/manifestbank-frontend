@@ -98,7 +98,7 @@ function VerifyEmailContent() {
     <main style={{ maxWidth: 520, margin: '90px auto', padding: 24 }}>
       <Card title="Verify your email" tone="soft">
         <div style={{ fontSize: 14, opacity: 0.8, marginBottom: 12 }}>
-          Verify your email to unlock deposits, transfers, and The Ether.
+          Verify your email to unlock deposits, transfers, and The Ether™.
         </div>
         {token ? (
           <div style={{ fontSize: 13, marginBottom: 12 }}>

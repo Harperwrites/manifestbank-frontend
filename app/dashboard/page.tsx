@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import AccountsPanel from '../components/AccountsPanel'
@@ -152,6 +152,14 @@ export default function DashboardPage() {
   const [balancesPeekOpen, setBalancesPeekOpen] = useState(false)
   const [verificationMsg, setVerificationMsg] = useState('')
   const [verificationSending, setVerificationSending] = useState(false)
+  const dashboardNavRef = useRef<HTMLDivElement | null>(null)
+  const enterEtherRef = useRef<HTMLDivElement | null>(null)
+  const [etherPortalVisible, setEtherPortalVisible] = useState(false)
+  const [etherNoticeCount, setEtherNoticeCount] = useState(0)
+  const [etherNoticeLoaded, setEtherNoticeLoaded] = useState(false)
+  const [treasureChipOpen, setTreasureChipOpen] = useState(false)
+  const treasureChipRef = useRef<HTMLDivElement | null>(null)
+  const treasureChipMenuRef = useRef<HTMLDivElement | null>(null)
 
   async function run(label: string, fn: () => Promise<any>) {
     setLog((prev) => prev + `\n▶ ${label}\n`)
@@ -178,6 +186,7 @@ export default function DashboardPage() {
     }
     if (res?.email_verified) {
       loadProfile().catch(() => {})
+      loadEtherNoticeCount().catch(() => {})
     } else {
       setProfile(null)
     }
@@ -189,6 +198,20 @@ export default function DashboardPage() {
       setProfile(res.data)
     } catch {
       setProfile(null)
+    }
+  }
+
+  async function loadEtherNoticeCount() {
+    if (etherNoticeLoaded) return
+    try {
+      const res = await api.get('/ether/notifications')
+      const list = Array.isArray(res.data) ? res.data : []
+      const unread = list.filter((item: any) => !item?.read_at).length
+      setEtherNoticeCount(unread)
+    } catch {
+      setEtherNoticeCount(0)
+    } finally {
+      setEtherNoticeLoaded(true)
     }
   }
 
@@ -704,6 +727,59 @@ export default function DashboardPage() {
     }
   }, [selectedActivity, pendingModalOpen, pendingDetail, avatarPreviewUrl])
 
+  useEffect(() => {
+    const target = dashboardNavRef.current
+    if (!target) return
+    const updateVisibility = () => {
+      if (!dashboardNavRef.current) return
+      const rect = dashboardNavRef.current.getBoundingClientRect()
+      setEtherPortalVisible(rect.bottom <= 0)
+    }
+    updateVisibility()
+    if (typeof IntersectionObserver === 'undefined') {
+      window.addEventListener('scroll', updateVisibility)
+      window.addEventListener('resize', updateVisibility)
+      return () => {
+        window.removeEventListener('scroll', updateVisibility)
+        window.removeEventListener('resize', updateVisibility)
+      }
+    }
+    const observer = new IntersectionObserver(() => updateVisibility(), { threshold: 0 })
+    observer.observe(target)
+    window.addEventListener('scroll', updateVisibility)
+    window.addEventListener('resize', updateVisibility)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('scroll', updateVisibility)
+      window.removeEventListener('resize', updateVisibility)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!treasureChipOpen) return
+    function handleClick(event: MouseEvent) {
+      const target = event.target as Node
+      if (
+        treasureChipRef.current &&
+        !treasureChipRef.current.contains(target) &&
+        (!treasureChipMenuRef.current || !treasureChipMenuRef.current.contains(target))
+      ) {
+        setTreasureChipOpen(false)
+      }
+    }
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setTreasureChipOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [treasureChipOpen])
+
   const accountsCount = summary?.accounts_count ?? '—'
   const ledgerCount = summary?.ledger_entries_count ?? '—'
   const identity = me?.email ?? 'Not signed in'
@@ -736,7 +812,143 @@ export default function DashboardPage() {
 
   return (
     <main>
-      <Navbar />
+      <div ref={dashboardNavRef}>
+        <Navbar sticky={false} />
+      </div>
+      {isVerified && etherPortalVisible ? (
+        <div
+          className="ether-portal-chip"
+          style={{
+            zIndex: 1400,
+            display: 'grid',
+            gap: 8,
+          }}
+        >
+          <Link href="/ether" style={{ textDecoration: 'none' }}>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '6px 12px',
+                borderRadius: 999,
+                border: '1px solid rgba(140, 92, 78, 0.7)',
+                background: 'linear-gradient(135deg, rgba(140, 92, 78, 0.35), rgba(245, 234, 226, 0.95))',
+                boxShadow: '0 0 16px rgba(140, 92, 78, 0.45)',
+                color: '#4a2f26',
+                fontWeight: 700,
+                letterSpacing: 0.2,
+                maxWidth: 'calc(100vw - 24px)',
+              }}
+            >
+              <span
+                style={{
+                  width: 26,
+                  height: 26,
+                  borderRadius: '50%',
+                  border: '1px solid rgba(95, 74, 62, 0.35)',
+                  background: 'rgba(255,255,255,0.95)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden',
+                  fontWeight: 700,
+                  flexShrink: 0,
+                }}
+              >
+                {profile?.avatar_url ? (
+                  <img
+                    src={profile.avatar_url}
+                    alt="Profile"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  <span style={{ fontSize: 12 }}>
+                    {profile?.display_name?.slice(0, 1)?.toUpperCase() ?? '◎'}
+                  </span>
+                )}
+              </span>
+              Enter The Ether™
+              {etherNoticeCount > 0 ? (
+                <span
+                  style={{
+                    minWidth: 18,
+                    height: 18,
+                    borderRadius: 999,
+                    background: '#b67967',
+                    color: '#fff',
+                    fontSize: 11,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '0 6px',
+                    boxShadow: '0 0 10px rgba(182, 121, 103, 0.65)',
+                    marginLeft: 2,
+                  }}
+                >
+                  {etherNoticeCount}
+                </span>
+              ) : null}
+            </span>
+          </Link>
+          <div ref={treasureChipRef} style={{ position: 'relative' }}>
+            <button
+              type="button"
+              onClick={() => setTreasureChipOpen((open) => !open)}
+              style={{
+                padding: '6px 12px',
+                borderRadius: 999,
+                border: '1px solid rgba(140, 92, 78, 0.7)',
+                background: 'linear-gradient(135deg, rgba(140, 92, 78, 0.35), rgba(245, 234, 226, 0.95))',
+                cursor: 'pointer',
+                fontWeight: 700,
+                color: '#4a2f26',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                boxShadow: '0 0 16px rgba(140, 92, 78, 0.45)',
+                maxWidth: 'calc(100vw - 24px)',
+              }}
+              aria-haspopup="menu"
+              aria-expanded={treasureChipOpen}
+            >
+              My Treasure Chest
+              <span style={{ fontSize: 12, opacity: 0.7 }}>▾</span>
+            </button>
+            {treasureChipOpen ? (
+              <div
+                ref={treasureChipMenuRef}
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  marginTop: 10,
+                  minWidth: 200,
+                  maxWidth: 'calc(100vw - 24px)',
+                  borderRadius: 12,
+                  border: '1px solid rgba(140, 92, 78, 0.45)',
+                  background: 'rgba(252, 245, 240, 0.98)',
+                  boxShadow: '0 20px 44px rgba(12, 10, 12, 0.32)',
+                  padding: 10,
+                  display: 'grid',
+                  gap: 8,
+                  zIndex: 99999,
+                }}
+                role="menu"
+              >
+                <Link
+                  href="/myjournal"
+                  style={{ textDecoration: 'none', fontWeight: 600, color: '#4a2f26' }}
+                  role="menuitem"
+                  onClick={() => setTreasureChipOpen(false)}
+                >
+                  My Journal
+                </Link>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
       {me ? (
         <div
           style={{
@@ -784,7 +996,7 @@ export default function DashboardPage() {
             }}
           >
             <div style={{ fontSize: 13 }}>
-              Verify your email to unlock deposits, transfers, and The Ether.
+              Verify your email to unlock deposits, transfers, and The Ether™.
             </div>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
               <Button variant="outline" onClick={resendVerification} disabled={verificationSending}>
@@ -809,7 +1021,7 @@ export default function DashboardPage() {
           </div>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
             {isVerified ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }} ref={enterEtherRef}>
                 <button
                   type="button"
                   onClick={() => {
@@ -864,7 +1076,7 @@ export default function DashboardPage() {
                       letterSpacing: 0.2,
                     }}
                   >
-                    Enter The Ether
+                    Enter The Ether™
                   </span>
                 </Link>
               </div>
@@ -881,7 +1093,7 @@ export default function DashboardPage() {
                   fontWeight: 600,
                 }}
               >
-                Verify email to unlock The Ether
+                Verify email to unlock The Ether™
               </button>
             )}
           </div>

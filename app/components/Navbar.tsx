@@ -14,7 +14,13 @@ type AccountItem = {
   balance?: number
 }
 
-export default function Navbar({ showAccountsDropdown = false }: { showAccountsDropdown?: boolean }) {
+export default function Navbar({
+  showAccountsDropdown = false,
+  sticky = true,
+}: {
+  showAccountsDropdown?: boolean
+  sticky?: boolean
+}) {
   const router = useRouter()
   const { me, isLoading } = useAuth()
   const [accountsOpen, setAccountsOpen] = useState(false)
@@ -122,11 +128,11 @@ export default function Navbar({ showAccountsDropdown = false }: { showAccountsD
       <div
         className="mb-navbar"
         style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 200,
+          position: sticky ? 'fixed' : 'relative',
+          top: sticky ? 0 : 'auto',
+          left: sticky ? 0 : 'auto',
+          right: sticky ? 0 : 'auto',
+          zIndex: sticky ? 200 : 'auto',
           padding: '16px 24px',
           borderBottom: '1px solid var(--border)',
           background: 'rgba(255, 255, 255, 0.8)',
@@ -332,7 +338,7 @@ export default function Navbar({ showAccountsDropdown = false }: { showAccountsD
         )}
         </div>
       </div>
-      <div className="mb-navbar-spacer" />
+      {sticky ? <div className="mb-navbar-spacer" /> : null}
     </>
   )
 }
