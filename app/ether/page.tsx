@@ -56,6 +56,7 @@ type EtherNotification = {
   read_at?: string | null
   actor_display_name?: string | null
   actor_avatar_url?: string | null
+  message?: string | null
 }
 
 type SyncRequest = {
