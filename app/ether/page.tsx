@@ -69,6 +69,35 @@ type SyncRequest = {
   requester_avatar_url?: string | null
 }
 
+type EtherThreadParticipant = {
+  profile_id: number
+  display_name?: string | null
+  avatar_url?: string | null
+}
+
+type EtherThread = {
+  id: number
+  participants?: EtherThreadParticipant[] | null
+  created_at?: string
+}
+
+type EtherMessage = {
+  id: number
+  sender_profile_id: number
+  content: string
+  created_at: string
+}
+
+type MyLinePreview = {
+  thread_id: number
+  sender_profile_id: number | null
+  sender_display_name: string | null
+  sender_avatar_url: string | null
+  message: string | null
+  created_at: string | null
+  unread: boolean
+}
+
 const IMAGE_FALLBACK =
   'data:image/svg+xml;utf8,' +
   encodeURIComponent(
@@ -843,10 +872,14 @@ export default function EtherPage() {
   const [syncMenuOpen, setSyncMenuOpen] = useState(false)
   const [syncMenuTab, setSyncMenuTab] = useState<'syncs' | 'requests' | 'search'>('syncs')
   const syncMenuRef = useRef<HTMLDivElement | null>(null)
-  const [threads, setThreads] = useState<any[]>([])
-  const [activeThread, setActiveThread] = useState<number | null>(null)
-  const [messages, setMessages] = useState<any[]>([])
-  const [messageText, setMessageText] = useState('')
+  const [threads, setThreads] = useState<EtherThread[]>([])
+  const [myLineOpen, setMyLineOpen] = useState(false)
+  const myLineRef = useRef<HTMLDivElement | null>(null)
+  const myLineMenuRef = useRef<HTMLDivElement | null>(null)
+  const [myLinePreviews, setMyLinePreviews] = useState<MyLinePreview[]>([])
+  const [myLineLoading, setMyLineLoading] = useState(false)
+  const [myLineUnreadCount, setMyLineUnreadCount] = useState(0)
+  const myLineProfileCache = useRef<Map<number, EtherThreadParticipant>>(new Map())
   const [avatarCropOpen, setAvatarCropOpen] = useState(false)
   const [avatarCropSrc, setAvatarCropSrc] = useState<string | null>(null)
   const [avatarCropZoom, setAvatarCropZoom] = useState(1)
@@ -890,7 +923,7 @@ export default function EtherPage() {
   const [manifestAccountsLoaded, setManifestAccountsLoaded] = useState(false)
   const [manifestAccountsLoading, setManifestAccountsLoading] = useState(false)
   const [manifestAccountsMsg, setManifestAccountsMsg] = useState('')
-  const etherStickyNoticeCount = unreadNotifications + syncRequests.length
+  const etherStickyNoticeCount = unreadNotifications + syncRequests.length + myLineUnreadCount
 
   const rememberEtherView = useCallback(() => {
     if (typeof window === 'undefined') return
@@ -1396,21 +1429,8 @@ export default function EtherPage() {
   }
 
   async function createThread(profileId: number) {
-    const res = await api.post('/ether/threads', { participant_profile_ids: [profileId] })
-    setActiveThread(res.data.id)
+    await api.post('/ether/threads', { participant_profile_ids: [profileId] })
     await load()
-  }
-
-  async function loadMessages(threadId: number) {
-    const res = await api.get(`/ether/threads/${threadId}/messages`)
-    setMessages(res.data)
-  }
-
-  async function sendMessage() {
-    if (!activeThread || !messageText.trim()) return
-    await api.post(`/ether/threads/${activeThread}/messages`, { content: messageText })
-    setMessageText('')
-    await loadMessages(activeThread)
   }
 
   function renderLinkedText(text: string) {
@@ -1505,6 +1525,146 @@ export default function EtherPage() {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [notificationsOpen])
 
+  useEffect(() => {
+    if (!myLineOpen) return
+    function handleClick(event: MouseEvent) {
+      const target = event.target as Node
+      if (
+        myLineRef.current &&
+        !myLineRef.current.contains(target) &&
+        (!myLineMenuRef.current || !myLineMenuRef.current.contains(target))
+      ) {
+        setMyLineOpen(false)
+      }
+    }
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setMyLineOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [myLineOpen])
+
+  function getThreadReadKey(threadId: number) {
+    return `ether:thread_read:${threadId}`
+  }
+
+  function getThreadReadAt(threadId: number) {
+    if (typeof window === 'undefined') return null
+    return window.localStorage.getItem(getThreadReadKey(threadId))
+  }
+
+  function markThreadRead(threadId: number, createdAt?: string | null) {
+    if (typeof window === 'undefined') return
+    const timestamp = createdAt ?? new Date().toISOString()
+    window.localStorage.setItem(getThreadReadKey(threadId), timestamp)
+  }
+
+  async function loadThreadParticipant(profileId: number) {
+    if (myLineProfileCache.current.has(profileId)) {
+      return myLineProfileCache.current.get(profileId) ?? null
+    }
+    try {
+      const res = await api.get(`/ether/profiles/${profileId}`)
+      const data = res.data as EtherThreadParticipant
+      myLineProfileCache.current.set(profileId, data)
+      return data
+    } catch {
+      return null
+    }
+  }
+
+  useEffect(() => {
+    if (!profile?.id) return
+    if (!threads.length) {
+      setMyLinePreviews([])
+      setMyLineUnreadCount(0)
+      return
+    }
+    let canceled = false
+    async function loadPreviews() {
+      setMyLineLoading(true)
+      try {
+        const results = await Promise.all(
+          threads.map(async (thread) => {
+            try {
+              const messagesRes = await api.get(`/ether/threads/${thread.id}/messages`)
+              const list = Array.isArray(messagesRes.data) ? (messagesRes.data as EtherMessage[]) : []
+              const last = list[list.length - 1]
+              const participant = Array.isArray(thread.participants)
+                ? thread.participants.find((p) => p.profile_id !== profile.id) ?? thread.participants[0]
+                : null
+              const senderProfileId = last?.sender_profile_id ?? participant?.profile_id ?? null
+              let senderDisplayName = participant?.display_name ?? null
+              let senderAvatarUrl = participant?.avatar_url ?? null
+              if (!senderDisplayName && senderProfileId) {
+                const sender = await loadThreadParticipant(senderProfileId)
+                senderDisplayName = sender?.display_name ?? null
+                senderAvatarUrl = sender?.avatar_url ?? null
+              }
+              const readAt = getThreadReadAt(thread.id)
+              const unread =
+                !!last &&
+                last.sender_profile_id !== profile.id &&
+                (!readAt || new Date(last.created_at).getTime() > new Date(readAt).getTime())
+              return {
+                thread_id: thread.id,
+                sender_profile_id: senderProfileId,
+                sender_display_name: senderDisplayName ?? (senderProfileId ? `User #${senderProfileId}` : null),
+                sender_avatar_url: senderAvatarUrl ?? null,
+                message: last?.content ?? null,
+                created_at: last?.created_at ?? null,
+                unread,
+              } satisfies MyLinePreview
+            } catch {
+              return {
+                thread_id: thread.id,
+                sender_profile_id: null,
+                sender_display_name: `Thread #${thread.id}`,
+                sender_avatar_url: null,
+                message: null,
+                created_at: null,
+                unread: false,
+              } satisfies MyLinePreview
+            }
+          })
+        )
+        if (canceled) return
+        const sorted = results.sort((a, b) => {
+          const aTime = a.created_at ? new Date(a.created_at).getTime() : 0
+          const bTime = b.created_at ? new Date(b.created_at).getTime() : 0
+          return bTime - aTime
+        })
+        setMyLinePreviews(sorted)
+        setMyLineUnreadCount(sorted.filter((preview) => preview.unread).length)
+      } finally {
+        if (!canceled) setMyLineLoading(false)
+      }
+    }
+    loadPreviews()
+    return () => {
+      canceled = true
+    }
+  }, [threads, profile?.id])
+
+  function openMyLineThread(preview: MyLinePreview) {
+    if (preview.created_at) {
+      markThreadRead(preview.thread_id, preview.created_at)
+    }
+    setMyLinePreviews((prev) =>
+      prev.map((item) => (item.thread_id === preview.thread_id ? { ...item, unread: false } : item))
+    )
+    setMyLineUnreadCount((count) => Math.max(0, count - (preview.unread ? 1 : 0)))
+    rememberEtherView()
+    setMyLineOpen(false)
+    router.push(`/myline/${preview.thread_id}`)
+  }
+
   async function markNotificationsRead() {
     try {
       await api.post('/ether/notifications/mark-read')
@@ -1522,6 +1682,13 @@ export default function EtherPage() {
       // ignore
     }
   }
+
+  const myLineNewPreviews = useMemo(
+    () => myLinePreviews.filter((preview) => preview.unread).slice(0, 4),
+    [myLinePreviews]
+  )
+  const myLineRecentPreviews = useMemo(() => myLinePreviews.slice(0, 3), [myLinePreviews])
+  const myLineDisplayPreviews = myLineNewPreviews.length ? myLineNewPreviews : myLineRecentPreviews
 
   const activePosts = useMemo(() => {
     if (activeTab === 'timeline') return timeline
@@ -1846,6 +2013,152 @@ export default function EtherPage() {
                     </div>
                   )}
                   <div style={{ height: 1, background: 'rgba(140, 92, 78, 0.25)', margin: '10px 0' }} />
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      fontWeight: 700,
+                      fontSize: 13,
+                    }}
+                  >
+                    My Line
+                    {myLineUnreadCount ? (
+                      <span
+                        style={{
+                          minWidth: 18,
+                          height: 18,
+                          borderRadius: 999,
+                          background: '#b67967',
+                          color: '#fff',
+                          fontSize: 11,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '0 6px',
+                        }}
+                      >
+                        {myLineUnreadCount}
+                      </span>
+                    ) : null}
+                  </div>
+                  {myLineLoading ? (
+                    <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>Loading messages…</div>
+                  ) : myLineDisplayPreviews.length === 0 ? (
+                    <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>No messages yet.</div>
+                  ) : (
+                    <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
+                      {myLineDisplayPreviews.map((preview) => (
+                        <button
+                          key={preview.thread_id}
+                          type="button"
+                          onClick={() => openMyLineThread(preview)}
+                          style={{
+                            border: '1px solid rgba(160, 120, 104, 0.25)',
+                            background: preview.unread ? 'rgba(182, 121, 103, 0.08)' : 'transparent',
+                            padding: '6px 8px',
+                            borderRadius: 12,
+                            display: 'flex',
+                            gap: 8,
+                            alignItems: 'center',
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: 26,
+                              height: 26,
+                              borderRadius: '50%',
+                              border: '1px solid rgba(95, 74, 62, 0.25)',
+                              background: 'rgba(255,255,255,0.9)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              overflow: 'hidden',
+                              fontSize: 11,
+                              fontWeight: 600,
+                              flexShrink: 0,
+                            }}
+                          >
+                            {preview.sender_avatar_url ? (
+                              <img
+                                src={preview.sender_avatar_url}
+                                alt={preview.sender_display_name ?? 'Member'}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              />
+                            ) : (
+                              (preview.sender_display_name ?? 'M').slice(0, 1).toUpperCase()
+                            )}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div
+                              style={{
+                                fontWeight: 600,
+                                fontSize: 12,
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                              }}
+                            >
+                              {preview.sender_display_name ?? 'Message'}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: 11,
+                                opacity: 0.7,
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                              }}
+                            >
+                              {preview.message ?? 'No message yet'}
+                            </div>
+                          </div>
+                          {preview.unread ? (
+                            <span
+                              style={{
+                                minWidth: 14,
+                                height: 14,
+                                borderRadius: 999,
+                                background: '#b67967',
+                                color: '#fff',
+                                fontSize: 9,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: '0 4px',
+                              }}
+                            >
+                              ●
+                            </span>
+                          ) : null}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      rememberEtherView()
+                      setEtherStickyOpen(false)
+                      router.push('/myline')
+                    }}
+                    style={{
+                      marginTop: 10,
+                      width: '100%',
+                      padding: '8px 12px',
+                      borderRadius: 12,
+                      border: '1px solid rgba(140, 92, 78, 0.4)',
+                      background: 'rgba(255, 255, 255, 0.75)',
+                      fontWeight: 600,
+                      color: '#4a2f26',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    View all messages
+                  </button>
+                  <div style={{ height: 1, background: 'rgba(140, 92, 78, 0.25)', margin: '10px 0' }} />
                   <div style={{ fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
                     In Sync Requests
                     {syncRequests.length ? (
@@ -2016,6 +2329,222 @@ export default function EtherPage() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <div style={{ fontFamily: 'var(--font-serif)', fontSize: 28, fontWeight: 600 }}>The Ether™</div>
+              <div style={{ position: 'relative' }} ref={myLineRef}>
+                <button
+                  type="button"
+                  onClick={() => setMyLineOpen((open) => !open)}
+                  style={{
+                    padding: '7px 12px',
+                    borderRadius: 999,
+                    border: '1px solid rgba(255, 255, 255, 0.75)',
+                    background: 'rgba(255, 248, 242, 0.96)',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    fontSize: 13,
+                    color: '#2d1f1a',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    boxShadow: '0 12px 22px rgba(12, 10, 12, 0.35)',
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: '50%',
+                      background: 'rgba(182, 121, 103, 0.18)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 12,
+                    }}
+                    aria-hidden="true"
+                  >
+                    💬
+                  </span>
+                  My Line
+                  {myLineUnreadCount ? (
+                    <span
+                      style={{
+                        minWidth: 16,
+                        height: 16,
+                        borderRadius: 999,
+                        background: '#b67967',
+                        color: '#fff',
+                        fontSize: 11,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '0 5px',
+                      }}
+                    >
+                      {myLineUnreadCount}
+                    </span>
+                  ) : null}
+                </button>
+                {myLineOpen ? (
+                  <div
+                    ref={myLineMenuRef}
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      marginTop: 10,
+                      width: 320,
+                      maxWidth: 'calc(100vw - 24px)',
+                      borderRadius: 16,
+                      border: '1px solid rgba(182, 121, 103, 0.45)',
+                      background: 'linear-gradient(180deg, rgba(252, 245, 239, 0.98), rgba(226, 199, 181, 0.96))',
+                      boxShadow: '0 18px 42px rgba(26, 18, 14, 0.24)',
+                      padding: 12,
+                      color: '#3b2b24',
+                      zIndex: 30,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 13 }}>
+                      My Line
+                      {myLineUnreadCount ? (
+                        <span
+                          style={{
+                            minWidth: 18,
+                            height: 18,
+                            borderRadius: 999,
+                            background: '#b67967',
+                            color: '#fff',
+                            fontSize: 11,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '0 6px',
+                          }}
+                        >
+                          {myLineUnreadCount}
+                        </span>
+                      ) : null}
+                    </div>
+                    <div style={{ fontSize: 11, opacity: 0.7, marginTop: 4 }}>
+                      {myLineNewPreviews.length ? 'New messages' : 'Recent messages'}
+                    </div>
+                    {myLineLoading ? (
+                      <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>Loading messages…</div>
+                    ) : myLineDisplayPreviews.length === 0 ? (
+                      <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>No messages yet.</div>
+                    ) : (
+                      <div style={{ display: 'grid', gap: 10, marginTop: 8 }}>
+                        {myLineDisplayPreviews.map((preview) => (
+                          <button
+                            key={preview.thread_id}
+                            type="button"
+                            onClick={() => openMyLineThread(preview)}
+                            style={{
+                              border: '1px solid rgba(160, 120, 104, 0.25)',
+                              background: preview.unread ? 'rgba(182, 121, 103, 0.08)' : 'transparent',
+                              padding: '8px 10px',
+                              borderRadius: 12,
+                              display: 'flex',
+                              gap: 10,
+                              alignItems: 'center',
+                              textAlign: 'left',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: 30,
+                                height: 30,
+                                borderRadius: '50%',
+                                border: '1px solid rgba(95, 74, 62, 0.25)',
+                                background: 'rgba(255,255,255,0.9)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                overflow: 'hidden',
+                                fontSize: 12,
+                                fontWeight: 600,
+                                flexShrink: 0,
+                              }}
+                            >
+                              {preview.sender_avatar_url ? (
+                                <img
+                                  src={preview.sender_avatar_url}
+                                  alt={preview.sender_display_name ?? 'Member'}
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                />
+                              ) : (
+                                (preview.sender_display_name ?? 'M').slice(0, 1).toUpperCase()
+                              )}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div
+                                style={{
+                                  fontWeight: 600,
+                                  fontSize: 13,
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                }}
+                              >
+                                {preview.sender_display_name ?? 'Message'}
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: 12,
+                                  opacity: 0.7,
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                }}
+                              >
+                                {preview.message ?? 'No message yet'}
+                              </div>
+                            </div>
+                            {preview.unread ? (
+                              <span
+                                style={{
+                                  minWidth: 16,
+                                  height: 16,
+                                  borderRadius: 999,
+                                  background: '#b67967',
+                                  color: '#fff',
+                                  fontSize: 10,
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  padding: '0 5px',
+                                }}
+                              >
+                                ●
+                              </span>
+                            ) : null}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        rememberEtherView()
+                        setMyLineOpen(false)
+                        router.push('/myline')
+                      }}
+                      style={{
+                        marginTop: 10,
+                        width: '100%',
+                        padding: '8px 12px',
+                        borderRadius: 12,
+                        border: '1px solid rgba(140, 92, 78, 0.4)',
+                        background: 'rgba(255, 255, 255, 0.75)',
+                        fontWeight: 600,
+                        color: '#4a2f26',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      View all messages
+                    </button>
+                  </div>
+                ) : null}
+              </div>
               <div style={{ position: 'relative' }} ref={notificationsRef}>
                 <button
                   type="button"
@@ -3245,52 +3774,6 @@ export default function EtherPage() {
                 ))}
               </div>
             )}
-          </Card>
-        </section>
-        <section style={{ marginTop: 20 }}>
-          <Card title="Direct Messages" tone="soft">
-            <div style={{ display: 'grid', gap: 10 }}>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {threads.map((t) => (
-                  <Button
-                    key={t.id}
-                    variant={activeThread === t.id ? 'solid' : 'outline'}
-                    onClick={() => {
-                      setActiveThread(t.id)
-                      loadMessages(t.id)
-                    }}
-                  >
-                    Thread #{t.id}
-                  </Button>
-                ))}
-              </div>
-              {activeThread ? (
-                <>
-                  <div style={{ maxHeight: 200, overflow: 'auto', border: '1px solid rgba(95, 74, 62, 0.2)', borderRadius: 12, padding: 10 }}>
-                    {messages.map((m) => (
-                      <div key={m.id} style={{ marginBottom: 8 }}>
-                        <div style={{ fontSize: 12, opacity: 0.7 }}>{new Date(m.created_at).toLocaleString()}</div>
-                        <div>{m.content}</div>
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <input
-                      type="text"
-                      placeholder="Write a message..."
-                      value={messageText}
-                      onChange={(e) => setMessageText(e.target.value)}
-                      style={{ flex: 1, padding: '10px 12px', borderRadius: 12, border: '1px solid rgba(95, 74, 62, 0.3)' }}
-                    />
-                    <Button variant="solid" onClick={sendMessage}>
-                      Send
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <div style={{ fontSize: 13, opacity: 0.7 }}>Select a thread or sync with someone to start messaging.</div>
-              )}
-            </div>
           </Card>
         </section>
       </Container>

@@ -83,6 +83,40 @@ export default function MyJournalPage() {
   const journalNavRef = useRef<HTMLDivElement | null>(null)
   const [etherPortalVisible, setEtherPortalVisible] = useState(false)
 
+  function getThreadReadAt(threadId: number) {
+    if (typeof window === 'undefined') return null
+    return window.localStorage.getItem(`ether:thread_read:${threadId}`)
+  }
+
+  async function countUnreadThreads(profileId: number | null) {
+    if (!profileId) return 0
+    try {
+      const threadsRes = await api.get('/ether/threads')
+      const threads = Array.isArray(threadsRes.data) ? threadsRes.data : []
+      if (!threads.length) return 0
+      const results = await Promise.allSettled(
+        threads.map(async (thread: any) => {
+          try {
+            const messagesRes = await api.get(`/ether/threads/${thread.id}/messages`)
+            const list = Array.isArray(messagesRes.data) ? messagesRes.data : []
+            const last = list[list.length - 1]
+            if (!last) return 0
+            const readAt = getThreadReadAt(thread.id)
+            const isUnread =
+              last.sender_profile_id !== profileId &&
+              (!readAt || new Date(last.created_at).getTime() > new Date(readAt).getTime())
+            return isUnread ? 1 : 0
+          } catch {
+            return 0
+          }
+        })
+      )
+      return results.reduce((sum, res) => (res.status === 'fulfilled' ? sum + res.value : sum), 0)
+    } catch {
+      return 0
+    }
+  }
+
   useEffect(() => {
     loadEntries()
     loadMe()
@@ -123,7 +157,17 @@ export default function MyJournalPage() {
       const list = notesRes.status === 'fulfilled' ? notesRes.value.data : []
       const syncs = syncRes.status === 'fulfilled' ? syncRes.value.data : []
       const unread = Array.isArray(list) ? list.filter((item: any) => !item?.read_at).length : 0
-      setEtherNoticeCount(unread + (Array.isArray(syncs) ? syncs.length : 0))
+      let profileId = profile?.id ?? null
+      if (!profileId) {
+        try {
+          const profileRes = await api.get('/ether/me-profile')
+          profileId = profileRes.data?.id ?? null
+        } catch {
+          profileId = null
+        }
+      }
+      const myLineUnread = await countUnreadThreads(profileId)
+      setEtherNoticeCount(unread + (Array.isArray(syncs) ? syncs.length : 0) + myLineUnread)
     } catch {
       setEtherNoticeCount(0)
     } finally {
