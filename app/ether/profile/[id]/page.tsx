@@ -68,6 +68,8 @@ export default function EtherProfilePage() {
   const [commentMsg, setCommentMsg] = useState<Record<number, string>>({})
   const [confirmAction, setConfirmAction] = useState<null | 'unsync' | 'cancel'>(null)
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null)
+  const [etherNoticeCount, setEtherNoticeCount] = useState(0)
+  const [etherNoticeLoaded, setEtherNoticeLoaded] = useState(false)
 
   useEffect(() => {
     if (!profileId) return
@@ -106,6 +108,25 @@ export default function EtherProfilePage() {
       setLoading(false)
     })()
   }, [profileId])
+
+  useEffect(() => {
+    if (etherNoticeLoaded) return
+    ;(async () => {
+      try {
+        const [notesRes, syncRes] = await Promise.allSettled([
+          api.get('/ether/notifications'),
+          api.get('/ether/sync/requests'),
+        ])
+        const notes = notesRes.status === 'fulfilled' ? notesRes.value.data : []
+        const syncs = syncRes.status === 'fulfilled' ? syncRes.value.data : []
+        const unread = Array.isArray(notes) ? notes.filter((note: any) => !note.read_at).length : 0
+        setEtherNoticeCount(unread + (Array.isArray(syncs) ? syncs.length : 0))
+        setEtherNoticeLoaded(true)
+      } catch {
+        setEtherNoticeLoaded(true)
+      }
+    })()
+  }, [etherNoticeLoaded])
 
   const title = useMemo(() => profile?.display_name ?? 'Ether Profile', [profile])
   const isSynced = useMemo(() => syncs.some((s) => s.id === profile?.id), [syncs, profile?.id])
@@ -260,6 +281,52 @@ export default function EtherProfilePage() {
 
   return (
     <main>
+      <div
+        style={{
+          position: 'fixed',
+          top: 16,
+          left: 16,
+          zIndex: 60,
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => router.push('/ether')}
+          style={{
+            padding: '6px 12px',
+            borderRadius: 999,
+            border: '1px solid rgba(140, 92, 78, 0.7)',
+            background: 'linear-gradient(135deg, rgba(140, 92, 78, 0.35), rgba(245, 234, 226, 0.95))',
+            cursor: 'pointer',
+            fontWeight: 600,
+            color: '#4a2f26',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            boxShadow: '0 0 16px rgba(140, 92, 78, 0.45)',
+          }}
+        >
+          The Ether™
+          {etherNoticeCount ? (
+            <span
+              style={{
+                minWidth: 16,
+                height: 16,
+                borderRadius: 999,
+                background: '#b67967',
+                color: '#fff',
+                fontSize: 11,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '0 5px',
+              }}
+            >
+              {etherNoticeCount}
+            </span>
+          ) : null}
+        </button>
+      </div>
       <Container>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginTop: 24 }}>
           <Button

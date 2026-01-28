@@ -204,10 +204,14 @@ export default function DashboardPage() {
   async function loadEtherNoticeCount() {
     if (etherNoticeLoaded) return
     try {
-      const res = await api.get('/ether/notifications')
-      const list = Array.isArray(res.data) ? res.data : []
-      const unread = list.filter((item: any) => !item?.read_at).length
-      setEtherNoticeCount(unread)
+      const [notesRes, syncRes] = await Promise.allSettled([
+        api.get('/ether/notifications'),
+        api.get('/ether/sync/requests'),
+      ])
+      const list = notesRes.status === 'fulfilled' ? notesRes.value.data : []
+      const syncs = syncRes.status === 'fulfilled' ? syncRes.value.data : []
+      const unread = Array.isArray(list) ? list.filter((item: any) => !item?.read_at).length : 0
+      setEtherNoticeCount(unread + (Array.isArray(syncs) ? syncs.length : 0))
     } catch {
       setEtherNoticeCount(0)
     } finally {
@@ -1074,9 +1078,32 @@ export default function DashboardPage() {
                       color: '#5d3d32',
                       fontWeight: 700,
                       letterSpacing: 0.2,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
                     }}
                   >
                     Enter The Ether™
+                    {etherNoticeCount > 0 ? (
+                      <span
+                        style={{
+                          minWidth: 18,
+                          height: 18,
+                          borderRadius: 999,
+                          background: '#b67967',
+                          color: '#fff',
+                          fontSize: 11,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '0 6px',
+                          boxShadow: '0 0 10px rgba(182, 121, 103, 0.65)',
+                          marginLeft: 2,
+                        }}
+                      >
+                        {etherNoticeCount}
+                      </span>
+                    ) : null}
                   </span>
                 </Link>
               </div>

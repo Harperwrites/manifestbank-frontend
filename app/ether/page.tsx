@@ -1,6 +1,6 @@
  'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -882,10 +882,33 @@ export default function EtherPage() {
   const [manifestStickyOpen, setManifestStickyOpen] = useState(false)
   const manifestStickyRef = useRef<HTMLDivElement | null>(null)
   const manifestStickyMenuRef = useRef<HTMLDivElement | null>(null)
+  const [etherStickyOpen, setEtherStickyOpen] = useState(false)
+  const etherStickyRef = useRef<HTMLDivElement | null>(null)
+  const etherStickyMenuRef = useRef<HTMLDivElement | null>(null)
   const [manifestAccounts, setManifestAccounts] = useState<any[]>([])
   const [manifestAccountsLoaded, setManifestAccountsLoaded] = useState(false)
   const [manifestAccountsLoading, setManifestAccountsLoading] = useState(false)
   const [manifestAccountsMsg, setManifestAccountsMsg] = useState('')
+  const etherStickyNoticeCount = unreadNotifications + syncRequests.length
+
+  const rememberEtherView = useCallback(() => {
+    if (typeof window === 'undefined') return
+    window.sessionStorage.setItem(
+      'ether:last_view',
+      JSON.stringify({
+        path: window.location.pathname + window.location.search,
+        tab: activeTab,
+      })
+    )
+  }, [activeTab])
+
+  const navigateToProfile = useCallback(
+    (profileId: number) => {
+      rememberEtherView()
+      router.push(`/ether/profile/${profileId}`)
+    },
+    [rememberEtherView, router]
+  )
 
   useEffect(() => {
     if (postMenuOpenId === null) return
@@ -979,6 +1002,31 @@ export default function EtherPage() {
       document.removeEventListener('keydown', handleKey)
     }
   }, [manifestStickyOpen])
+
+  useEffect(() => {
+    if (!etherStickyOpen) return
+    function handleClick(event: MouseEvent) {
+      const target = event.target as Node
+      if (
+        etherStickyRef.current &&
+        !etherStickyRef.current.contains(target) &&
+        (!etherStickyMenuRef.current || !etherStickyMenuRef.current.contains(target))
+      ) {
+        setEtherStickyOpen(false)
+      }
+    }
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setEtherStickyOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [etherStickyOpen])
 
   function formatMoney(value: any) {
     const num = Number(value)
@@ -1536,86 +1584,400 @@ export default function EtherPage() {
             boxShadow: 'none',
           }}
         >
-          <div ref={manifestStickyRef} style={{ position: 'relative' }}>
-            <button
-              type="button"
-              onClick={() => setManifestStickyOpen((open) => !open)}
-              style={{
-                padding: '6px 12px',
-                borderRadius: 999,
-                border: '1px solid rgba(140, 92, 78, 0.7)',
-                background: 'linear-gradient(135deg, rgba(140, 92, 78, 0.35), rgba(245, 234, 226, 0.95))',
-                cursor: 'pointer',
-                fontWeight: 600,
-                color: '#4a2f26',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                boxShadow: '0 0 16px rgba(140, 92, 78, 0.45)',
-              }}
-              aria-haspopup="menu"
-              aria-expanded={manifestStickyOpen}
-            >
-              ManifestBank™
-              <span style={{ fontSize: 12, opacity: 0.7 }}>▾</span>
-            </button>
-            {manifestStickyOpen ? (
-              <div
-                ref={manifestStickyMenuRef}
+          <div style={{ display: 'grid', gap: 8 }}>
+            <div ref={manifestStickyRef} style={{ position: 'relative' }}>
+              <button
+                type="button"
+                onClick={() => setManifestStickyOpen((open) => !open)}
                 style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  marginTop: 10,
-                  width: 280,
-                  maxWidth: 'calc(100vw - 24px)',
-                  borderRadius: 14,
-                  border: '1px solid rgba(140, 92, 78, 0.45)',
-                  background: 'rgba(252, 245, 240, 0.98)',
-                  boxShadow: '0 20px 44px rgba(12, 10, 12, 0.32)',
-                  padding: 12,
-                  display: 'grid',
-                  gap: 10,
-                  zIndex: 99999,
+                  padding: '6px 12px',
+                  borderRadius: 999,
+                  border: '1px solid rgba(140, 92, 78, 0.7)',
+                  background: 'linear-gradient(135deg, rgba(140, 92, 78, 0.35), rgba(245, 234, 226, 0.95))',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  color: '#4a2f26',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  boxShadow: '0 0 16px rgba(140, 92, 78, 0.45)',
                 }}
-                role="menu"
+                aria-haspopup="menu"
+                aria-expanded={manifestStickyOpen}
               >
-                <div style={{ fontWeight: 600, color: '#3b2b24' }}>Accounts</div>
-                {manifestAccountsLoading ? (
-                  <div style={{ fontSize: 12, opacity: 0.7 }}>Loading…</div>
-                ) : manifestAccountsMsg ? (
-                  <div style={{ fontSize: 12, color: '#8c4f3d' }}>{manifestAccountsMsg}</div>
-                ) : manifestAccounts.length ? (
-                  <div style={{ display: 'grid', gap: 8 }}>
-                    {manifestAccounts.map((acct) => (
-                      <div key={acct.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                        <span style={{ fontSize: 12, color: '#5d3d32' }}>{acct.name ?? 'Account'}</span>
-                        <span style={{ fontWeight: 700, fontSize: 12, color: '#3b2b24' }}>
-                          {formatMoney(acct.balance)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div style={{ fontSize: 12, opacity: 0.7 }}>No accounts found.</div>
-                )}
-                <button
-                  type="button"
-                  onClick={() => router.push('/dashboard')}
+                ManifestBank™
+                <span style={{ fontSize: 12, opacity: 0.7 }}>▾</span>
+              </button>
+              {manifestStickyOpen ? (
+                <div
+                  ref={manifestStickyMenuRef}
                   style={{
-                    padding: '8px 12px',
-                    borderRadius: 10,
-                    border: '1px solid rgba(140, 92, 78, 0.4)',
-                    background: 'rgba(255, 255, 255, 0.7)',
-                    cursor: 'pointer',
-                    fontWeight: 600,
-                    color: '#4a2f26',
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    marginTop: 10,
+                    width: 280,
+                    maxWidth: 'calc(100vw - 24px)',
+                    borderRadius: 14,
+                    border: '1px solid rgba(140, 92, 78, 0.45)',
+                    background: 'rgba(252, 245, 240, 0.98)',
+                    boxShadow: '0 20px 44px rgba(12, 10, 12, 0.32)',
+                    padding: 12,
+                    display: 'grid',
+                    gap: 10,
+                    zIndex: 99999,
                   }}
+                  role="menu"
                 >
-                  Open Dashboard
-                </button>
-              </div>
-            ) : null}
+                  <div style={{ fontWeight: 600, color: '#3b2b24' }}>Accounts</div>
+                  {manifestAccountsLoading ? (
+                    <div style={{ fontSize: 12, opacity: 0.7 }}>Loading…</div>
+                  ) : manifestAccountsMsg ? (
+                    <div style={{ fontSize: 12, color: '#8c4f3d' }}>{manifestAccountsMsg}</div>
+                  ) : manifestAccounts.length ? (
+                    <div style={{ display: 'grid', gap: 8 }}>
+                      {manifestAccounts.map((acct) => (
+                        <div key={acct.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+                          <span style={{ fontSize: 12, color: '#5d3d32' }}>{acct.name ?? 'Account'}</span>
+                          <span style={{ fontWeight: 700, fontSize: 12, color: '#3b2b24' }}>
+                            {formatMoney(acct.balance)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 12, opacity: 0.7 }}>No accounts found.</div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => router.push('/dashboard')}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: 10,
+                      border: '1px solid rgba(140, 92, 78, 0.4)',
+                      background: 'rgba(255, 255, 255, 0.7)',
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                      color: '#4a2f26',
+                    }}
+                  >
+                    Open Dashboard
+                  </button>
+                </div>
+              ) : null}
+            </div>
+            <div ref={etherStickyRef} style={{ position: 'relative' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setEtherStickyOpen((open) => !open)
+                  if (!etherStickyOpen) {
+                    markNotificationsRead()
+                  }
+                }}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: 999,
+                  border: '1px solid rgba(140, 92, 78, 0.7)',
+                  background: 'linear-gradient(135deg, rgba(140, 92, 78, 0.35), rgba(245, 234, 226, 0.95))',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  color: '#4a2f26',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  boxShadow: '0 0 16px rgba(140, 92, 78, 0.45)',
+                }}
+                aria-haspopup="menu"
+                aria-expanded={etherStickyOpen}
+              >
+                The Ether™
+                {etherStickyNoticeCount ? (
+                  <span
+                    style={{
+                      minWidth: 16,
+                      height: 16,
+                      borderRadius: 999,
+                      background: '#b67967',
+                      color: '#fff',
+                      fontSize: 11,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '0 5px',
+                    }}
+                  >
+                    {etherStickyNoticeCount}
+                  </span>
+                ) : null}
+                <span style={{ fontSize: 12, opacity: 0.7 }}>▾</span>
+              </button>
+              {etherStickyOpen ? (
+                <div
+                  ref={etherStickyMenuRef}
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    marginTop: 10,
+                    width: 320,
+                    maxWidth: 'calc(100vw - 24px)',
+                    borderRadius: 16,
+                    border: '1px solid rgba(140, 92, 78, 0.45)',
+                    background: 'linear-gradient(180deg, rgba(252, 245, 239, 0.98), rgba(226, 199, 181, 0.96))',
+                    boxShadow: '0 18px 42px rgba(26, 18, 14, 0.24)',
+                    padding: 12,
+                    color: '#3b2b24',
+                    zIndex: 99999,
+                  }}
+                  role="menu"
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      fontWeight: 700,
+                      fontSize: 13,
+                    }}
+                  >
+                    Notifications
+                    {unreadNotifications ? (
+                      <span
+                        style={{
+                          minWidth: 18,
+                          height: 18,
+                          borderRadius: 999,
+                          background: '#b67967',
+                          color: '#fff',
+                          fontSize: 11,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '0 6px',
+                        }}
+                      >
+                        {unreadNotifications}
+                      </span>
+                    ) : null}
+                  </div>
+                  {notifications.length === 0 ? (
+                    <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>No notifications yet.</div>
+                  ) : (
+                    <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
+                      {notifications.map((note) => (
+                        <div
+                          key={note.id}
+                          style={{
+                            display: 'flex',
+                            gap: 8,
+                            alignItems: 'center',
+                            padding: '6px 6px',
+                            borderRadius: 12,
+                            background: note.read_at ? 'transparent' : 'rgba(182, 121, 103, 0.08)',
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigateToProfile(note.actor_profile_id)
+                              setEtherStickyOpen(false)
+                            }}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 8,
+                              border: 'none',
+                              background: 'transparent',
+                              cursor: 'pointer',
+                              padding: 0,
+                              color: 'inherit',
+                              textDecoration: 'none',
+                              textUnderlineOffset: 2,
+                              transition: 'text-shadow 180ms ease, color 180ms ease',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.color = '#8a5c4a'
+                              e.currentTarget.style.textShadow = '0 0 10px rgba(140, 92, 78, 0.35)'
+                              e.currentTarget.style.textDecoration = 'underline'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.color = 'inherit'
+                              e.currentTarget.style.textShadow = 'none'
+                              e.currentTarget.style.textDecoration = 'none'
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: 26,
+                                height: 26,
+                                borderRadius: '50%',
+                                border: '1px solid rgba(95, 74, 62, 0.25)',
+                                background: 'rgba(255,255,255,0.9)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                overflow: 'hidden',
+                                fontSize: 11,
+                                fontWeight: 600,
+                              }}
+                            >
+                              {note.actor_avatar_url ? (
+                                <img
+                                  src={note.actor_avatar_url}
+                                  alt={note.actor_display_name ?? 'Member'}
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                />
+                              ) : (
+                                (note.actor_display_name ?? 'M').slice(0, 1).toUpperCase()
+                              )}
+                            </div>
+                            <div style={{ fontSize: 12 }}>
+                              <div style={{ fontWeight: 600 }}>{note.actor_display_name}</div>
+                              <div style={{ opacity: 0.7 }}>{note.message}</div>
+                            </div>
+                          </button>
+                          <div style={{ marginLeft: 'auto', fontSize: 11, opacity: 0.6 }}>
+                            {new Date(note.created_at).toLocaleString()}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div style={{ height: 1, background: 'rgba(140, 92, 78, 0.25)', margin: '10px 0' }} />
+                  <div style={{ fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    In Sync Requests
+                    {syncRequests.length ? (
+                      <span
+                        style={{
+                          minWidth: 18,
+                          height: 18,
+                          borderRadius: 999,
+                          background: '#b67967',
+                          color: '#fff',
+                          fontSize: 11,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '0 6px',
+                        }}
+                      >
+                        {syncRequests.length}
+                      </span>
+                    ) : null}
+                  </div>
+                  {syncRequests.length === 0 ? (
+                    <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>No requests.</div>
+                  ) : (
+                    <div style={{ marginTop: 8, display: 'grid', gap: 8 }}>
+                      {syncRequests.map((req) => (
+                        <div
+                          key={req.id}
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            gap: 8,
+                            alignItems: 'center',
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigateToProfile(req.requester_profile_id)
+                              setEtherStickyOpen(false)
+                            }}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 8,
+                              border: 'none',
+                              background: 'transparent',
+                              cursor: 'pointer',
+                              padding: 0,
+                              color: 'inherit',
+                              textDecoration: 'none',
+                              textUnderlineOffset: 2,
+                              transition: 'text-shadow 180ms ease, color 180ms ease',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.color = '#8a5c4a'
+                              e.currentTarget.style.textShadow = '0 0 10px rgba(140, 92, 78, 0.35)'
+                              e.currentTarget.style.textDecoration = 'underline'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.color = 'inherit'
+                              e.currentTarget.style.textShadow = 'none'
+                              e.currentTarget.style.textDecoration = 'none'
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: 28,
+                                height: 28,
+                                borderRadius: '50%',
+                                border: '1px solid rgba(95, 74, 62, 0.25)',
+                                background: 'rgba(255,255,255,0.9)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                overflow: 'hidden',
+                                fontSize: 12,
+                                fontWeight: 600,
+                              }}
+                            >
+                              {req.requester_avatar_url ? (
+                                <img
+                                  src={req.requester_avatar_url}
+                                  alt="Profile"
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                />
+                              ) : (
+                                <span>{(req.requester_display_name || 'U').slice(0, 1).toUpperCase()}</span>
+                              )}
+                            </div>
+                            <span style={{ fontSize: 12 }}>{req.requester_display_name}</span>
+                          </button>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                approveSyncRequest(req.id)
+                                setEtherStickyOpen(false)
+                              }}
+                              style={{
+                                border: 'none',
+                                background: 'transparent',
+                                cursor: 'pointer',
+                                fontSize: 11,
+                                opacity: 0.9,
+                              }}
+                            >
+                              Approve
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                denySyncRequest(req.id)
+                                setEtherStickyOpen(false)
+                              }}
+                              style={{
+                                border: 'none',
+                                background: 'transparent',
+                                cursor: 'pointer',
+                                fontSize: 11,
+                                opacity: 0.7,
+                              }}
+                            >
+                              Decline
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
       ) : null}
@@ -1732,18 +2094,7 @@ export default function EtherPage() {
                           >
                             <button
                               type="button"
-                              onClick={() => {
-                                if (typeof window !== 'undefined') {
-                                  window.sessionStorage.setItem(
-                                    'ether:last_view',
-                                    JSON.stringify({
-                                      path: window.location.pathname + window.location.search,
-                                      tab: activeTab,
-                                    })
-                                  )
-                                }
-                                router.push(`/ether/profile/${note.actor_profile_id}`)
-                              }}
+                              onClick={() => navigateToProfile(note.actor_profile_id)}
                               style={{
                                 display: 'inline-flex',
                                 alignItems: 'center',
@@ -2026,7 +2377,34 @@ export default function EtherPage() {
                                 key={p.id}
                                 style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}
                               >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <button
+                                  type="button"
+                                  onClick={() => navigateToProfile(p.id)}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 8,
+                                    border: 'none',
+                                    background: 'transparent',
+                                    cursor: 'pointer',
+                                    padding: 0,
+                                    color: 'inherit',
+                                    textDecoration: 'none',
+                                    textUnderlineOffset: 2,
+                                    transition: 'text-shadow 180ms ease, color 180ms ease',
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.color = '#6f4a3a'
+                                    e.currentTarget.style.textDecoration = 'underline'
+                                    e.currentTarget.style.textShadow =
+                                      '0 1px 0 rgba(182, 121, 103, 0.25), 0 0 10px rgba(182, 121, 103, 0.35)'
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.color = 'inherit'
+                                    e.currentTarget.style.textDecoration = 'none'
+                                    e.currentTarget.style.textShadow = 'none'
+                                  }}
+                                >
                                   <div
                                     style={{
                                       width: 26,
@@ -2056,7 +2434,7 @@ export default function EtherPage() {
                                     )}
                                   </div>
                                   <span style={{ fontSize: 12 }}>{p.display_name}</span>
-                                </div>
+                                </button>
                                 <div style={{ display: 'flex', gap: 6 }}>
                                   <button
                                     type="button"
@@ -2073,7 +2451,7 @@ export default function EtherPage() {
                                   </button>
                                   <button
                                     type="button"
-                                    onClick={() => router.push(`/ether/profile/${p.id}`)}
+                                    onClick={() => navigateToProfile(p.id)}
                                     style={{
                                       border: 'none',
                                       background: 'transparent',
@@ -2098,7 +2476,34 @@ export default function EtherPage() {
                         ) : (
                           syncRequests.map((req) => (
                             <div key={req.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <button
+                                type="button"
+                                onClick={() => navigateToProfile(req.requester_profile_id)}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 8,
+                                  border: 'none',
+                                  background: 'transparent',
+                                  cursor: 'pointer',
+                                  padding: 0,
+                                  color: 'inherit',
+                                  textDecoration: 'none',
+                                  textUnderlineOffset: 2,
+                                  transition: 'text-shadow 180ms ease, color 180ms ease',
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.color = '#6f4a3a'
+                                  e.currentTarget.style.textDecoration = 'underline'
+                                  e.currentTarget.style.textShadow =
+                                    '0 1px 0 rgba(182, 121, 103, 0.25), 0 0 10px rgba(182, 121, 103, 0.35)'
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.color = 'inherit'
+                                  e.currentTarget.style.textDecoration = 'none'
+                                  e.currentTarget.style.textShadow = 'none'
+                                }}
+                              >
                                 <div
                                   style={{
                                     width: 28,
@@ -2127,11 +2532,11 @@ export default function EtherPage() {
                                 <span style={{ fontSize: 12 }}>
                                   {req.requester_display_name || `Profile #${req.requester_profile_id}`}
                                 </span>
-                              </div>
+                              </button>
                               <div style={{ display: 'flex', gap: 6 }}>
                                 <button
                                   type="button"
-                                  onClick={() => router.push(`/ether/profile/${req.requester_profile_id}`)}
+                                  onClick={() => navigateToProfile(req.requester_profile_id)}
                                   style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 11, opacity: 0.7 }}
                                 >
                                   View
@@ -2165,7 +2570,34 @@ export default function EtherPage() {
                               key={p.id}
                               style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}
                             >
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <button
+                                type="button"
+                                onClick={() => navigateToProfile(p.id)}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 8,
+                                  border: 'none',
+                                  background: 'transparent',
+                                  cursor: 'pointer',
+                                  padding: 0,
+                                  color: 'inherit',
+                                  textDecoration: 'none',
+                                  textUnderlineOffset: 2,
+                                  transition: 'text-shadow 180ms ease, color 180ms ease',
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.color = '#6f4a3a'
+                                  e.currentTarget.style.textDecoration = 'underline'
+                                  e.currentTarget.style.textShadow =
+                                    '0 1px 0 rgba(182, 121, 103, 0.25), 0 0 10px rgba(182, 121, 103, 0.35)'
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.color = 'inherit'
+                                  e.currentTarget.style.textDecoration = 'none'
+                                  e.currentTarget.style.textShadow = 'none'
+                                }}
+                              >
                                 <div
                                   style={{
                                     width: 26,
@@ -2195,10 +2627,10 @@ export default function EtherPage() {
                                   )}
                                 </div>
                                 <span style={{ fontSize: 12 }}>{p.display_name}</span>
-                              </div>
+                              </button>
                               <button
                                 type="button"
-                                onClick={() => router.push(`/ether/profile/${p.id}`)}
+                                onClick={() => navigateToProfile(p.id)}
                                 style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 11, opacity: 0.7 }}
                               >
                                 View

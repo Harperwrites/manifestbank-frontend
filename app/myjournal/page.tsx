@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import Navbar from '@/app/components/Navbar'
 import { api } from '@/lib/api'
 
@@ -75,10 +76,60 @@ export default function MyJournalPage() {
   const [draftImageUrl, setDraftImageUrl] = useState('')
   const [draftImageFile, setDraftImageFile] = useState<File | null>(null)
   const [draftImageName, setDraftImageName] = useState<string | null>(null)
+  const [isVerified, setIsVerified] = useState(false)
+  const [profile, setProfile] = useState<any>(null)
+  const [etherNoticeCount, setEtherNoticeCount] = useState(0)
+  const [etherNoticeLoaded, setEtherNoticeLoaded] = useState(false)
+  const journalNavRef = useRef<HTMLDivElement | null>(null)
+  const [etherPortalVisible, setEtherPortalVisible] = useState(false)
 
   useEffect(() => {
     loadEntries()
+    loadMe()
   }, [])
+
+  async function loadMe() {
+    try {
+      const res = await api.get('/auth/me')
+      const verified = Boolean(res.data?.email_verified)
+      setIsVerified(verified)
+      if (verified) {
+        loadProfile().catch(() => {})
+        loadEtherNoticeCount().catch(() => {})
+      } else {
+        setProfile(null)
+      }
+    } catch {
+      setIsVerified(false)
+    }
+  }
+
+  async function loadProfile() {
+    try {
+      const res = await api.get('/ether/me-profile')
+      setProfile(res.data)
+    } catch {
+      setProfile(null)
+    }
+  }
+
+  async function loadEtherNoticeCount() {
+    if (etherNoticeLoaded) return
+    try {
+      const [notesRes, syncRes] = await Promise.allSettled([
+        api.get('/ether/notifications'),
+        api.get('/ether/sync/requests'),
+      ])
+      const list = notesRes.status === 'fulfilled' ? notesRes.value.data : []
+      const syncs = syncRes.status === 'fulfilled' ? syncRes.value.data : []
+      const unread = Array.isArray(list) ? list.filter((item: any) => !item?.read_at).length : 0
+      setEtherNoticeCount(unread + (Array.isArray(syncs) ? syncs.length : 0))
+    } catch {
+      setEtherNoticeCount(0)
+    } finally {
+      setEtherNoticeLoaded(true)
+    }
+  }
 
   function loadEntries() {
     setLoading(true)
@@ -158,9 +209,117 @@ export default function MyJournalPage() {
     setEntries(list)
   }
 
+  useEffect(() => {
+    const target = journalNavRef.current
+    if (!target) return
+    const updateVisibility = () => {
+      if (!journalNavRef.current) return
+      const rect = journalNavRef.current.getBoundingClientRect()
+      setEtherPortalVisible(rect.bottom <= 0)
+    }
+    updateVisibility()
+    if (typeof IntersectionObserver === 'undefined') {
+      window.addEventListener('scroll', updateVisibility)
+      window.addEventListener('resize', updateVisibility)
+      return () => {
+        window.removeEventListener('scroll', updateVisibility)
+        window.removeEventListener('resize', updateVisibility)
+      }
+    }
+    const observer = new IntersectionObserver(() => updateVisibility(), { threshold: 0 })
+    observer.observe(target)
+    window.addEventListener('scroll', updateVisibility)
+    window.addEventListener('resize', updateVisibility)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('scroll', updateVisibility)
+      window.removeEventListener('resize', updateVisibility)
+    }
+  }, [])
+
   return (
     <main style={{ minHeight: '100vh', background: 'var(--page-bg)' }}>
-      <Navbar showAccountsDropdown />
+      <div ref={journalNavRef}>
+        <Navbar showAccountsDropdown />
+      </div>
+      {isVerified && etherPortalVisible ? (
+        <div
+          className="ether-portal-chip"
+          style={{
+            zIndex: 1400,
+            display: 'grid',
+            gap: 8,
+          }}
+        >
+          <Link href="/ether" style={{ textDecoration: 'none' }}>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '6px 12px',
+                borderRadius: 999,
+                border: '1px solid rgba(140, 92, 78, 0.7)',
+                background: 'linear-gradient(135deg, rgba(140, 92, 78, 0.35), rgba(245, 234, 226, 0.95))',
+                boxShadow: '0 0 16px rgba(140, 92, 78, 0.45)',
+                color: '#4a2f26',
+                fontWeight: 700,
+                letterSpacing: 0.2,
+                maxWidth: 'calc(100vw - 24px)',
+              }}
+            >
+              <span
+                style={{
+                  width: 26,
+                  height: 26,
+                  borderRadius: '50%',
+                  border: '1px solid rgba(95, 74, 62, 0.35)',
+                  background: 'rgba(255,255,255,0.95)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden',
+                  fontWeight: 700,
+                  flexShrink: 0,
+                }}
+              >
+                {profile?.avatar_url ? (
+                  <img
+                    src={profile.avatar_url}
+                    alt="Profile"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  <span style={{ fontSize: 12 }}>
+                    {profile?.display_name?.slice(0, 1)?.toUpperCase() ?? '◎'}
+                  </span>
+                )}
+              </span>
+              Enter The Ether™
+              {etherNoticeCount > 0 ? (
+                <span
+                  style={{
+                    minWidth: 18,
+                    height: 18,
+                    borderRadius: 999,
+                    background: '#b67967',
+                    color: '#fff',
+                    fontSize: 11,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '0 6px',
+                    boxShadow: '0 0 10px rgba(182, 121, 103, 0.65)',
+                    marginLeft: 2,
+                  }}
+                >
+                  {etherNoticeCount}
+                </span>
+              ) : null}
+            </span>
+          </Link>
+        </div>
+      ) : null}
       <section style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 20px 80px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <div>
