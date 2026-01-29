@@ -466,7 +466,7 @@ export default function MyLineThreadPage() {
                   type="button"
                   onClick={() => {
                     window.sessionStorage.setItem('ether:last_view', JSON.stringify({ path: `/myline/${threadId}` }))
-                    router.push(`/ether/profile/${counterpart.id}`)
+                    router.push(`/ether/profile/${counterpart.profile_id}`)
                   }}
                   style={{
                     display: 'inline-flex',
