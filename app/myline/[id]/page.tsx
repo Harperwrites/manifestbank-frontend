@@ -96,6 +96,8 @@ export default function MyLineThreadPage() {
   const [notifications, setNotifications] = useState<EtherNotification[]>([])
   const [syncRequests, setSyncRequests] = useState<SyncRequest[]>([])
   const [threadUnreadCount, setThreadUnreadCount] = useState(0)
+  const [counterpartProfile, setCounterpartProfile] = useState<EtherThreadParticipant | null>(null)
+  const counterpartProfileCache = useRef<Map<number, EtherThreadParticipant>>(new Map())
   const accountMenuRef = useRef<HTMLDivElement | null>(null)
   const accountMenuTriggerRef = useRef<HTMLButtonElement | null>(null)
   const bottomRef = useRef<HTMLDivElement | null>(null)
@@ -245,9 +247,43 @@ export default function MyLineThreadPage() {
   }, [messages.length])
 
   const counterpart = useMemo(() => {
-    if (!thread?.participants || !profile?.id) return null
-    return thread.participants.find((p) => p.profile_id !== profile.id) ?? thread.participants[0]
+    if (!thread?.participants?.length) return null
+    const profileId = profile?.id ?? null
+    const match = profileId
+      ? thread.participants.find((p) => p.profile_id !== profileId)
+      : thread.participants[0]
+    return match ?? thread.participants[0]
   }, [thread?.participants, profile?.id])
+  const conversationProfile = counterpartProfile ?? counterpart
+
+  async function loadThreadParticipant(profileId: number) {
+    if (counterpartProfileCache.current.has(profileId)) {
+      return counterpartProfileCache.current.get(profileId) ?? null
+    }
+    try {
+      const res = await api.get(`/ether/profiles/${profileId}`)
+      const data = res.data as EtherThreadParticipant
+      counterpartProfileCache.current.set(profileId, data)
+      return data
+    } catch {
+      return null
+    }
+  }
+
+  useEffect(() => {
+    let canceled = false
+    const targetId = counterpart?.profile_id ?? null
+    if (!targetId) {
+      setCounterpartProfile(null)
+      return
+    }
+    loadThreadParticipant(targetId).then((data) => {
+      if (!canceled) setCounterpartProfile(data)
+    })
+    return () => {
+      canceled = true
+    }
+  }, [counterpart?.profile_id])
 
   async function sendMessage() {
     const trimmed = draft.trim()
@@ -454,19 +490,32 @@ export default function MyLineThreadPage() {
       <Container>
         <div style={{ marginTop: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-            <Button variant="outline" onClick={handleBack}>
+            <button
+              type="button"
+              onClick={handleBack}
+              style={{
+                padding: '10px 16px',
+                borderRadius: 999,
+                border: '1px solid rgba(140, 92, 78, 0.55)',
+                background: 'rgba(255, 248, 242, 0.9)',
+                color: '#3b2b24',
+                fontWeight: 600,
+                cursor: 'pointer',
+                boxShadow: '0 10px 22px rgba(10, 8, 10, 0.22)',
+              }}
+            >
               ← Back to My Line
-            </Button>
+            </button>
             <div style={{ display: 'grid', justifyItems: 'center', gap: 4 }}>
               <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.08, opacity: 0.65 }}>
                 Conversation
               </div>
-              {counterpart ? (
+              {conversationProfile ? (
                 <button
                   type="button"
                   onClick={() => {
                     window.sessionStorage.setItem('ether:last_view', JSON.stringify({ path: `/myline/${threadId}` }))
-                    router.push(`/ether/profile/${counterpart.profile_id}`)
+                    router.push(`/ether/profile/${conversationProfile.profile_id}`)
                   }}
                   style={{
                     display: 'inline-flex',
@@ -508,17 +557,17 @@ export default function MyLineThreadPage() {
                       fontWeight: 600,
                     }}
                   >
-                    {counterpart.avatar_url ? (
+                    {conversationProfile.avatar_url ? (
                       <img
-                        src={counterpart.avatar_url ?? undefined}
-                        alt={counterpart.display_name ?? 'Profile'}
+                        src={conversationProfile.avatar_url ?? undefined}
+                        alt={conversationProfile.display_name ?? 'Profile'}
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       />
                     ) : (
-                      (counterpart.display_name ?? 'U').slice(0, 1).toUpperCase()
+                      (conversationProfile.display_name ?? 'U').slice(0, 1).toUpperCase()
                     )}
                   </span>
-                  <span style={{ fontWeight: 600 }}>{counterpart.display_name ?? 'Member'}</span>
+                  <span style={{ fontWeight: 600 }}>{conversationProfile.display_name ?? 'Member'}</span>
                 </button>
               ) : (
                 <div style={{ fontWeight: 600 }}>Conversation</div>
@@ -583,10 +632,10 @@ export default function MyLineThreadPage() {
                       <div style={{ fontSize: 14, lineHeight: 1.5 }}>{message.content}</div>
                     </div>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 11, opacity: 0.7 }}>
-                      {!isMe && counterpart ? (
+                      {!isMe && conversationProfile ? (
                         <button
                           type="button"
-                          onClick={() => handleProfileClick(counterpart.profile_id)}
+                          onClick={() => handleProfileClick(conversationProfile.profile_id)}
                           style={{
                             border: 'none',
                             background: 'transparent',
@@ -610,7 +659,7 @@ export default function MyLineThreadPage() {
                             event.currentTarget.style.textDecorationLine = 'none'
                           }}
                         >
-                          {counterpart.display_name ?? 'Sender'}
+                          {conversationProfile.display_name ?? 'Sender'}
                         </button>
                       ) : null}
                       <span>{new Date(message.created_at).toLocaleString()}</span>

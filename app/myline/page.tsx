@@ -466,6 +466,10 @@ export default function MyLinePage() {
       )
     })
   }, [previews, search])
+  const hasAnyMessages = useMemo(
+    () => filteredPreviews.some((preview) => preview.message || preview.created_at),
+    [filteredPreviews]
+  )
 
   function handleOpenThread(preview: MyLinePreview) {
     if (preview.created_at) {
@@ -718,10 +722,10 @@ export default function MyLinePage() {
                 style={{
                   padding: '8px 12px',
                   borderRadius: 999,
-                  border: '1px solid rgba(140, 92, 78, 0.5)',
-                  background: 'linear-gradient(135deg, rgba(182, 121, 103, 0.2), rgba(255, 255, 255, 0.9))',
+                  border: '1px solid rgba(90, 56, 44, 0.8)',
+                  background: 'linear-gradient(135deg, rgba(111, 74, 58, 0.95), rgba(142, 92, 76, 0.9))',
                   fontWeight: 600,
-                  color: '#4a2f26',
+                  color: '#fff9f5',
                   cursor: 'pointer',
                   boxShadow: '0 10px 18px rgba(20, 12, 12, 0.25)',
                 }}
@@ -811,9 +815,10 @@ export default function MyLinePage() {
                       style={{
                         position: 'absolute',
                         top: '100%',
-                        right: 0,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
                         marginTop: 8,
-                        width: 260,
+                        width: 'min(260px, calc(100vw - 24px))',
                         maxWidth: 'calc(100vw - 24px)',
                         borderRadius: 14,
                         border: '1px solid rgba(140, 92, 78, 0.35)',
@@ -1011,7 +1016,7 @@ export default function MyLinePage() {
           <div style={{ marginTop: 20, display: 'grid', gap: 12 }}>
             {loading ? (
               <div style={{ fontSize: 13, opacity: 0.75 }}>Loading messages…</div>
-            ) : filteredPreviews.length === 0 ? (
+            ) : filteredPreviews.length === 0 || !hasAnyMessages ? (
               <div style={{ fontSize: 13, opacity: 0.75 }}>No messages yet.</div>
             ) : (
               filteredPreviews.map((preview) => (

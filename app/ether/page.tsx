@@ -1689,7 +1689,15 @@ export default function EtherPage() {
     [myLinePreviews]
   )
   const myLineRecentPreviews = useMemo(() => myLinePreviews.slice(0, 3), [myLinePreviews])
-  const myLineDisplayPreviews = myLineNewPreviews.length ? myLineNewPreviews : myLineRecentPreviews
+  const myLineHasMessages = useMemo(
+    () => myLinePreviews.some((preview) => Boolean(preview.created_at || preview.message)),
+    [myLinePreviews]
+  )
+  const myLineDisplayPreviews = myLineNewPreviews.length
+    ? myLineNewPreviews
+    : myLineHasMessages
+      ? myLineRecentPreviews
+      : []
 
   const activePosts = useMemo(() => {
     if (activeTab === 'timeline') return timeline
@@ -2390,9 +2398,10 @@ export default function EtherPage() {
                     style={{
                       position: 'absolute',
                       top: '100%',
-                      left: 0,
+                      left: '50%',
+                      transform: 'translateX(-50%)',
                       marginTop: 10,
-                      width: 320,
+                      width: 'min(320px, calc(100vw - 24px))',
                       maxWidth: 'calc(100vw - 24px)',
                       borderRadius: 16,
                       border: '1px solid rgba(182, 121, 103, 0.45)',
@@ -2400,7 +2409,7 @@ export default function EtherPage() {
                       boxShadow: '0 18px 42px rgba(26, 18, 14, 0.24)',
                       padding: 12,
                       color: '#3b2b24',
-                      zIndex: 30,
+                      zIndex: 1600,
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 13 }}>
