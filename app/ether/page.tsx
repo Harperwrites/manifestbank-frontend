@@ -1596,8 +1596,9 @@ export default function EtherPage() {
               const messagesRes = await api.get(`/ether/threads/${thread.id}/messages`)
               const list = Array.isArray(messagesRes.data) ? (messagesRes.data as EtherMessage[]) : []
               const last = list[list.length - 1]
+              const profileId = profile?.id ?? null
               const participant = Array.isArray(thread.participants)
-                ? thread.participants.find((p) => p.profile_id !== profile.id) ?? thread.participants[0]
+                ? thread.participants.find((p) => p.profile_id !== profileId) ?? thread.participants[0]
                 : null
               const senderProfileId = last?.sender_profile_id ?? participant?.profile_id ?? null
               let senderDisplayName = participant?.display_name ?? null
@@ -1610,7 +1611,7 @@ export default function EtherPage() {
               const readAt = getThreadReadAt(thread.id)
               const unread =
                 !!last &&
-                last.sender_profile_id !== profile.id &&
+                (!profileId || last.sender_profile_id !== profileId) &&
                 (!readAt || new Date(last.created_at).getTime() > new Date(readAt).getTime())
               return {
                 thread_id: thread.id,
