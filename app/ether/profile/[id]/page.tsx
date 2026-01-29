@@ -70,6 +70,7 @@ export default function EtherProfilePage() {
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null)
   const [etherNoticeCount, setEtherNoticeCount] = useState(0)
   const [etherNoticeLoaded, setEtherNoticeLoaded] = useState(false)
+  const [lineLoading, setLineLoading] = useState(false)
 
   function getThreadReadAt(threadId: number) {
     if (typeof window === 'undefined') return null
@@ -102,6 +103,53 @@ export default function EtherProfilePage() {
       return results.reduce((sum, res) => (res.status === 'fulfilled' ? sum + res.value : sum), 0)
     } catch {
       return 0
+    }
+  }
+
+  function storeLineReturnPath() {
+    if (typeof window === 'undefined') return
+    const payload = JSON.stringify({
+      path: window.location.pathname + window.location.search,
+      scrollY: window.scrollY,
+    })
+    window.sessionStorage.setItem('myline:last_view', payload)
+    window.sessionStorage.setItem('ether:last_view', payload)
+  }
+
+  function findThreadWithProfile(threads: any[], targetId: number) {
+    return threads.find((thread) => thread?.participants?.some((p: any) => p?.profile_id === targetId))
+  }
+
+  async function openLineWithProfile(targetId: number) {
+    if (!targetId) return
+    setLineLoading(true)
+    setMsg('')
+    try {
+      const threadRes = await api.get('/ether/threads')
+      const list = Array.isArray(threadRes.data) ? threadRes.data : []
+      let thread = findThreadWithProfile(list, targetId)
+      if (!thread) {
+        const created = await api.post('/ether/threads', { participant_profile_ids: [targetId] })
+        const createdId = created.data?.id
+        if (createdId) {
+          storeLineReturnPath()
+          router.push(`/myline/${createdId}`)
+          return
+        }
+        const refresh = await api.get('/ether/threads')
+        const refreshed = Array.isArray(refresh.data) ? refresh.data : []
+        thread = findThreadWithProfile(refreshed, targetId)
+      }
+      if (thread?.id) {
+        storeLineReturnPath()
+        router.push(`/myline/${thread.id}`)
+      } else {
+        setMsg('Unable to start a new line. Please try again.')
+      }
+    } catch (e: any) {
+      setMsg(e?.response?.data?.detail ?? e?.message ?? 'Unable to start a new line.')
+    } finally {
+      setLineLoading(false)
     }
   }
 
@@ -623,6 +671,55 @@ export default function EtherProfilePage() {
                           Sync
                         </button>
                       )
+                    ) : null}
+                    {profile.id !== meProfileId ? (
+                      <button
+                        type="button"
+                        onClick={() => openLineWithProfile(profile.id)}
+                        disabled={lineLoading}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          padding: '2px 8px',
+                          borderRadius: 999,
+                          border: '1px solid rgba(182, 121, 103, 0.6)',
+                          background: 'rgba(255,255,255,0.9)',
+                          color: '#6f4a3a',
+                          fontSize: 12,
+                          fontWeight: 600,
+                          cursor: lineLoading ? 'wait' : 'pointer',
+                          boxShadow: '0 10px 18px rgba(182, 121, 103, 0.24)',
+                          transition: 'transform 160ms ease, box-shadow 160ms ease',
+                        }}
+                        onMouseEnter={(event) => {
+                          event.currentTarget.style.boxShadow =
+                            '0 12px 22px rgba(182, 121, 103, 0.32)'
+                          event.currentTarget.style.transform = 'translateY(-1px)'
+                        }}
+                        onMouseLeave={(event) => {
+                          event.currentTarget.style.boxShadow =
+                            '0 10px 18px rgba(182, 121, 103, 0.24)'
+                          event.currentTarget.style.transform = 'translateY(0)'
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: 18,
+                            height: 18,
+                            borderRadius: '50%',
+                            background: 'rgba(182, 121, 103, 0.18)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: 11,
+                          }}
+                          aria-hidden="true"
+                        >
+                          💬
+                        </span>
+                        {profile.display_name ? `${profile.display_name}'s Line` : "Member's Line"}
+                      </button>
                     ) : null}
                   </div>
                   <div style={{ fontSize: 12, opacity: 0.7 }}>{profile.bio || 'No bio yet.'}</div>

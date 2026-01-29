@@ -457,7 +457,73 @@ export default function MyLineThreadPage() {
             <Button variant="outline" onClick={handleBack}>
               ← Back to My Line
             </Button>
-            <div style={{ fontWeight: 600 }}>{counterpart?.display_name ?? 'Conversation'}</div>
+            <div style={{ display: 'grid', justifyItems: 'center', gap: 4 }}>
+              <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.08, opacity: 0.65 }}>
+                Conversation
+              </div>
+              {counterpart ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.sessionStorage.setItem('ether:last_view', JSON.stringify({ path: `/myline/${threadId}` }))
+                    router.push(`/ether/profile/${counterpart.id}`)
+                  }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    padding: 0,
+                    color: 'inherit',
+                    textDecoration: 'none',
+                    textUnderlineOffset: 2,
+                    transition: 'text-shadow 160ms ease, color 160ms ease',
+                  }}
+                  onMouseEnter={(event) => {
+                    event.currentTarget.style.color = '#6f4a3a'
+                    event.currentTarget.style.textDecoration = 'underline'
+                    event.currentTarget.style.textShadow =
+                      '0 1px 0 rgba(182, 121, 103, 0.25), 0 0 12px rgba(182, 121, 103, 0.35)'
+                  }}
+                  onMouseLeave={(event) => {
+                    event.currentTarget.style.color = 'inherit'
+                    event.currentTarget.style.textDecoration = 'none'
+                    event.currentTarget.style.textShadow = 'none'
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: '50%',
+                      border: '1px solid rgba(95, 74, 62, 0.25)',
+                      background: 'rgba(255,255,255,0.9)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      overflow: 'hidden',
+                      fontSize: 11,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {counterpart.avatar_url ? (
+                      <img
+                        src={counterpart.avatar_url ?? undefined}
+                        alt={counterpart.display_name ?? 'Profile'}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    ) : (
+                      (counterpart.display_name ?? 'U').slice(0, 1).toUpperCase()
+                    )}
+                  </span>
+                  <span style={{ fontWeight: 600 }}>{counterpart.display_name ?? 'Member'}</span>
+                </button>
+              ) : (
+                <div style={{ fontWeight: 600 }}>Conversation</div>
+              )}
+            </div>
             <button
               type="button"
               onClick={() => loadThread()}

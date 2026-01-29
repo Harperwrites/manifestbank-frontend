@@ -95,11 +95,13 @@ function markThreadRead(threadId: number, createdAt?: string | null) {
 export default function MyLinePage() {
   const { me } = useAuth()
   const router = useRouter()
+  const navRef = useRef<HTMLDivElement | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [threads, setThreads] = useState<EtherThread[]>([])
   const [previews, setPreviews] = useState<MyLinePreview[]>([])
   const [loading, setLoading] = useState(false)
   const [noticeMsg, setNoticeMsg] = useState('')
+  const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
   const [accountsOpen, setAccountsOpen] = useState(false)
   const [accounts, setAccounts] = useState<any[]>([])
@@ -108,11 +110,22 @@ export default function MyLinePage() {
   const [accountsMsg, setAccountsMsg] = useState('')
   const [notifications, setNotifications] = useState<EtherNotification[]>([])
   const [syncRequests, setSyncRequests] = useState<SyncRequest[]>([])
+  const [syncs, setSyncs] = useState<Profile[]>([])
+  const [syncsOpen, setSyncsOpen] = useState(false)
+  const syncsMenuRef = useRef<HTMLDivElement | null>(null)
+  const syncsMenuTriggerRef = useRef<HTMLButtonElement | null>(null)
   const [threadUnreadCount, setThreadUnreadCount] = useState(0)
+  const [newMessageOpen, setNewMessageOpen] = useState(false)
+  const [recipientInput, setRecipientInput] = useState('')
+  const [recipientQuery, setRecipientQuery] = useState('')
+  const [recipientResults, setRecipientResults] = useState<Profile[]>([])
+  const [recipientLoading, setRecipientLoading] = useState(false)
+  const [recipientMsg, setRecipientMsg] = useState('')
   const accountMenuRef = useRef<HTMLDivElement | null>(null)
   const accountMenuTriggerRef = useRef<HTMLButtonElement | null>(null)
   const profileCache = useRef<Map<number, EtherThreadParticipant>>(new Map())
   const [restoringScroll, setRestoringScroll] = useState(false)
+  const [showStickyChips, setShowStickyChips] = useState(false)
 
   const unreadNotifications = useMemo(
     () => notifications.filter((note) => !note.read_at).length,
@@ -152,6 +165,21 @@ export default function MyLinePage() {
   }, [restoringScroll])
 
   useEffect(() => {
+    if (typeof window === 'undefined') return
+    const handle = () => {
+      const navHeight = navRef.current?.getBoundingClientRect().height ?? 0
+      setShowStickyChips(window.scrollY > navHeight + 6)
+    }
+    handle()
+    window.addEventListener('scroll', handle, { passive: true })
+    window.addEventListener('resize', handle)
+    return () => {
+      window.removeEventListener('scroll', handle)
+      window.removeEventListener('resize', handle)
+    }
+  }, [])
+
+  useEffect(() => {
     if (!me) return
     if (me.email_verified === false) {
       router.replace('/verify-email?next=/myline')
@@ -183,15 +211,17 @@ export default function MyLinePage() {
     setLoading(true)
     setNoticeMsg('')
     try {
-      const [threadRes, noteRes, syncRes] = await Promise.allSettled([
+      const [threadRes, noteRes, syncRes, syncListRes] = await Promise.allSettled([
         api.get('/ether/threads'),
         api.get('/ether/notifications'),
         api.get('/ether/sync/requests'),
+        api.get('/ether/syncs'),
       ])
       if (threadRes.status === 'fulfilled') setThreads(threadRes.value.data)
       if (noteRes.status === 'fulfilled') setNotifications(noteRes.value.data)
       if (syncRes.status === 'fulfilled') setSyncRequests(syncRes.value.data)
-      if ([threadRes, noteRes, syncRes].some((res) => res.status === 'rejected')) {
+      if (syncListRes.status === 'fulfilled') setSyncs(syncListRes.value.data)
+      if ([threadRes, noteRes, syncRes, syncListRes].some((res) => res.status === 'rejected')) {
         setNoticeMsg('Some data failed to load. Try refresh.')
       }
     } catch (e: any) {
@@ -351,6 +381,80 @@ export default function MyLinePage() {
     }
   }, [accountsOpen])
 
+  useEffect(() => {
+    if (!syncsOpen) return
+    function handleClick(event: MouseEvent) {
+      const target = event.target as Node
+      if (
+        syncsMenuRef.current &&
+        !syncsMenuRef.current.contains(target) &&
+        syncsMenuTriggerRef.current &&
+        !syncsMenuTriggerRef.current.contains(target)
+      ) {
+        setSyncsOpen(false)
+      }
+    }
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setSyncsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [syncsOpen])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const handle = window.setTimeout(() => {
+      setSearch(searchInput.trim())
+    }, 220)
+    return () => window.clearTimeout(handle)
+  }, [searchInput])
+
+  useEffect(() => {
+    if (!newMessageOpen) return
+    if (typeof window === 'undefined') return
+    const handle = window.setTimeout(() => {
+      const trimmed = recipientInput.trim()
+      setRecipientQuery(trimmed)
+    }, 220)
+    return () => window.clearTimeout(handle)
+  }, [recipientInput, newMessageOpen])
+
+  useEffect(() => {
+    if (!newMessageOpen) return
+    if (!recipientQuery) {
+      setRecipientResults([])
+      setRecipientMsg('')
+      return
+    }
+    let canceled = false
+    setRecipientLoading(true)
+    api
+      .get('/ether/profiles/search', { params: { query: recipientQuery } })
+      .then((res) => {
+        if (canceled) return
+        const list = Array.isArray(res.data) ? res.data : []
+        setRecipientResults(list)
+        setRecipientMsg('')
+      })
+      .catch((e) => {
+        if (canceled) return
+        setRecipientResults([])
+        setRecipientMsg(e?.response?.data?.detail ?? e?.message ?? 'Search failed')
+      })
+      .finally(() => {
+        if (!canceled) setRecipientLoading(false)
+      })
+    return () => {
+      canceled = true
+    }
+  }, [recipientQuery, newMessageOpen])
+
   const filteredPreviews = useMemo(() => {
     const query = search.trim().toLowerCase()
     if (!query) return previews
@@ -398,6 +502,52 @@ export default function MyLinePage() {
     router.push(`/ether/profile/${profileId}`)
   }
 
+  function storeReturnPath() {
+    if (typeof window === 'undefined') return
+    window.sessionStorage.setItem(
+      MYLINE_VIEW_KEY,
+      JSON.stringify({ path: window.location.pathname + window.location.search, scrollY: window.scrollY })
+    )
+    window.sessionStorage.setItem(
+      'ether:last_view',
+      JSON.stringify({ path: window.location.pathname + window.location.search })
+    )
+  }
+
+  function findThreadWithProfile(profileId: number) {
+    return threads.find(
+      (thread) =>
+        Array.isArray(thread.participants) &&
+        thread.participants.some((participant) => participant.profile_id === profileId)
+    )
+  }
+
+  async function openLineWithProfile(profileId: number) {
+    if (!profileId) return
+    try {
+      let thread = findThreadWithProfile(profileId)
+      if (!thread) {
+        const res = await api.post('/ether/threads', { participant_profile_ids: [profileId] })
+        const createdId = res.data?.id ?? res.data?.thread_id ?? null
+        if (createdId) {
+          storeReturnPath()
+          router.push(`/myline/${createdId}`)
+          return
+        }
+        await loadThreads()
+        thread = findThreadWithProfile(profileId)
+      }
+      if (thread) {
+        storeReturnPath()
+        router.push(`/myline/${thread.id}`)
+      } else {
+        setNoticeMsg('Unable to start a new line. Please try again.')
+      }
+    } catch (e: any) {
+      setNoticeMsg(e?.response?.data?.detail ?? e?.message ?? 'Unable to start a new line.')
+    }
+  }
+
   return (
     <main
       style={{
@@ -411,166 +561,188 @@ export default function MyLinePage() {
         color: 'var(--marble-ivory)',
       }}
     >
-      <EtherNavbar profile={profile} updateSettings={updateSettings} onAvatarSelect={onAvatarSelect} />
+      <div ref={navRef}>
+        <EtherNavbar profile={profile} updateSettings={updateSettings} onAvatarSelect={onAvatarSelect} />
+      </div>
 
-      <div
-        style={{
-          position: 'fixed',
-          top: 'calc(env(safe-area-inset-top) + 8px)',
-          left: 12,
-          zIndex: 1400,
-          display: 'grid',
-          gap: 8,
-        }}
-      >
-        <div style={{ position: 'relative' }}>
-          <button
-            type="button"
-            onClick={() => router.push('/ether')}
-            style={{
-              padding: '6px 12px',
-              borderRadius: 999,
-              border: '1px solid rgba(140, 92, 78, 0.7)',
-              background: 'linear-gradient(135deg, rgba(120, 77, 64, 0.7), rgba(224, 198, 186, 0.95))',
-              cursor: 'pointer',
-              fontWeight: 600,
-              color: '#2f1f1a',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              boxShadow: '0 0 18px rgba(140, 92, 78, 0.5)',
-            }}
-          >
-            The Ether™
-            {etherBadgeCount ? (
-              <span
-                style={{
-                  minWidth: 16,
-                  height: 16,
-                  borderRadius: 999,
-                  background: '#b67967',
-                  color: '#fff',
-                  fontSize: 11,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '0 5px',
-                }}
-              >
-                {etherBadgeCount}
-              </span>
-            ) : null}
-          </button>
-        </div>
-        <div style={{ position: 'relative' }}>
-          <button
-            ref={accountMenuTriggerRef}
-            type="button"
-            onClick={() => setAccountsOpen((open) => !open)}
-            style={{
-              padding: '6px 12px',
-              borderRadius: 999,
-              border: '1px solid rgba(140, 92, 78, 0.7)',
-              background: 'linear-gradient(135deg, rgba(140, 92, 78, 0.35), rgba(245, 234, 226, 0.95))',
-              cursor: 'pointer',
-              fontWeight: 600,
-              color: '#4a2f26',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              boxShadow: '0 0 16px rgba(140, 92, 78, 0.45)',
-            }}
-            aria-haspopup="menu"
-            aria-expanded={accountsOpen}
-          >
-            ManifestBank™
-            <span style={{ fontSize: 12, opacity: 0.7 }}>▾</span>
-          </button>
-          {accountsOpen ? (
-            <div
-              ref={accountMenuRef}
+      {showStickyChips ? (
+        <div
+          style={{
+            position: 'fixed',
+            top: 'calc(env(safe-area-inset-top) + 8px)',
+            left: 12,
+            zIndex: 1400,
+            display: 'grid',
+            gap: 8,
+          }}
+        >
+          <div style={{ position: 'relative' }}>
+            <button
+              type="button"
+              onClick={() => router.push('/ether')}
               style={{
-                position: 'absolute',
-                top: '100%',
-                left: 0,
-                marginTop: 10,
-                width: 320,
-                maxWidth: 'calc(100vw - 24px)',
-                borderRadius: 16,
-                border: '1px solid rgba(140, 92, 78, 0.45)',
-                background: 'linear-gradient(180deg, rgba(252, 245, 239, 0.98), rgba(226, 199, 181, 0.96))',
-                boxShadow: '0 18px 42px rgba(26, 18, 14, 0.24)',
-                padding: 12,
-                color: '#3b2b24',
-                zIndex: 99999,
+                padding: '6px 12px',
+                borderRadius: 999,
+                border: '1px solid rgba(140, 92, 78, 0.7)',
+                background: 'linear-gradient(135deg, rgba(120, 77, 64, 0.7), rgba(224, 198, 186, 0.95))',
+                cursor: 'pointer',
+                fontWeight: 600,
+                color: '#2f1f1a',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                boxShadow: '0 0 18px rgba(140, 92, 78, 0.5)',
               }}
             >
-              <div style={{ fontWeight: 700, fontSize: 13 }}>Accounts</div>
-              {accountsLoading ? (
-                <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>Loading accounts…</div>
-              ) : accountsMsg ? (
-                <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>{accountsMsg}</div>
-              ) : accounts.length === 0 ? (
-                <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>No accounts yet.</div>
-              ) : (
-                <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
-                  {accounts.map((acct) => (
-                    <div
-                      key={acct.id}
-                      style={{
-                        padding: '6px 8px',
-                        borderRadius: 12,
-                        border: '1px solid rgba(160, 120, 104, 0.25)',
-                        background: 'rgba(255,255,255,0.75)',
-                      }}
-                    >
-                      <div style={{ fontWeight: 600, fontSize: 12 }}>{acct.name}</div>
-                      <div style={{ fontSize: 12, opacity: 0.8 }}>{formatMoney(acct.balance)}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <button
-                type="button"
-                onClick={() => router.push('/dashboard')}
+              The Ether™
+              {etherBadgeCount ? (
+                <span
+                  style={{
+                    minWidth: 16,
+                    height: 16,
+                    borderRadius: 999,
+                    background: '#b67967',
+                    color: '#fff',
+                    fontSize: 11,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '0 5px',
+                  }}
+                >
+                  {etherBadgeCount}
+                </span>
+              ) : null}
+            </button>
+          </div>
+          <div style={{ position: 'relative' }}>
+            <button
+              ref={accountMenuTriggerRef}
+              type="button"
+              onClick={() => setAccountsOpen((open) => !open)}
+              style={{
+                padding: '6px 12px',
+                borderRadius: 999,
+                border: '1px solid rgba(140, 92, 78, 0.7)',
+                background: 'linear-gradient(135deg, rgba(140, 92, 78, 0.35), rgba(245, 234, 226, 0.95))',
+                cursor: 'pointer',
+                fontWeight: 600,
+                color: '#4a2f26',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                boxShadow: '0 0 16px rgba(140, 92, 78, 0.45)',
+              }}
+              aria-haspopup="menu"
+              aria-expanded={accountsOpen}
+            >
+              ManifestBank™
+              <span style={{ fontSize: 12, opacity: 0.7 }}>▾</span>
+            </button>
+            {accountsOpen ? (
+              <div
+                ref={accountMenuRef}
                 style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
                   marginTop: 10,
-                  width: '100%',
-                  padding: '8px 12px',
-                  borderRadius: 12,
-                  border: '1px solid rgba(140, 92, 78, 0.4)',
-                  background: 'rgba(255, 255, 255, 0.75)',
-                  fontWeight: 600,
-                  color: '#4a2f26',
-                  cursor: 'pointer',
+                  width: 320,
+                  maxWidth: 'calc(100vw - 24px)',
+                  borderRadius: 16,
+                  border: '1px solid rgba(140, 92, 78, 0.45)',
+                  background: 'linear-gradient(180deg, rgba(252, 245, 239, 0.98), rgba(226, 199, 181, 0.96))',
+                  boxShadow: '0 18px 42px rgba(26, 18, 14, 0.24)',
+                  padding: 12,
+                  color: '#3b2b24',
+                  zIndex: 99999,
                 }}
               >
-                Open dashboard
-              </button>
-            </div>
-          ) : null}
+                <div style={{ fontWeight: 700, fontSize: 13 }}>Accounts</div>
+                {accountsLoading ? (
+                  <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>Loading accounts…</div>
+                ) : accountsMsg ? (
+                  <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>{accountsMsg}</div>
+                ) : accounts.length === 0 ? (
+                  <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>No accounts yet.</div>
+                ) : (
+                  <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
+                    {accounts.map((acct) => (
+                      <div
+                        key={acct.id}
+                        style={{
+                          padding: '6px 8px',
+                          borderRadius: 12,
+                          border: '1px solid rgba(160, 120, 104, 0.25)',
+                          background: 'rgba(255,255,255,0.75)',
+                        }}
+                      >
+                        <div style={{ fontWeight: 600, fontSize: 12 }}>{acct.name}</div>
+                        <div style={{ fontSize: 12, opacity: 0.8 }}>{formatMoney(acct.balance)}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => router.push('/dashboard')}
+                  style={{
+                    marginTop: 10,
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: 12,
+                    border: '1px solid rgba(140, 92, 78, 0.4)',
+                    background: 'rgba(255, 255, 255, 0.75)',
+                    fontWeight: 600,
+                    color: '#4a2f26',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Open dashboard
+                </button>
+              </div>
+            ) : null}
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <Container>
         <div style={{ marginTop: 24 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
             <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 30, margin: 0 }}>My Line</h1>
-            <button
-              type="button"
-              onClick={() => loadThreads()}
-              style={{
-                padding: '8px 12px',
-                borderRadius: 999,
-                border: '1px solid rgba(140, 92, 78, 0.5)',
-                background: 'rgba(255, 255, 255, 0.85)',
-                fontWeight: 600,
-                color: '#4a2f26',
-                cursor: 'pointer',
-              }}
-            >
-              Refresh
-            </button>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <button
+                type="button"
+                onClick={() => setNewMessageOpen((open) => !open)}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: 999,
+                  border: '1px solid rgba(140, 92, 78, 0.5)',
+                  background: 'linear-gradient(135deg, rgba(182, 121, 103, 0.2), rgba(255, 255, 255, 0.9))',
+                  fontWeight: 600,
+                  color: '#4a2f26',
+                  cursor: 'pointer',
+                  boxShadow: '0 10px 18px rgba(20, 12, 12, 0.25)',
+                }}
+              >
+                New Message
+              </button>
+              <button
+                type="button"
+                onClick={() => loadThreads()}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: 999,
+                  border: '1px solid rgba(140, 92, 78, 0.5)',
+                  background: 'rgba(255, 255, 255, 0.85)',
+                  fontWeight: 600,
+                  color: '#4a2f26',
+                  cursor: 'pointer',
+                }}
+              >
+                Refresh
+              </button>
+            </div>
           </div>
           <div style={{ opacity: 0.7, marginTop: 6 }}>
             Search messages and senders. Click any preview to open the thread.
@@ -579,10 +751,237 @@ export default function MyLinePage() {
             <div style={{ marginTop: 10, fontSize: 12, opacity: 0.75 }}>{noticeMsg}</div>
           ) : null}
 
+          {newMessageOpen ? (
+            <div
+              style={{
+                marginTop: 16,
+                padding: 16,
+                borderRadius: 20,
+                background: 'rgba(255,255,255,0.88)',
+                border: '1px solid rgba(182, 121, 103, 0.2)',
+                boxShadow: '0 18px 32px rgba(10, 8, 10, 0.18)',
+                display: 'grid',
+                gap: 12,
+                color: '#2d1f1a',
+              }}
+            >
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ fontWeight: 700 }}>To:</div>
+                <div style={{ flex: 1, minWidth: 200, position: 'relative' }}>
+                  <input
+                    value={recipientInput}
+                    onChange={(event) => setRecipientInput(event.target.value)}
+                    placeholder="Search by name or username"
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      borderRadius: 999,
+                      border: '1px solid rgba(140, 92, 78, 0.35)',
+                      background: 'rgba(255,255,255,0.95)',
+                      fontSize: 14,
+                      color: '#2d1f1a',
+                    }}
+                  />
+                </div>
+                <div style={{ position: 'relative' }}>
+                  <button
+                    ref={syncsMenuTriggerRef}
+                    type="button"
+                    onClick={() => setSyncsOpen((open) => !open)}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: 999,
+                      border: '1px solid rgba(140, 92, 78, 0.45)',
+                      background: 'rgba(245, 234, 226, 0.95)',
+                      fontWeight: 600,
+                      color: '#4a2f26',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    In Sync
+                    <span style={{ fontSize: 12, opacity: 0.7 }}>▾</span>
+                  </button>
+                  {syncsOpen ? (
+                    <div
+                      ref={syncsMenuRef}
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        right: 0,
+                        marginTop: 8,
+                        width: 260,
+                        maxWidth: 'calc(100vw - 24px)',
+                        borderRadius: 14,
+                        border: '1px solid rgba(140, 92, 78, 0.35)',
+                        background: 'linear-gradient(180deg, rgba(252, 245, 239, 0.98), rgba(226, 199, 181, 0.96))',
+                        boxShadow: '0 16px 30px rgba(12, 10, 10, 0.22)',
+                        padding: 10,
+                        zIndex: 9999,
+                      }}
+                    >
+                      <div style={{ fontWeight: 700, fontSize: 12 }}>In Sync</div>
+                      {syncs.length === 0 ? (
+                        <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>No synced profiles yet.</div>
+                      ) : (
+                        <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
+                          {syncs.map((sync) => (
+                            <button
+                              key={sync.id}
+                              type="button"
+                              onClick={() => {
+                                setSyncsOpen(false)
+                                openLineWithProfile(sync.id)
+                              }}
+                              style={{
+                                border: '1px solid rgba(140, 92, 78, 0.2)',
+                                borderRadius: 10,
+                                padding: '6px 8px',
+                                background: 'rgba(255,255,255,0.9)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 8,
+                                cursor: 'pointer',
+                                textAlign: 'left',
+                                color: 'inherit',
+                                textDecoration: 'none',
+                                textUnderlineOffset: 2,
+                                transition: 'text-shadow 160ms ease, color 160ms ease',
+                              }}
+                              onMouseEnter={(event) => {
+                                event.currentTarget.style.color = '#6f4a3a'
+                                event.currentTarget.style.textDecoration = 'underline'
+                                event.currentTarget.style.textShadow =
+                                  '0 1px 0 rgba(182, 121, 103, 0.25), 0 0 12px rgba(182, 121, 103, 0.35)'
+                              }}
+                              onMouseLeave={(event) => {
+                                event.currentTarget.style.color = 'inherit'
+                                event.currentTarget.style.textDecoration = 'none'
+                                event.currentTarget.style.textShadow = 'none'
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: 28,
+                                  height: 28,
+                                  borderRadius: '50%',
+                                  background: 'rgba(255,255,255,0.85)',
+                                  border: '1px solid rgba(140, 92, 78, 0.25)',
+                                  overflow: 'hidden',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  color: '#5a3b31',
+                                }}
+                              >
+                                {sync.avatar_url ? (
+                                  <img
+                                    src={sync.avatar_url ?? undefined}
+                                    alt={sync.display_name ?? 'Profile'}
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                  />
+                                ) : (
+                                  (sync.display_name ?? 'U').slice(0, 1).toUpperCase()
+                                )}
+                              </div>
+                              <div style={{ fontSize: 12, fontWeight: 600, color: '#4a2f26' }}>
+                                {sync.display_name ?? `User #${sync.id}`}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+              {recipientMsg ? (
+                <div style={{ fontSize: 12, opacity: 0.7 }}>{recipientMsg}</div>
+              ) : null}
+              {recipientLoading ? (
+                <div style={{ fontSize: 12, opacity: 0.7 }}>Searching…</div>
+              ) : recipientQuery ? (
+                recipientResults.length ? (
+                  <div style={{ display: 'grid', gap: 8 }}>
+                    {recipientResults.map((result) => (
+                      <button
+                        key={result.id}
+                        type="button"
+                        onClick={() => openLineWithProfile(result.id)}
+                        style={{
+                          border: '1px solid rgba(140, 92, 78, 0.18)',
+                          borderRadius: 12,
+                          padding: '8px 10px',
+                          background: 'rgba(255,255,255,0.95)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 10,
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          color: 'inherit',
+                          textDecoration: 'none',
+                          textUnderlineOffset: 2,
+                          transition: 'text-shadow 160ms ease, color 160ms ease',
+                        }}
+                        onMouseEnter={(event) => {
+                          event.currentTarget.style.color = '#6f4a3a'
+                          event.currentTarget.style.textDecoration = 'underline'
+                          event.currentTarget.style.textShadow =
+                            '0 1px 0 rgba(182, 121, 103, 0.25), 0 0 12px rgba(182, 121, 103, 0.35)'
+                        }}
+                        onMouseLeave={(event) => {
+                          event.currentTarget.style.color = 'inherit'
+                          event.currentTarget.style.textDecoration = 'none'
+                          event.currentTarget.style.textShadow = 'none'
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 34,
+                            height: 34,
+                            borderRadius: '50%',
+                            background: 'rgba(255,255,255,0.9)',
+                            border: '1px solid rgba(140, 92, 78, 0.25)',
+                            overflow: 'hidden',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: '#5a3b31',
+                          }}
+                        >
+                          {result.avatar_url ? (
+                            <img
+                              src={result.avatar_url ?? undefined}
+                              alt={result.display_name ?? 'Profile'}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                          ) : (
+                            (result.display_name ?? 'U').slice(0, 1).toUpperCase()
+                          )}
+                        </div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#4a2f26' }}>
+                          {result.display_name ?? `User #${result.id}`}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 12, opacity: 0.7 }}>No matches yet.</div>
+                )
+              ) : null}
+            </div>
+          ) : null}
+
           <div style={{ marginTop: 16, position: 'relative' }}>
             <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
               placeholder="Search My Line"
               style={{
                 width: '100%',
