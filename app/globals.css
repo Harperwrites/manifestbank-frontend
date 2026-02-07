@@ -93,6 +93,20 @@ a {
   left: 12px;
 }
 
+.no-print {
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff !important;
+  }
+}
+
 @media (max-width: 900px) {
   .kpi-grid {
     --kpi-columns: 1fr;
