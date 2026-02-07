@@ -1626,7 +1626,13 @@ export default function EtherPage() {
     participant: number | EtherThreadParticipant | (EtherThreadParticipant & { id?: number; user_id?: number })
   ) {
     if (typeof participant === 'number') return toProfileId(participant)
-    return toProfileId(participant.profile_id ?? participant.id ?? null)
+    if ('profile_id' in participant) {
+      return toProfileId(participant.profile_id ?? null)
+    }
+    if ('id' in participant) {
+      return toProfileId(participant.id ?? null)
+    }
+    return null
   }
 
   function isSelfParticipant(
@@ -1638,7 +1644,11 @@ export default function EtherPage() {
     if (typeof participant === 'number') {
       return !!myProfileId && participant === myProfileId
     }
-    const profileId = toProfileId(participant.profile_id ?? participant.id ?? null)
+    const profileId = 'profile_id' in participant
+      ? toProfileId(participant.profile_id ?? null)
+      : 'id' in participant
+      ? toProfileId(participant.id ?? null)
+      : null
     const userId = toProfileId(participant.user_id ?? null)
     return (!!myProfileId && profileId === myProfileId) || (!!myUserId && userId === myUserId)
   }
