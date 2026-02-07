@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useParams } from 'next/navigation'
 import Navbar from '@/app/components/Navbar'
 import { api } from '@/lib/api'
 
@@ -28,16 +29,11 @@ type StatementEntry = {
 }
 
 type StatementSummary = {
+  startingBalance: string
   endingBalance: string
   deposits: string
   withdrawals: string
   transfers: string
-}
-
-type AccountBalance = {
-  id: number
-  name: string
-  balance: number
 }
 
 function formatMonthLabel(date: Date) {
@@ -60,6 +56,7 @@ function buildMonthOptions(count = 12) {
 
 function buildFallbackSummary(): StatementSummary {
   return {
+    startingBalance: '$0.00',
     endingBalance: '$0.00',
     deposits: '$0.00',
     withdrawals: '$0.00',
@@ -84,25 +81,42 @@ function formatMoney(value: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value)
 }
 
-export default function MyStatementsPage() {
+export default function AccountStatementPage() {
+  const params = useParams()
+  const accountId = typeof params?.id === 'string' ? params.id : Array.isArray(params?.id) ? params.id[0] : ''
   const [months] = useState(() => buildMonthOptions(12))
   const [selectedMonth, setSelectedMonth] = useState(months[0]?.value ?? '')
   const [summary, setSummary] = useState<StatementSummary>(buildFallbackSummary())
   const [entries, setEntries] = useState<StatementEntry[]>(buildFallbackEntries())
-  const [accounts, setAccounts] = useState<AccountBalance[]>([])
+  const [accountName, setAccountName] = useState('Account')
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState('')
-  const printRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    async function loadAccount() {
+      if (!accountId) return
+      try {
+        const res = await api.get(`/accounts/${accountId}`)
+        setAccountName(res.data?.name ?? 'Account')
+      } catch {
+        setAccountName('Account')
+      }
+    }
+    loadAccount()
+  }, [accountId])
 
   useEffect(() => {
     async function loadStatements() {
-      if (!selectedMonth) return
+      if (!selectedMonth || !accountId) return
       setLoading(true)
       setMsg('')
       try {
-        const res = await api.get('/statements', { params: { month: selectedMonth } })
+        const res = await api.get('/statements', { params: { month: selectedMonth, account_id: accountId } })
         const data = res.data ?? {}
-        const nextSummary = data.summary ?? buildFallbackSummary()
+        const nextSummary = {
+          ...buildFallbackSummary(),
+          ...(data.summary ?? {}),
+        }
         const nextEntries = Array.isArray(data.entries) && data.entries.length ? data.entries : buildFallbackEntries()
         setSummary(nextSummary)
         setEntries(nextEntries)
@@ -115,35 +129,7 @@ export default function MyStatementsPage() {
       }
     }
     loadStatements()
-  }, [selectedMonth])
-
-  useEffect(() => {
-    async function loadAccounts() {
-      try {
-        const accountsRes = await api.get('/accounts')
-        const rawAccounts = Array.isArray(accountsRes.data) ? accountsRes.data : []
-        const balances = await Promise.all(
-          rawAccounts.map(async (acct: any) => {
-            try {
-              const balanceRes = await api.get(`/accounts/${acct.id}/balance`, { params: { currency: 'USD' } })
-              return { id: acct.id, name: acct.name ?? 'Account', balance: Number(balanceRes.data?.balance ?? 0) }
-            } catch {
-              return { id: acct.id, name: acct.name ?? 'Account', balance: NaN }
-            }
-          })
-        )
-        setAccounts(balances)
-        const totalBalance = balances.reduce((sum, acct) => sum + (Number.isFinite(acct.balance) ? acct.balance : 0), 0)
-        setSummary((prev) => ({
-          ...prev,
-          endingBalance: totalBalance > 0 ? formatMoney(totalBalance) : prev.endingBalance,
-        }))
-      } catch {
-        setAccounts([])
-      }
-    }
-    loadAccounts()
-  }, [])
+  }, [selectedMonth, accountId])
 
   const totalRowCount = useMemo(() => entries.length, [entries])
 
@@ -219,7 +205,6 @@ export default function MyStatementsPage() {
         ) : null}
 
         <div
-          ref={printRef}
           style={{
             marginTop: 24,
             background: '#fff',
@@ -234,13 +219,15 @@ export default function MyStatementsPage() {
               <div style={{ fontFamily: 'var(--font-serif)', fontSize: 28, fontWeight: 600 }}>
                 ManifestBank™ Statement
               </div>
-              <div style={{ marginTop: 6, opacity: 0.7 }}>Private Vault | {selectedMonth}</div>
+              <div style={{ marginTop: 6, opacity: 0.7 }}>Account: {accountName}</div>
+              <div style={{ marginTop: 6, opacity: 0.7 }}>Month: {selectedMonth}</div>
             </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.18em', opacity: 0.6 }}>
                 Account Summary
               </div>
-              <div style={{ fontSize: 14, fontWeight: 600 }}>Ending Balance: {summary.endingBalance}</div>
+              <div style={{ fontSize: 14, fontWeight: 600 }}>Starting: {summary.startingBalance}</div>
+              <div style={{ fontSize: 14, fontWeight: 600 }}>Ending: {summary.endingBalance}</div>
             </div>
           </div>
 
@@ -256,6 +243,7 @@ export default function MyStatementsPage() {
               { label: 'Deposits', value: summary.deposits },
               { label: 'Withdrawals', value: summary.withdrawals },
               { label: 'Transfers', value: summary.transfers },
+              { label: 'Starting Balance', value: summary.startingBalance },
               { label: 'Ending Balance', value: summary.endingBalance },
             ].map((item) => (
               <div
@@ -273,57 +261,6 @@ export default function MyStatementsPage() {
                 <div style={{ fontSize: 16, fontWeight: 700, marginTop: 6 }}>{item.value}</div>
               </div>
             ))}
-          </div>
-
-          <div style={{ marginTop: 22, fontWeight: 700 }}>Accounts & Balances</div>
-          <div
-            style={{
-              marginTop: 10,
-              border: '1px solid rgba(95, 74, 62, 0.2)',
-              borderRadius: 12,
-              overflow: 'hidden',
-            }}
-          >
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1.6fr 140px',
-                gap: 10,
-                padding: '10px 12px',
-                background: 'rgba(95, 74, 62, 0.08)',
-                fontWeight: 600,
-                fontSize: 12,
-              }}
-            >
-              <div>Account</div>
-              <div>Balance</div>
-            </div>
-            {accounts.length ? (
-              accounts.map((acct) => (
-                <button
-                  key={acct.id}
-                  type="button"
-                  onClick={() => (window.location.href = `/mystatments/${acct.id}`)}
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1.6fr 140px',
-                    gap: 10,
-                    padding: '10px 12px',
-                    borderTop: '1px solid rgba(95, 74, 62, 0.12)',
-                    fontSize: 12,
-                    background: 'transparent',
-                    border: 'none',
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <div style={{ fontWeight: 600 }}>{acct.name}</div>
-                  <div>{Number.isFinite(acct.balance) ? formatMoney(acct.balance) : 'Unavailable'}</div>
-                </button>
-              ))
-            ) : (
-              <div style={{ padding: '10px 12px', fontSize: 12, opacity: 0.7 }}>No accounts found.</div>
-            )}
           </div>
 
           <div style={{ marginTop: 22, fontWeight: 700 }}>Activity</div>
