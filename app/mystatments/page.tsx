@@ -100,29 +100,9 @@ export default function MyStatementsPage() {
       setLoading(true)
       setMsg('')
       try {
-        const [res, accountsRes] = await Promise.all([
-          api.get('/statements', { params: { month: selectedMonth } }),
-          api.get('/accounts'),
-        ])
+        const res = await api.get('/statements', { params: { month: selectedMonth } })
         const data = res.data ?? {}
-        const rawAccounts = Array.isArray(accountsRes.data) ? accountsRes.data : []
-        const balances = await Promise.all(
-          rawAccounts.map(async (acct: any) => {
-            try {
-              const balanceRes = await api.get(`/accounts/${acct.id}/balance`, { params: { currency: 'USD' } })
-              return { id: acct.id, name: acct.name ?? 'Account', balance: Number(balanceRes.data?.balance ?? 0) }
-            } catch {
-              return { id: acct.id, name: acct.name ?? 'Account', balance: 0 }
-            }
-          })
-        )
-        setAccounts(balances)
-        const totalBalance = balances.reduce((sum, acct) => sum + (Number.isFinite(acct.balance) ? acct.balance : 0), 0)
-        const nextSummary = {
-          ...buildFallbackSummary(),
-          ...(data.summary ?? {}),
-          endingBalance: formatMoney(totalBalance),
-        }
+        const nextSummary = data.summary ?? buildFallbackSummary()
         const nextEntries = Array.isArray(data.entries) && data.entries.length ? data.entries : buildFallbackEntries()
         setSummary(nextSummary)
         setEntries(nextEntries)
@@ -130,13 +110,40 @@ export default function MyStatementsPage() {
         setMsg(e?.response?.data?.detail ?? e?.message ?? 'Statements unavailable. Showing sample layout.')
         setSummary(buildFallbackSummary())
         setEntries(buildFallbackEntries())
-        setAccounts([])
       } finally {
         setLoading(false)
       }
     }
     loadStatements()
   }, [selectedMonth])
+
+  useEffect(() => {
+    async function loadAccounts() {
+      try {
+        const accountsRes = await api.get('/accounts')
+        const rawAccounts = Array.isArray(accountsRes.data) ? accountsRes.data : []
+        const balances = await Promise.all(
+          rawAccounts.map(async (acct: any) => {
+            try {
+              const balanceRes = await api.get(`/accounts/${acct.id}/balance`, { params: { currency: 'USD' } })
+              return { id: acct.id, name: acct.name ?? 'Account', balance: Number(balanceRes.data?.balance ?? 0) }
+            } catch {
+              return { id: acct.id, name: acct.name ?? 'Account', balance: NaN }
+            }
+          })
+        )
+        setAccounts(balances)
+        const totalBalance = balances.reduce((sum, acct) => sum + (Number.isFinite(acct.balance) ? acct.balance : 0), 0)
+        setSummary((prev) => ({
+          ...prev,
+          endingBalance: totalBalance > 0 ? formatMoney(totalBalance) : prev.endingBalance,
+        }))
+      } catch {
+        setAccounts([])
+      }
+    }
+    loadAccounts()
+  }, [])
 
   const totalRowCount = useMemo(() => entries.length, [entries])
 
@@ -305,7 +312,7 @@ export default function MyStatementsPage() {
                   }}
                 >
                   <div style={{ fontWeight: 600 }}>{acct.name}</div>
-                  <div>{formatMoney(acct.balance)}</div>
+                  <div>{Number.isFinite(acct.balance) ? formatMoney(acct.balance) : 'Unavailable'}</div>
                 </div>
               ))
             ) : (
