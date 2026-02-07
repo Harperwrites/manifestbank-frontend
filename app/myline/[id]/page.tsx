@@ -259,7 +259,14 @@ export default function MyLineThreadPage() {
     participant: number | EtherThreadParticipant | (EtherThreadParticipant & { id?: number; user_id?: number })
   ) {
     if (typeof participant === 'number') return toProfileId(participant)
-    return toProfileId(participant.profile_id ?? participant.id ?? null)
+    const profileId =
+      'profile_id' in participant ? toProfileId(participant.profile_id ?? null) : null
+    if (profileId) return profileId
+    if (typeof participant === 'object' && participant !== null && 'id' in participant) {
+      const maybeId = (participant as { id?: number | null }).id
+      return toProfileId(maybeId ?? null)
+    }
+    return null
   }
 
   function isSelfParticipant(
@@ -271,8 +278,16 @@ export default function MyLineThreadPage() {
     if (typeof participant === 'number') {
       return !!myProfileId && participant === myProfileId
     }
-    const profileId = toProfileId(participant.profile_id ?? participant.id ?? null)
-    const userId = toProfileId(participant.user_id ?? null)
+    const profileId =
+      'profile_id' in participant
+        ? toProfileId(participant.profile_id ?? null)
+        : typeof participant === 'object' && participant !== null && 'id' in participant
+        ? toProfileId((participant as { id?: number | null }).id ?? null)
+        : null
+    const userId =
+      typeof participant === 'object' && participant !== null && 'user_id' in participant
+        ? toProfileId((participant as { user_id?: number | null }).user_id ?? null)
+        : null
     return (!!myProfileId && profileId === myProfileId) || (!!myUserId && userId === myUserId)
   }
 
@@ -304,7 +319,7 @@ export default function MyLineThreadPage() {
     }
   }
 
-  const myProfileId = useMemo(() => toProfileId(profile?.profile_id ?? profile?.id), [profile?.profile_id, profile?.id])
+  const myProfileId = useMemo(() => toProfileId(profile?.id ?? null), [profile?.id])
   const myUserId = useMemo(() => toProfileId(me?.id), [me?.id])
   const participantFromThread = useMemo(() => {
     if (!thread?.participants?.length) return null
@@ -781,7 +796,7 @@ export default function MyLineThreadPage() {
               <div style={{ fontSize: 13, opacity: 0.75 }}>No messages yet.</div>
             ) : (
               messages.map((message) => {
-                const isMe = message.sender_profile_id === toProfileId(profile?.profile_id ?? profile?.id)
+                const isMe = message.sender_profile_id === toProfileId(profile?.id ?? null)
                 return (
                   <div
                     key={message.id}

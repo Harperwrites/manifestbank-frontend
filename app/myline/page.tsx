@@ -245,7 +245,14 @@ export default function MyLinePage() {
     participant: number | EtherThreadParticipant | (EtherThreadParticipant & { id?: number; user_id?: number })
   ) {
     if (typeof participant === 'number') return toProfileId(participant)
-    return toProfileId(participant.profile_id ?? participant.id ?? null)
+    const profileId =
+      'profile_id' in participant ? toProfileId(participant.profile_id ?? null) : null
+    if (profileId) return profileId
+    if (typeof participant === 'object' && participant !== null && 'id' in participant) {
+      const maybeId = (participant as { id?: number | null }).id
+      return toProfileId(maybeId ?? null)
+    }
+    return null
   }
 
   function isSelfParticipant(
@@ -257,8 +264,16 @@ export default function MyLinePage() {
     if (typeof participant === 'number') {
       return !!myProfileId && participant === myProfileId
     }
-    const profileId = toProfileId(participant.profile_id ?? participant.id ?? null)
-    const userId = toProfileId(participant.user_id ?? null)
+    const profileId =
+      'profile_id' in participant
+        ? toProfileId(participant.profile_id ?? null)
+        : typeof participant === 'object' && participant !== null && 'id' in participant
+        ? toProfileId((participant as { id?: number | null }).id ?? null)
+        : null
+    const userId =
+      typeof participant === 'object' && participant !== null && 'user_id' in participant
+        ? toProfileId((participant as { user_id?: number | null }).user_id ?? null)
+        : null
     return (!!myProfileId && profileId === myProfileId) || (!!myUserId && userId === myUserId)
   }
 
@@ -323,7 +338,7 @@ export default function MyLinePage() {
   }, [])
 
   useEffect(() => {
-    const currentProfileId = toProfileId(profile?.profile_id ?? profile?.id)
+    const currentProfileId = toProfileId(profile?.id ?? null)
     if (!currentProfileId) return
     if (!threads.length) {
       setPreviews([])
@@ -339,7 +354,7 @@ export default function MyLinePage() {
               const messagesRes = await api.get(`/ether/threads/${thread.id}/messages`)
               const list = Array.isArray(messagesRes.data) ? (messagesRes.data as EtherMessage[]) : []
               const last = list[list.length - 1]
-              const profileId = toProfileId(profile?.profile_id ?? profile?.id)
+              const profileId = toProfileId(profile?.id ?? null)
               const userId = toProfileId(me?.id)
               const storedTarget = getStoredThreadTarget(thread.id, profileId)
               const participant = Array.isArray(thread.participants)
@@ -444,7 +459,7 @@ export default function MyLinePage() {
     return () => {
       canceled = true
     }
-  }, [threads, profile?.profile_id, profile?.id])
+  }, [threads, profile?.id])
 
   useEffect(() => {
     if (!accountsOpen) return

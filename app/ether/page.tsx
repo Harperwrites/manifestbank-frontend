@@ -1626,11 +1626,12 @@ export default function EtherPage() {
     participant: number | EtherThreadParticipant | (EtherThreadParticipant & { id?: number; user_id?: number })
   ) {
     if (typeof participant === 'number') return toProfileId(participant)
-    if ('profile_id' in participant) {
-      return toProfileId(participant.profile_id ?? null)
-    }
-    if ('id' in participant) {
-      return toProfileId(participant.id ?? null)
+    const profileId =
+      'profile_id' in participant ? toProfileId(participant.profile_id ?? null) : null
+    if (profileId) return profileId
+    if (typeof participant === 'object' && participant !== null && 'id' in participant) {
+      const maybeId = (participant as { id?: number | null }).id
+      return toProfileId(maybeId ?? null)
     }
     return null
   }
@@ -1644,12 +1645,16 @@ export default function EtherPage() {
     if (typeof participant === 'number') {
       return !!myProfileId && participant === myProfileId
     }
-    const profileId = 'profile_id' in participant
-      ? toProfileId(participant.profile_id ?? null)
-      : 'id' in participant
-      ? toProfileId(participant.id ?? null)
-      : null
-    const userId = toProfileId(participant.user_id ?? null)
+    const profileId =
+      'profile_id' in participant
+        ? toProfileId(participant.profile_id ?? null)
+        : typeof participant === 'object' && participant !== null && 'id' in participant
+        ? toProfileId((participant as { id?: number | null }).id ?? null)
+        : null
+    const userId =
+      typeof participant === 'object' && participant !== null && 'user_id' in participant
+        ? toProfileId((participant as { user_id?: number | null }).user_id ?? null)
+        : null
     return (!!myProfileId && profileId === myProfileId) || (!!myUserId && userId === myUserId)
   }
 
@@ -1709,7 +1714,7 @@ export default function EtherPage() {
   }
 
   useEffect(() => {
-    const currentProfileId = toProfileId(profile?.profile_id ?? profile?.id)
+    const currentProfileId = toProfileId(profile?.id ?? null)
     if (!currentProfileId) return
     if (!threads.length) {
       setMyLinePreviews([])
@@ -1726,7 +1731,7 @@ export default function EtherPage() {
               const messagesRes = await api.get(`/ether/threads/${thread.id}/messages`)
               const list = Array.isArray(messagesRes.data) ? (messagesRes.data as EtherMessage[]) : []
               const last = list[list.length - 1]
-              const profileId = toProfileId(profile?.profile_id ?? profile?.id)
+              const profileId = toProfileId(profile?.id ?? null)
               const myUserId = typeof me?.id === 'number' ? me.id : null
               const storedTarget = getStoredThreadTarget(thread.id, profileId)
               const participant = Array.isArray(thread.participants)
@@ -1826,7 +1831,7 @@ export default function EtherPage() {
     return () => {
       canceled = true
     }
-  }, [threads, profile?.profile_id, profile?.id])
+  }, [threads, profile?.id])
 
   function openMyLineThread(preview: MyLinePreview) {
     if (preview.created_at) {
@@ -3547,7 +3552,7 @@ export default function EtherPage() {
             <Button
               variant={activeTab === 'mine' ? 'solid' : 'outlineLight'}
               onClick={() => {
-                const currentProfileId = toProfileId(profile?.profile_id ?? profile?.id)
+                const currentProfileId = toProfileId(profile?.id ?? null)
                 if (currentProfileId) {
                   if (typeof window !== 'undefined') {
                     window.sessionStorage.setItem(
@@ -3656,7 +3661,7 @@ export default function EtherPage() {
                           {post.kind.toUpperCase()}
                         </div>
                         <div style={{ fontSize: 12, opacity: 0.7 }}>{new Date(post.created_at).toLocaleString()}</div>
-                        {toProfileId(profile?.profile_id ?? profile?.id) === post.author_profile_id || role === 'admin' ? (
+                        {toProfileId(profile?.id ?? null) === post.author_profile_id || role === 'admin' ? (
                           <div style={{ position: 'relative' }}>
                             <button
                               type="button"
