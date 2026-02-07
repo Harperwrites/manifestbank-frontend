@@ -938,6 +938,18 @@ export default function EtherPage() {
     )
   }, [activeTab])
 
+  const rememberReturnTo = useCallback(() => {
+    if (typeof window === 'undefined') return
+    window.sessionStorage.setItem(
+      'ether:return_to',
+      JSON.stringify({
+        path: window.location.pathname + window.location.search,
+        tab: activeTab,
+        scrollY: window.scrollY,
+      })
+    )
+  }, [activeTab])
+
   const navigateToProfile = useCallback(
     (profileId: number) => {
       rememberEtherView()
@@ -1144,6 +1156,21 @@ export default function EtherPage() {
       // ignore invalid storage
     }
   }, [tabInitialized])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const stored = window.sessionStorage.getItem('ether:return_to')
+    if (!stored) return
+    try {
+      const parsed = JSON.parse(stored) as { path?: string; scrollY?: number }
+      if (parsed.path === window.location.pathname && typeof parsed.scrollY === 'number') {
+        window.setTimeout(() => window.scrollTo(0, parsed.scrollY ?? 0), 0)
+        window.sessionStorage.removeItem('ether:return_to')
+      }
+    } catch {
+      // ignore invalid storage
+    }
+  }, [])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -1562,20 +1589,6 @@ export default function EtherPage() {
     if (!trigger) return
     const updatePosition = () => {
       const rect = trigger.getBoundingClientRect()
-      if (window.innerWidth < 520) {
-        setMyLineMenuStyle({
-          position: 'fixed',
-          top: rect.bottom + 8,
-          left: 12,
-          right: 12,
-          maxWidth: 'calc(100vw - 24px)',
-          boxSizing: 'border-box',
-          maxHeight: '60vh',
-          overflowY: 'auto',
-          overflowX: 'hidden',
-        })
-        return
-      }
       const width = Math.min(320, window.innerWidth - 24)
       const idealLeft = rect.left + rect.width / 2 - width / 2
       const left = Math.min(Math.max(12, idealLeft), window.innerWidth - width - 12)
@@ -1587,6 +1600,7 @@ export default function EtherPage() {
         maxWidth: 'calc(100vw - 24px)',
         maxHeight: '60vh',
         overflowY: 'auto',
+        overflowX: 'hidden',
       })
     }
     updatePosition()
@@ -2641,7 +2655,7 @@ export default function EtherPage() {
                       <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>No messages yet.</div>
                     ) : (
                       <div style={{ display: 'grid', gap: 10, marginTop: 8 }}>
-                        {myLineShownPreviews.map((preview) => (
+                        {myLineShownPreviews.slice(0, 4).map((preview) => (
                           <button
                             key={preview.thread_id}
                             type="button"
@@ -2733,7 +2747,7 @@ export default function EtherPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        rememberEtherView()
+                        rememberReturnTo()
                         setMyLineOpen(false)
                         router.push('/myline')
                       }}
@@ -2817,11 +2831,11 @@ export default function EtherPage() {
                       zIndex: 20,
                     }}
                   >
-                    {notifications.length === 0 ? (
-                      <div style={{ fontSize: 12, opacity: 0.7 }}>No notifications yet.</div>
-                    ) : (
-                      <div style={{ display: 'grid', gap: 10 }}>
-                        {notifications.map((note) => (
+                      {notifications.length === 0 ? (
+                        <div style={{ fontSize: 12, opacity: 0.7 }}>No notifications yet.</div>
+                      ) : (
+                        <div style={{ display: 'grid', gap: 10 }}>
+                        {notifications.slice(0, 4).map((note) => (
                           <div
                             key={note.id}
                             style={{
@@ -2962,6 +2976,27 @@ export default function EtherPage() {
                         ))}
                       </div>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        rememberReturnTo()
+                        setNotificationsOpen(false)
+                        router.push('/notifications')
+                      }}
+                      style={{
+                        marginTop: 10,
+                        width: '100%',
+                        padding: '8px 12px',
+                        borderRadius: 12,
+                        border: '1px solid rgba(140, 92, 78, 0.4)',
+                        background: 'rgba(255, 255, 255, 0.75)',
+                        fontWeight: 600,
+                        color: '#4a2f26',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      View all notifications
+                    </button>
                   </div>
                 ) : null}
               </div>
@@ -3113,7 +3148,7 @@ export default function EtherPage() {
                         ) : null}
                         {syncResults.length ? (
                           <div style={{ marginTop: 8, display: 'grid', gap: 6 }}>
-                            {syncResults.map((p) => (
+                            {syncResults.slice(0, 4).map((p) => (
                               <div
                                 key={p.id}
                                 style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}
@@ -3208,6 +3243,29 @@ export default function EtherPage() {
                             ))}
                           </div>
                         ) : null}
+                        {syncResults.length > 4 ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              rememberReturnTo()
+                              setSyncMenuOpen(false)
+                              router.push(`/sync?tab=search&query=${encodeURIComponent(syncQuery.trim())}`)
+                            }}
+                            style={{
+                              marginTop: 8,
+                              width: '100%',
+                              padding: '8px 12px',
+                              borderRadius: 12,
+                              border: '1px solid rgba(140, 92, 78, 0.4)',
+                              background: 'rgba(255, 255, 255, 0.75)',
+                              fontWeight: 600,
+                              color: '#4a2f26',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            View all results
+                          </button>
+                        ) : null}
                       </div>
                     ) : null}
                     {syncMenuTab === 'requests' ? (
@@ -3215,7 +3273,7 @@ export default function EtherPage() {
                         {syncRequests.length === 0 ? (
                           <div style={{ fontSize: 12, opacity: 0.7 }}>No requests.</div>
                         ) : (
-                          syncRequests.map((req) => (
+                          syncRequests.slice(0, 4).map((req) => (
                             <div key={req.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
                               <button
                                 type="button"
@@ -3300,13 +3358,34 @@ export default function EtherPage() {
                             </div>
                           ))
                         )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            rememberReturnTo()
+                            setSyncMenuOpen(false)
+                            router.push('/sync?tab=requests')
+                          }}
+                          style={{
+                            marginTop: 6,
+                            width: '100%',
+                            padding: '8px 12px',
+                            borderRadius: 12,
+                            border: '1px solid rgba(140, 92, 78, 0.4)',
+                            background: 'rgba(255, 255, 255, 0.75)',
+                            fontWeight: 600,
+                            color: '#4a2f26',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          View all requests
+                        </button>
                       </div>
                     ) : syncMenuTab === 'syncs' ? (
                       <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
                         {syncs.length === 0 ? (
                           <div style={{ fontSize: 12, opacity: 0.7 }}>No one in sync yet.</div>
                         ) : (
-                          syncs.map((p) => (
+                          syncs.slice(0, 4).map((p) => (
                             <div
                               key={p.id}
                               style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}
@@ -3379,6 +3458,27 @@ export default function EtherPage() {
                             </div>
                           ))
                         )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            rememberReturnTo()
+                            setSyncMenuOpen(false)
+                            router.push('/sync?tab=syncs')
+                          }}
+                          style={{
+                            marginTop: 6,
+                            width: '100%',
+                            padding: '8px 12px',
+                            borderRadius: 12,
+                            border: '1px solid rgba(140, 92, 78, 0.4)',
+                            background: 'rgba(255, 255, 255, 0.75)',
+                            fontWeight: 600,
+                            color: '#4a2f26',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          View all in sync
+                        </button>
                       </div>
                     ) : null}
                   </div>
