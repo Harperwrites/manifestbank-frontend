@@ -449,8 +449,17 @@ export default function MyLinePage() {
           const bTime = b.created_at ? new Date(b.created_at).getTime() : 0
           return bTime - aTime
         })
-        setPreviews(sorted)
-        setThreadUnreadCount(sorted.filter((preview) => preview.unread).length)
+        const seen = new Set<string>()
+        const deduped = sorted.filter((preview) => {
+          const key = preview.counterpart_profile_id
+            ? `profile:${preview.counterpart_profile_id}`
+            : `thread:${preview.thread_id}`
+          if (seen.has(key)) return false
+          seen.add(key)
+          return true
+        })
+        setPreviews(deduped)
+        setThreadUnreadCount(deduped.filter((preview) => preview.unread).length)
       } catch {
         // ignore
       }
@@ -1364,7 +1373,8 @@ export default function MyLinePage() {
                       style={{
                         marginTop: 6,
                         fontSize: 13,
-                        opacity: 0.75,
+                        opacity: 0.92,
+                        color: '#241914',
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',

@@ -2803,9 +2803,11 @@ export default function EtherPage() {
                     style={{
                       position: 'absolute',
                       top: '100%',
-                      left: 0,
+                      left: 'auto',
+                      right: 0,
                       marginTop: 10,
-                      width: 320,
+                      width: 'min(320px, 92vw)',
+                      maxWidth: '92vw',
                       borderRadius: 16,
                       border: '1px solid rgba(182, 121, 103, 0.45)',
                       background: 'linear-gradient(180deg, rgba(252, 245, 239, 0.98), rgba(226, 199, 181, 0.96))',
