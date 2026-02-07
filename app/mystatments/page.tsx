@@ -34,6 +34,12 @@ type StatementSummary = {
   transfers: string
 }
 
+type AccountBalance = {
+  id: number
+  name: string
+  balance: number
+}
+
 function formatMonthLabel(date: Date) {
   return `${STATEMENT_MONTHS[date.getMonth()]} ${date.getFullYear()}`
 }
@@ -73,11 +79,17 @@ function buildFallbackEntries(): StatementEntry[] {
   ]
 }
 
+function formatMoney(value: number) {
+  if (!Number.isFinite(value)) return '$0.00'
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value)
+}
+
 export default function MyStatementsPage() {
   const [months] = useState(() => buildMonthOptions(12))
   const [selectedMonth, setSelectedMonth] = useState(months[0]?.value ?? '')
   const [summary, setSummary] = useState<StatementSummary>(buildFallbackSummary())
   const [entries, setEntries] = useState<StatementEntry[]>(buildFallbackEntries())
+  const [accounts, setAccounts] = useState<AccountBalance[]>([])
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState('')
   const printRef = useRef<HTMLDivElement | null>(null)
@@ -88,9 +100,29 @@ export default function MyStatementsPage() {
       setLoading(true)
       setMsg('')
       try {
-        const res = await api.get('/statements', { params: { month: selectedMonth } })
+        const [res, accountsRes] = await Promise.all([
+          api.get('/statements', { params: { month: selectedMonth } }),
+          api.get('/accounts'),
+        ])
         const data = res.data ?? {}
-        const nextSummary = data.summary ?? buildFallbackSummary()
+        const rawAccounts = Array.isArray(accountsRes.data) ? accountsRes.data : []
+        const balances = await Promise.all(
+          rawAccounts.map(async (acct: any) => {
+            try {
+              const balanceRes = await api.get(`/accounts/${acct.id}/balance`, { params: { currency: 'USD' } })
+              return { id: acct.id, name: acct.name ?? 'Account', balance: Number(balanceRes.data?.balance ?? 0) }
+            } catch {
+              return { id: acct.id, name: acct.name ?? 'Account', balance: 0 }
+            }
+          })
+        )
+        setAccounts(balances)
+        const totalBalance = balances.reduce((sum, acct) => sum + (Number.isFinite(acct.balance) ? acct.balance : 0), 0)
+        const nextSummary = {
+          ...buildFallbackSummary(),
+          ...(data.summary ?? {}),
+          endingBalance: formatMoney(totalBalance),
+        }
         const nextEntries = Array.isArray(data.entries) && data.entries.length ? data.entries : buildFallbackEntries()
         setSummary(nextSummary)
         setEntries(nextEntries)
@@ -98,6 +130,7 @@ export default function MyStatementsPage() {
         setMsg(e?.response?.data?.detail ?? e?.message ?? 'Statements unavailable. Showing sample layout.')
         setSummary(buildFallbackSummary())
         setEntries(buildFallbackEntries())
+        setAccounts([])
       } finally {
         setLoading(false)
       }
@@ -233,6 +266,51 @@ export default function MyStatementsPage() {
                 <div style={{ fontSize: 16, fontWeight: 700, marginTop: 6 }}>{item.value}</div>
               </div>
             ))}
+          </div>
+
+          <div style={{ marginTop: 22, fontWeight: 700 }}>Accounts & Balances</div>
+          <div
+            style={{
+              marginTop: 10,
+              border: '1px solid rgba(95, 74, 62, 0.2)',
+              borderRadius: 12,
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1.6fr 140px',
+                gap: 10,
+                padding: '10px 12px',
+                background: 'rgba(95, 74, 62, 0.08)',
+                fontWeight: 600,
+                fontSize: 12,
+              }}
+            >
+              <div>Account</div>
+              <div>Balance</div>
+            </div>
+            {accounts.length ? (
+              accounts.map((acct) => (
+                <div
+                  key={acct.id}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1.6fr 140px',
+                    gap: 10,
+                    padding: '10px 12px',
+                    borderTop: '1px solid rgba(95, 74, 62, 0.12)',
+                    fontSize: 12,
+                  }}
+                >
+                  <div style={{ fontWeight: 600 }}>{acct.name}</div>
+                  <div>{formatMoney(acct.balance)}</div>
+                </div>
+              ))
+            ) : (
+              <div style={{ padding: '10px 12px', fontSize: 12, opacity: 0.7 }}>No accounts found.</div>
+            )}
           </div>
 
           <div style={{ marginTop: 22, fontWeight: 700 }}>Activity</div>
