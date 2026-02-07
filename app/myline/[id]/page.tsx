@@ -25,7 +25,7 @@ type EtherThreadParticipant = {
 
 type EtherThread = {
   id: number
-  participants?: EtherThreadParticipant[] | null
+  participants?: Array<number | EtherThreadParticipant> | null
   created_at?: string
 }
 
@@ -246,15 +246,193 @@ export default function MyLineThreadPage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [messages.length])
 
-  const counterpart = useMemo(() => {
+  function toProfileId(value: unknown): number | null {
+    if (typeof value === 'number') return Number.isFinite(value) ? value : null
+    if (typeof value === 'string') {
+      const parsed = Number(value)
+      return Number.isFinite(parsed) ? parsed : null
+    }
+    return null
+  }
+
+  function getParticipantProfileId(
+    participant: number | EtherThreadParticipant | (EtherThreadParticipant & { id?: number; user_id?: number })
+  ) {
+    if (typeof participant === 'number') return toProfileId(participant)
+    return toProfileId(participant.profile_id ?? participant.id ?? null)
+  }
+
+  function isSelfParticipant(
+    participant: number | EtherThreadParticipant | (EtherThreadParticipant & { id?: number; user_id?: number }),
+    myProfileId: number | null,
+    myUserId: number | null
+  ) {
+    if (!myProfileId && !myUserId) return false
+    if (typeof participant === 'number') {
+      return !!myProfileId && participant === myProfileId
+    }
+    const profileId = toProfileId(participant.profile_id ?? participant.id ?? null)
+    const userId = toProfileId(participant.user_id ?? null)
+    return (!!myProfileId && profileId === myProfileId) || (!!myUserId && userId === myUserId)
+  }
+
+  type StoredThreadTarget = {
+    profile_id: number
+    display_name?: string | null
+    avatar_url?: string | null
+  }
+
+  function getStoredThreadTarget(threadId: number, myProfileId?: number | null): StoredThreadTarget | null {
+    if (typeof window === 'undefined') return null
+    const raw = window.sessionStorage.getItem(`myline:thread_target:${threadId}`)
+    if (!raw) return null
+    try {
+      const parsed = JSON.parse(raw) as StoredThreadTarget
+      const profileId = toProfileId(parsed?.profile_id ?? null)
+      if (!profileId) return null
+      if (myProfileId && profileId === myProfileId) return null
+      return {
+        profile_id: profileId,
+        display_name: parsed.display_name ?? null,
+        avatar_url: parsed.avatar_url ?? null,
+      }
+    } catch {
+      const parsed = Number(raw)
+      if (!Number.isFinite(parsed)) return null
+      if (myProfileId && parsed === myProfileId) return null
+      return { profile_id: parsed, display_name: null, avatar_url: null }
+    }
+  }
+
+  const myProfileId = useMemo(() => toProfileId(profile?.profile_id ?? profile?.id), [profile?.profile_id, profile?.id])
+  const myUserId = useMemo(() => toProfileId(me?.id), [me?.id])
+  const participantFromThread = useMemo(() => {
     if (!thread?.participants?.length) return null
-    const profileId = profile?.id ?? null
-    const match = profileId
-      ? thread.participants.find((p) => p.profile_id !== profileId)
-      : thread.participants[0]
-    return match ?? thread.participants[0]
-  }, [thread?.participants, profile?.id])
-  const conversationProfile = counterpartProfile ?? counterpart
+    if (!myProfileId && !myUserId) return thread.participants[0] ?? null
+    return (
+      thread.participants.find((participant) => !isSelfParticipant(participant, myProfileId ?? null, myUserId ?? null)) ??
+      thread.participants[0] ??
+      null
+    )
+  }, [thread?.participants, myProfileId, myUserId])
+  const participantProfileId = useMemo(
+    () => (participantFromThread ? getParticipantProfileId(participantFromThread) : null),
+    [participantFromThread]
+  )
+  const participantProfileData = useMemo(() => {
+    if (!participantFromThread || typeof participantFromThread === 'number') return null
+    return {
+      profile_id: getParticipantProfileId(participantFromThread) ?? null,
+      display_name: participantFromThread.display_name ?? null,
+      avatar_url: participantFromThread.avatar_url ?? null,
+    }
+  }, [participantFromThread])
+
+  const counterpartId = useMemo(() => {
+    if (!thread?.participants?.length) return null
+    const ids = thread.participants
+      .map((participant) => getParticipantProfileId(participant))
+      .filter((id): id is number => typeof id === 'number')
+    if (!myProfileId && !myUserId) return ids[0] ?? null
+    return ids.find((id) => id !== myProfileId && id !== myUserId) ?? null
+  }, [thread?.participants, myProfileId, myUserId])
+  const storedTarget = useMemo(() => getStoredThreadTarget(threadId, myProfileId), [threadId, myProfileId])
+  const storedTargetProfile = useMemo(
+    () =>
+      storedTarget
+        ? {
+            profile_id: storedTarget.profile_id,
+            display_name: storedTarget.display_name ?? null,
+            avatar_url: storedTarget.avatar_url ?? null,
+          }
+        : null,
+    [storedTarget]
+  )
+  const derivedProfileId = useMemo(() => {
+    if (!myProfileId) {
+      return storedTarget?.profile_id ?? participantProfileId ?? counterpartId ?? null
+    }
+    const other = messages.find((message) => message.sender_profile_id !== myProfileId)
+    const otherMessageProfileId = other?.sender_profile_id ?? null
+    let candidate =
+      storedTarget?.profile_id ?? otherMessageProfileId ?? participantProfileId ?? counterpartId ?? null
+    if (candidate === myProfileId) {
+      candidate = otherMessageProfileId ?? participantProfileId ?? counterpartId ?? null
+    }
+    return candidate
+  }, [counterpartId, storedTarget?.profile_id, participantProfileId, messages, myProfileId])
+  const targetProfileId = useMemo(() => {
+    if (derivedProfileId && (!myProfileId || derivedProfileId !== myProfileId)) return derivedProfileId
+    if (storedTarget?.profile_id && (!myProfileId || storedTarget.profile_id !== myProfileId)) return storedTarget.profile_id
+    if (counterpartId && (!myProfileId || counterpartId !== myProfileId)) return counterpartId
+    if (participantProfileId && (!myProfileId || participantProfileId !== myProfileId)) return participantProfileId
+    return null
+  }, [derivedProfileId, counterpartId, participantProfileId, storedTarget?.profile_id, myProfileId])
+  const conversationProfile = useMemo(() => {
+    const candidates = [storedTargetProfile, counterpartProfile, participantProfileData].filter(Boolean)
+    for (const candidate of candidates) {
+      if (!myProfileId || candidate!.profile_id !== myProfileId) {
+        return candidate as {
+          profile_id: number
+          display_name?: string | null
+          avatar_url?: string | null
+        }
+      }
+    }
+    return null
+  }, [counterpartProfile, storedTargetProfile, participantProfileData, myProfileId])
+  const conversationProfileId = useMemo(() => {
+    const candidate = conversationProfile?.profile_id ?? null
+    if (candidate && myProfileId && candidate === myProfileId) {
+      return targetProfileId ?? derivedProfileId ?? participantProfileId ?? null
+    }
+    return candidate ?? targetProfileId ?? derivedProfileId ?? participantProfileId ?? null
+  }, [conversationProfile?.profile_id, targetProfileId, derivedProfileId, participantProfileId, myProfileId])
+  const conversationDisplayName =
+    (storedTargetProfile &&
+    (!myProfileId || storedTargetProfile.profile_id !== myProfileId) &&
+    storedTargetProfile.display_name
+      ? storedTargetProfile.display_name
+      : null) ??
+    conversationProfile?.display_name ??
+    (participantProfileData &&
+    (!myProfileId || participantProfileData.profile_id !== myProfileId) &&
+    participantProfileData.display_name
+      ? participantProfileData.display_name
+      : null) ??
+    (conversationProfileId ? `User #${conversationProfileId}` : 'Member')
+  const conversationAvatarUrl =
+    (storedTargetProfile &&
+    (!myProfileId || storedTargetProfile.profile_id !== myProfileId) &&
+    storedTargetProfile.avatar_url
+      ? storedTargetProfile.avatar_url
+      : null) ?? conversationProfile?.avatar_url ?? null
+  const participantAvatarUrl =
+    participantProfileData &&
+    (!myProfileId || participantProfileData.profile_id !== myProfileId) &&
+    participantProfileData.avatar_url
+      ? participantProfileData.avatar_url
+      : null
+  const resolvedConversationAvatarUrl = conversationAvatarUrl ?? participantAvatarUrl ?? null
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!threadId || !conversationProfileId) return
+    if (myProfileId && conversationProfileId === myProfileId) return
+    const targetPayload =
+      storedTargetProfile?.profile_id && (!myProfileId || storedTargetProfile.profile_id !== myProfileId)
+        ? {
+            profile_id: storedTargetProfile.profile_id,
+            display_name: storedTargetProfile.display_name ?? null,
+            avatar_url: storedTargetProfile.avatar_url ?? null,
+          }
+        : {
+            profile_id: conversationProfileId,
+            display_name: conversationProfile?.display_name ?? null,
+            avatar_url: conversationProfile?.avatar_url ?? null,
+          }
+    window.sessionStorage.setItem(`myline:thread_target:${threadId}`, JSON.stringify(targetPayload))
+  }, [threadId, conversationProfileId, conversationProfile?.display_name, conversationProfile?.avatar_url, myProfileId])
 
   async function loadThreadParticipant(profileId: number) {
     if (counterpartProfileCache.current.has(profileId)) {
@@ -262,7 +440,12 @@ export default function MyLineThreadPage() {
     }
     try {
       const res = await api.get(`/ether/profiles/${profileId}`)
-      const data = res.data as EtherThreadParticipant
+      const raw = res.data as { id?: number; profile_id?: number; display_name?: string | null; avatar_url?: string | null }
+      const data = {
+        profile_id: raw.profile_id ?? raw.id ?? profileId,
+        display_name: raw.display_name ?? null,
+        avatar_url: raw.avatar_url ?? null,
+      } satisfies EtherThreadParticipant
       counterpartProfileCache.current.set(profileId, data)
       return data
     } catch {
@@ -272,7 +455,7 @@ export default function MyLineThreadPage() {
 
   useEffect(() => {
     let canceled = false
-    const targetId = counterpart?.profile_id ?? null
+    const targetId = targetProfileId
     if (!targetId) {
       setCounterpartProfile(null)
       return
@@ -283,7 +466,7 @@ export default function MyLineThreadPage() {
     return () => {
       canceled = true
     }
-  }, [counterpart?.profile_id])
+  }, [targetProfileId])
 
   async function sendMessage() {
     const trimmed = draft.trim()
@@ -496,12 +679,12 @@ export default function MyLineThreadPage() {
               style={{
                 padding: '10px 16px',
                 borderRadius: 999,
-                border: '1px solid rgba(140, 92, 78, 0.55)',
-                background: 'rgba(255, 248, 242, 0.9)',
-                color: '#3b2b24',
+                border: '1px solid rgba(98, 66, 58, 0.9)',
+                background: 'linear-gradient(135deg, rgba(120, 78, 68, 0.96), rgba(84, 54, 48, 0.96))',
+                color: '#fffaf7',
                 fontWeight: 600,
                 cursor: 'pointer',
-                boxShadow: '0 10px 22px rgba(10, 8, 10, 0.22)',
+                boxShadow: '0 14px 24px rgba(8, 6, 8, 0.28)',
               }}
             >
               ← Back to My Line
@@ -510,12 +693,12 @@ export default function MyLineThreadPage() {
               <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.08, opacity: 0.65 }}>
                 Conversation
               </div>
-              {conversationProfile ? (
+              {conversationProfileId ? (
                 <button
                   type="button"
                   onClick={() => {
                     window.sessionStorage.setItem('ether:last_view', JSON.stringify({ path: `/myline/${threadId}` }))
-                    router.push(`/ether/profile/${conversationProfile.profile_id}`)
+                    router.push(`/ether/profile/${conversationProfileId}`)
                   }}
                   style={{
                     display: 'inline-flex',
@@ -557,17 +740,17 @@ export default function MyLineThreadPage() {
                       fontWeight: 600,
                     }}
                   >
-                    {conversationProfile.avatar_url ? (
+                    {resolvedConversationAvatarUrl ? (
                       <img
-                        src={conversationProfile.avatar_url ?? undefined}
-                        alt={conversationProfile.display_name ?? 'Profile'}
+                        src={resolvedConversationAvatarUrl ?? undefined}
+                        alt={conversationDisplayName}
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       />
                     ) : (
-                      (conversationProfile.display_name ?? 'U').slice(0, 1).toUpperCase()
+                      conversationDisplayName.slice(0, 1).toUpperCase()
                     )}
                   </span>
-                  <span style={{ fontWeight: 600 }}>{conversationProfile.display_name ?? 'Member'}</span>
+                  <span style={{ fontWeight: 600 }}>{conversationDisplayName}</span>
                 </button>
               ) : (
                 <div style={{ fontWeight: 600 }}>Conversation</div>
@@ -598,7 +781,7 @@ export default function MyLineThreadPage() {
               <div style={{ fontSize: 13, opacity: 0.75 }}>No messages yet.</div>
             ) : (
               messages.map((message) => {
-                const isMe = message.sender_profile_id === profile?.id
+                const isMe = message.sender_profile_id === toProfileId(profile?.profile_id ?? profile?.id)
                 return (
                   <div
                     key={message.id}
@@ -632,10 +815,10 @@ export default function MyLineThreadPage() {
                       <div style={{ fontSize: 14, lineHeight: 1.5 }}>{message.content}</div>
                     </div>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 11, opacity: 0.7 }}>
-                      {!isMe && conversationProfile ? (
+                      {!isMe && conversationProfileId ? (
                         <button
                           type="button"
-                          onClick={() => handleProfileClick(conversationProfile.profile_id)}
+                          onClick={() => handleProfileClick(conversationProfileId)}
                           style={{
                             border: 'none',
                             background: 'transparent',
@@ -659,7 +842,7 @@ export default function MyLineThreadPage() {
                             event.currentTarget.style.textDecorationLine = 'none'
                           }}
                         >
-                          {conversationProfile.display_name ?? 'Sender'}
+                          {conversationProfile?.display_name ?? conversationDisplayName}
                         </button>
                       ) : null}
                       <span>{new Date(message.created_at).toLocaleString()}</span>

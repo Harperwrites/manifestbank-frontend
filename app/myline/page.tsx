@@ -26,7 +26,7 @@ type EtherThreadParticipant = {
 
 type EtherThread = {
   id: number
-  participants?: EtherThreadParticipant[] | null
+  participants?: Array<number | EtherThreadParticipant> | null
   created_at?: string
 }
 
@@ -59,9 +59,9 @@ type SyncRequest = {
 
 type MyLinePreview = {
   thread_id: number
-  sender_profile_id: number | null
-  sender_display_name: string | null
-  sender_avatar_url: string | null
+  counterpart_profile_id: number | null
+  counterpart_display_name: string | null
+  counterpart_avatar_url: string | null
   message: string | null
   created_at: string | null
   unread: boolean
@@ -112,6 +112,7 @@ export default function MyLinePage() {
   const [syncRequests, setSyncRequests] = useState<SyncRequest[]>([])
   const [syncs, setSyncs] = useState<Profile[]>([])
   const [syncsOpen, setSyncsOpen] = useState(false)
+  const [syncsMenuStyle, setSyncsMenuStyle] = useState<React.CSSProperties | null>(null)
   const syncsMenuRef = useRef<HTMLDivElement | null>(null)
   const syncsMenuTriggerRef = useRef<HTMLButtonElement | null>(null)
   const [threadUnreadCount, setThreadUnreadCount] = useState(0)
@@ -231,13 +232,84 @@ export default function MyLinePage() {
     }
   }
 
+  function toProfileId(value: unknown): number | null {
+    if (typeof value === 'number') return Number.isFinite(value) ? value : null
+    if (typeof value === 'string') {
+      const parsed = Number(value)
+      return Number.isFinite(parsed) ? parsed : null
+    }
+    return null
+  }
+
+  function getParticipantProfileId(
+    participant: number | EtherThreadParticipant | (EtherThreadParticipant & { id?: number; user_id?: number })
+  ) {
+    if (typeof participant === 'number') return toProfileId(participant)
+    return toProfileId(participant.profile_id ?? participant.id ?? null)
+  }
+
+  function isSelfParticipant(
+    participant: number | EtherThreadParticipant | (EtherThreadParticipant & { id?: number; user_id?: number }),
+    myProfileId: number | null,
+    myUserId: number | null
+  ) {
+    if (!myProfileId && !myUserId) return false
+    if (typeof participant === 'number') {
+      return !!myProfileId && participant === myProfileId
+    }
+    const profileId = toProfileId(participant.profile_id ?? participant.id ?? null)
+    const userId = toProfileId(participant.user_id ?? null)
+    return (!!myProfileId && profileId === myProfileId) || (!!myUserId && userId === myUserId)
+  }
+
+  type StoredThreadTarget = {
+    profile_id: number
+    display_name?: string | null
+    avatar_url?: string | null
+  }
+
+  function getStoredThreadTarget(threadId: number, myProfileId?: number | null): StoredThreadTarget | null {
+    if (typeof window === 'undefined') return null
+    const raw = window.sessionStorage.getItem(`myline:thread_target:${threadId}`)
+    if (!raw) return null
+    try {
+      const parsed = JSON.parse(raw) as StoredThreadTarget
+      const profileId = toProfileId(parsed?.profile_id ?? null)
+      if (!profileId) return null
+      if (myProfileId && profileId === myProfileId) return null
+      return {
+        profile_id: profileId,
+        display_name: parsed.display_name ?? null,
+        avatar_url: parsed.avatar_url ?? null,
+      }
+    } catch {
+      const parsed = Number(raw)
+      if (!Number.isFinite(parsed)) return null
+      if (myProfileId && parsed === myProfileId) return null
+      return { profile_id: parsed, display_name: null, avatar_url: null }
+    }
+  }
+
+  function isMeaningfulMessage(message: string | null | undefined) {
+    if (!message) return false
+    const trimmed = message.trim()
+    if (!trimmed) return false
+    const normalized = trimmed.toLowerCase().replace(/[^\w\s]/g, '').trim()
+    return !normalized.includes('no message yet') && !normalized.includes('no messages yet')
+  }
+
   async function loadThreadParticipant(profileId: number) {
     if (profileCache.current.has(profileId)) {
       return profileCache.current.get(profileId) ?? null
     }
     try {
       const res = await api.get(`/ether/profiles/${profileId}`)
-      const data = res.data as EtherThreadParticipant
+      const raw = res.data as { id?: number; profile_id?: number; display_name?: string | null; avatar_url?: string | null }
+      const data = {
+        profile_id: raw.profile_id ?? raw.id ?? profileId,
+        display_name: raw.display_name ?? null,
+        avatar_url: raw.avatar_url ?? null,
+      } satisfies EtherThreadParticipant
       profileCache.current.set(profileId, data)
       return data
     } catch {
@@ -251,7 +323,8 @@ export default function MyLinePage() {
   }, [])
 
   useEffect(() => {
-    if (!profile?.id) return
+    const currentProfileId = toProfileId(profile?.profile_id ?? profile?.id)
+    if (!currentProfileId) return
     if (!threads.length) {
       setPreviews([])
       setThreadUnreadCount(0)
@@ -266,17 +339,66 @@ export default function MyLinePage() {
               const messagesRes = await api.get(`/ether/threads/${thread.id}/messages`)
               const list = Array.isArray(messagesRes.data) ? (messagesRes.data as EtherMessage[]) : []
               const last = list[list.length - 1]
-              const profileId = profile?.id ?? null
+              const profileId = toProfileId(profile?.profile_id ?? profile?.id)
+              const userId = toProfileId(me?.id)
+              const storedTarget = getStoredThreadTarget(thread.id, profileId)
               const participant = Array.isArray(thread.participants)
-                ? thread.participants.find((p) => p.profile_id !== profileId) ?? thread.participants[0]
+                ? (profileId || userId
+                    ? thread.participants.find((p) => !isSelfParticipant(p, profileId ?? null, userId ?? null)) ??
+                      thread.participants[0] ??
+                      null
+                    : thread.participants[0] ?? null)
                 : null
-              const senderProfileId = last?.sender_profile_id ?? participant?.profile_id ?? null
-              let senderDisplayName = participant?.display_name ?? null
-              let senderAvatarUrl = participant?.avatar_url ?? null
-              if (!senderDisplayName && senderProfileId) {
-                const sender = await loadThreadParticipant(senderProfileId)
-                senderDisplayName = sender?.display_name ?? null
-                senderAvatarUrl = sender?.avatar_url ?? null
+              const otherMessage = profileId ? list.find((message) => message.sender_profile_id !== profileId) : null
+              const otherMessageProfileId =
+                profileId && otherMessage?.sender_profile_id && otherMessage.sender_profile_id !== profileId
+                  ? otherMessage.sender_profile_id
+                  : null
+              let participantProfileId = participant ? getParticipantProfileId(participant) : null
+              if ((profileId && participantProfileId === profileId) || (userId && participantProfileId === userId)) {
+                participantProfileId = null
+              }
+              const safeTarget =
+                storedTarget && (!profileId || storedTarget.profile_id !== profileId) ? storedTarget : null
+              let counterpartProfileId =
+                safeTarget?.profile_id ?? otherMessageProfileId ?? participantProfileId ?? null
+              if (
+                (profileId && counterpartProfileId === profileId) ||
+                (userId && counterpartProfileId === userId)
+              ) {
+                counterpartProfileId = otherMessageProfileId ?? participantProfileId ?? null
+              }
+              const participantIsSelf = participant
+                ? isSelfParticipant(participant, profileId ?? null, userId ?? null)
+                : false
+              let counterpartDisplayName =
+                safeTarget?.display_name ??
+                (!participantIsSelf && typeof participant === 'object' && participant
+                  ? participant.display_name ?? null
+                  : null)
+              let counterpartAvatarUrl =
+                safeTarget?.avatar_url ??
+                (!participantIsSelf && typeof participant === 'object' && participant
+                  ? participant.avatar_url ?? null
+                  : null)
+              if (
+                !counterpartDisplayName &&
+                safeTarget?.display_name &&
+                safeTarget.profile_id === counterpartProfileId
+              ) {
+                counterpartDisplayName = safeTarget.display_name
+              }
+              if (
+                !counterpartAvatarUrl &&
+                safeTarget?.avatar_url &&
+                safeTarget.profile_id === counterpartProfileId
+              ) {
+                counterpartAvatarUrl = safeTarget.avatar_url
+              }
+              if (!counterpartDisplayName && counterpartProfileId) {
+                const counterpart = await loadThreadParticipant(counterpartProfileId)
+                counterpartDisplayName = counterpart?.display_name ?? null
+                counterpartAvatarUrl = counterpart?.avatar_url ?? null
               }
               const readAt = getThreadReadAt(thread.id)
               const unread =
@@ -285,19 +407,20 @@ export default function MyLinePage() {
                 (!readAt || new Date(last.created_at).getTime() > new Date(readAt).getTime())
               return {
                 thread_id: thread.id,
-                sender_profile_id: senderProfileId,
-                sender_display_name: senderDisplayName ?? (senderProfileId ? `User #${senderProfileId}` : null),
-                sender_avatar_url: senderAvatarUrl ?? null,
-                message: last?.content ?? null,
+                counterpart_profile_id: counterpartProfileId,
+                counterpart_display_name:
+                  counterpartDisplayName ?? (counterpartProfileId ? `User #${counterpartProfileId}` : 'Member'),
+                counterpart_avatar_url: counterpartAvatarUrl ?? null,
+                message: isMeaningfulMessage(last?.content) ? last?.content?.trim() ?? null : null,
                 created_at: last?.created_at ?? null,
                 unread,
               } satisfies MyLinePreview
             } catch {
               return {
                 thread_id: thread.id,
-                sender_profile_id: null,
-                sender_display_name: `Thread #${thread.id}`,
-                sender_avatar_url: null,
+                counterpart_profile_id: null,
+                counterpart_display_name: `Thread #${thread.id}`,
+                counterpart_avatar_url: null,
                 message: null,
                 created_at: null,
                 unread: false,
@@ -321,7 +444,7 @@ export default function MyLinePage() {
     return () => {
       canceled = true
     }
-  }, [threads, profile?.id])
+  }, [threads, profile?.profile_id, profile?.id])
 
   useEffect(() => {
     if (!accountsOpen) return
@@ -409,6 +532,52 @@ export default function MyLinePage() {
   }, [syncsOpen])
 
   useEffect(() => {
+    if (!syncsOpen) {
+      setSyncsMenuStyle(null)
+      return
+    }
+    if (typeof window === 'undefined') return
+    const trigger = syncsMenuTriggerRef.current
+    if (!trigger) return
+    const updatePosition = () => {
+      const rect = trigger.getBoundingClientRect()
+      if (window.innerWidth < 520) {
+        setSyncsMenuStyle({
+          position: 'fixed',
+          top: rect.bottom + 8,
+          left: 12,
+          right: 12,
+          maxWidth: 'calc(100vw - 24px)',
+          boxSizing: 'border-box',
+          maxHeight: '50vh',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+        })
+        return
+      }
+      const width = Math.min(320, window.innerWidth - 24)
+      const idealLeft = rect.left + rect.width / 2 - width / 2
+      const left = Math.min(Math.max(12, idealLeft), window.innerWidth - width - 12)
+      setSyncsMenuStyle({
+        position: 'fixed',
+        top: rect.bottom + 8,
+        left,
+        width,
+        maxWidth: 'calc(100vw - 24px)',
+        maxHeight: '50vh',
+        overflowY: 'auto',
+      })
+    }
+    updatePosition()
+    window.addEventListener('resize', updatePosition)
+    window.addEventListener('scroll', updatePosition, true)
+    return () => {
+      window.removeEventListener('resize', updatePosition)
+      window.removeEventListener('scroll', updatePosition, true)
+    }
+  }, [syncsOpen])
+
+  useEffect(() => {
     if (typeof window === 'undefined') return
     const handle = window.setTimeout(() => {
       setSearch(searchInput.trim())
@@ -461,13 +630,13 @@ export default function MyLinePage() {
     if (!query) return previews
     return previews.filter((preview) => {
       return (
-        preview.sender_display_name?.toLowerCase().includes(query) ||
-        preview.message?.toLowerCase().includes(query)
+        preview.counterpart_display_name?.toLowerCase().includes(query) ||
+        (isMeaningfulMessage(preview.message) && preview.message?.toLowerCase().includes(query))
       )
     })
   }, [previews, search])
   const hasAnyMessages = useMemo(
-    () => filteredPreviews.some((preview) => preview.message || preview.created_at),
+    () => filteredPreviews.some((preview) => isMeaningfulMessage(preview.message)),
     [filteredPreviews]
   )
 
@@ -488,6 +657,16 @@ export default function MyLinePage() {
         'ether:last_view',
         JSON.stringify({ path: window.location.pathname + window.location.search })
       )
+      if (preview.counterpart_profile_id) {
+        window.sessionStorage.setItem(
+          `myline:thread_target:${preview.thread_id}`,
+          JSON.stringify({
+            profile_id: preview.counterpart_profile_id,
+            display_name: preview.counterpart_display_name ?? null,
+            avatar_url: preview.counterpart_avatar_url ?? null,
+          })
+        )
+      }
     }
     router.push(`/myline/${preview.thread_id}`)
   }
@@ -523,11 +702,14 @@ export default function MyLinePage() {
     return threads.find(
       (thread) =>
         Array.isArray(thread.participants) &&
-        thread.participants.some((participant) => participant.profile_id === profileId)
+        thread.participants.some((participant) => getParticipantProfileId(participant) === profileId)
     )
   }
 
-  async function openLineWithProfile(profileId: number) {
+  async function openLineWithProfile(
+    profileId: number,
+    details?: { display_name?: string | null; avatar_url?: string | null }
+  ) {
     if (!profileId) return
     try {
       let thread = findThreadWithProfile(profileId)
@@ -536,6 +718,16 @@ export default function MyLinePage() {
         const createdId = res.data?.id ?? res.data?.thread_id ?? null
         if (createdId) {
           storeReturnPath()
+          if (typeof window !== 'undefined') {
+            window.sessionStorage.setItem(
+              `myline:thread_target:${createdId}`,
+              JSON.stringify({
+                profile_id: profileId,
+                display_name: details?.display_name ?? null,
+                avatar_url: details?.avatar_url ?? null,
+              })
+            )
+          }
           router.push(`/myline/${createdId}`)
           return
         }
@@ -544,6 +736,16 @@ export default function MyLinePage() {
       }
       if (thread) {
         storeReturnPath()
+        if (typeof window !== 'undefined') {
+          window.sessionStorage.setItem(
+            `myline:thread_target:${thread.id}`,
+            JSON.stringify({
+              profile_id: profileId,
+              display_name: details?.display_name ?? null,
+              avatar_url: details?.avatar_url ?? null,
+            })
+          )
+        }
         router.push(`/myline/${thread.id}`)
       } else {
         setNoticeMsg('Unable to start a new line. Please try again.')
@@ -722,12 +924,12 @@ export default function MyLinePage() {
                 style={{
                   padding: '8px 12px',
                   borderRadius: 999,
-                  border: '1px solid rgba(90, 56, 44, 0.8)',
-                  background: 'linear-gradient(135deg, rgba(111, 74, 58, 0.95), rgba(142, 92, 76, 0.9))',
+                  border: '1px solid rgba(72, 38, 30, 0.9)',
+                  background: 'linear-gradient(135deg, rgba(34, 16, 12, 0.98), rgba(58, 28, 22, 0.98))',
                   fontWeight: 600,
-                  color: '#fff9f5',
+                  color: '#fffaf7',
                   cursor: 'pointer',
-                  boxShadow: '0 10px 18px rgba(20, 12, 12, 0.25)',
+                  boxShadow: '0 12px 20px rgba(12, 8, 8, 0.35)',
                 }}
               >
                 New Message
@@ -809,23 +1011,25 @@ export default function MyLinePage() {
                     In Sync
                     <span style={{ fontSize: 12, opacity: 0.7 }}>▾</span>
                   </button>
-                  {syncsOpen ? (
+                  {syncsOpen && syncsMenuStyle ? (
                     <div
                       ref={syncsMenuRef}
                       style={{
-                        position: 'absolute',
-                        top: '100%',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        marginTop: 8,
-                        width: 'min(260px, calc(100vw - 24px))',
-                        maxWidth: 'calc(100vw - 24px)',
                         borderRadius: 14,
                         border: '1px solid rgba(140, 92, 78, 0.35)',
                         background: 'linear-gradient(180deg, rgba(252, 245, 239, 0.98), rgba(226, 199, 181, 0.96))',
                         boxShadow: '0 16px 30px rgba(12, 10, 10, 0.22)',
                         padding: 10,
                         zIndex: 9999,
+                        ...(syncsMenuStyle ?? {}),
+                        ...(syncsMenuStyle?.position === 'fixed'
+                          ? {
+                              left: 12,
+                              right: 12,
+                              maxWidth: 'calc(100vw - 24px)',
+                              boxSizing: 'border-box',
+                            }
+                          : {}),
                       }}
                     >
                       <div style={{ fontWeight: 700, fontSize: 12 }}>In Sync</div>
@@ -839,7 +1043,10 @@ export default function MyLinePage() {
                               type="button"
                               onClick={() => {
                                 setSyncsOpen(false)
-                                openLineWithProfile(sync.id)
+                                openLineWithProfile(sync.id, {
+                                  display_name: sync.display_name ?? null,
+                                  avatar_url: sync.avatar_url ?? null,
+                                })
                               }}
                               style={{
                                 border: '1px solid rgba(140, 92, 78, 0.2)',
@@ -917,7 +1124,12 @@ export default function MyLinePage() {
                       <button
                         key={result.id}
                         type="button"
-                        onClick={() => openLineWithProfile(result.id)}
+                        onClick={() =>
+                          openLineWithProfile(result.id, {
+                            display_name: result.display_name ?? null,
+                            avatar_url: result.avatar_url ?? null,
+                          })
+                        }
                         style={{
                           border: '1px solid rgba(140, 92, 78, 0.18)',
                           borderRadius: 12,
@@ -1062,21 +1274,21 @@ export default function MyLinePage() {
                       fontSize: 14,
                       fontWeight: 600,
                       flexShrink: 0,
-                      cursor: preview.sender_profile_id ? 'pointer' : 'default',
+                      cursor: preview.counterpart_profile_id ? 'pointer' : 'default',
                     }}
                     onClick={(event) => {
                       event.stopPropagation()
-                      handleProfileClick(preview.sender_profile_id)
+                      handleProfileClick(preview.counterpart_profile_id)
                     }}
                   >
-                    {preview.sender_avatar_url ? (
+                    {preview.counterpart_avatar_url ? (
                       <img
-                        src={preview.sender_avatar_url}
-                        alt={preview.sender_display_name ?? 'Member'}
+                        src={preview.counterpart_avatar_url}
+                        alt={preview.counterpart_display_name ?? 'Member'}
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       />
                     ) : (
-                      (preview.sender_display_name ?? 'M').slice(0, 1).toUpperCase()
+                      (preview.counterpart_display_name ?? 'Member').slice(0, 1).toUpperCase()
                     )}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -1090,12 +1302,12 @@ export default function MyLinePage() {
                       <span
                         onClick={(event) => {
                           event.stopPropagation()
-                          handleProfileClick(preview.sender_profile_id)
+                          handleProfileClick(preview.counterpart_profile_id)
                         }}
                         style={{
                           fontWeight: 700,
                           fontSize: 16,
-                          cursor: preview.sender_profile_id ? 'pointer' : 'default',
+                          cursor: preview.counterpart_profile_id ? 'pointer' : 'default',
                           textDecorationLine: 'none',
                           textDecorationColor: 'rgba(185, 126, 104, 0.75)',
                           textUnderlineOffset: 3,
@@ -1112,7 +1324,7 @@ export default function MyLinePage() {
                           event.currentTarget.style.textDecorationLine = 'none'
                         }}
                       >
-                        {preview.sender_display_name ?? 'Message'}
+                        {preview.counterpart_display_name ?? 'Member'}
                       </span>
                       {preview.unread ? (
                         <span
@@ -1143,7 +1355,7 @@ export default function MyLinePage() {
                         textOverflow: 'ellipsis',
                       }}
                     >
-                      {preview.message ?? 'No message yet.'}
+                      {preview.message ?? ''}
                     </div>
                   </div>
                   <div style={{ fontSize: 11, opacity: 0.6 }}>
