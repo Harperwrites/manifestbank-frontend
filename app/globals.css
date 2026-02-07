@@ -89,7 +89,7 @@ a {
 
 .ether-portal-chip {
   position: fixed;
-  top: calc(env(safe-area-inset-top) + 100px);
+  top: calc(env(safe-area-inset-top) + 8px);
   left: 12px;
 }
 
@@ -121,7 +121,7 @@ a {
   }
 
   .ether-portal-chip {
-    top: calc(env(safe-area-inset-top) + 136px);
+    top: calc(env(safe-area-inset-top) + 8px);
     left: 10px;
   }
 
