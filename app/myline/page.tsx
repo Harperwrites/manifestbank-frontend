@@ -778,6 +778,20 @@ export default function MyLinePage() {
     try {
       let thread = findThreadWithProfile(profileId)
       if (!thread) {
+        try {
+          const threadsRes = await api.get('/ether/threads')
+          const freshThreads = Array.isArray(threadsRes.data) ? threadsRes.data : []
+          setThreads(freshThreads)
+          thread = freshThreads.find(
+            (t: any) =>
+              Array.isArray(t.participants) &&
+              t.participants.some((participant: any) => getParticipantProfileId(participant) === profileId)
+          )
+        } catch {
+          // ignore and fall back to create
+        }
+      }
+      if (!thread) {
         const res = await api.post('/ether/threads', { participant_profile_ids: [profileId] })
         const createdId = res.data?.id ?? res.data?.thread_id ?? null
         if (createdId) {

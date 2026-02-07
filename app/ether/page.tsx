@@ -1898,7 +1898,17 @@ export default function EtherPage() {
   const myLineDisplayPreviews = (myLineNewPreviews.length ? myLineNewPreviews : myLineRecentPreviews).filter(
     (preview) => isMeaningfulMessage(preview.message)
   )
-  const myLineShownPreviews = myLineDisplayPreviews
+  const myLineShownPreviews = useMemo(() => {
+    const seen = new Set<string>()
+    return myLineDisplayPreviews.filter((preview) => {
+      const key = preview.counterpart_profile_id
+        ? `profile:${preview.counterpart_profile_id}`
+        : `thread:${preview.thread_id}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+  }, [myLineDisplayPreviews])
   const myLineHasMessages = myLineShownPreviews.length > 0
 
   const activePosts = useMemo(() => {
