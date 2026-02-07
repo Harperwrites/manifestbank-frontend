@@ -55,6 +55,8 @@ type SyncRequest = {
   target_profile_id: number
   status: string
   created_at: string
+  requester_display_name?: string | null
+  requester_avatar_url?: string | null
 }
 
 type MyLinePreview = {
@@ -127,6 +129,9 @@ export default function MyLinePage() {
   const profileCache = useRef<Map<number, EtherThreadParticipant>>(new Map())
   const [restoringScroll, setRestoringScroll] = useState(false)
   const [showStickyChips, setShowStickyChips] = useState(false)
+  const [etherStickyOpen, setEtherStickyOpen] = useState(false)
+  const etherStickyRef = useRef<HTMLDivElement | null>(null)
+  const etherStickyMenuRef = useRef<HTMLDivElement | null>(null)
 
   const unreadNotifications = useMemo(
     () => notifications.filter((note) => !note.read_at).length,
@@ -181,6 +186,31 @@ export default function MyLinePage() {
   }, [])
 
   useEffect(() => {
+    if (!etherStickyOpen) return
+    function handleClick(event: MouseEvent) {
+      const target = event.target as Node
+      if (
+        etherStickyRef.current &&
+        !etherStickyRef.current.contains(target) &&
+        (!etherStickyMenuRef.current || !etherStickyMenuRef.current.contains(target))
+      ) {
+        setEtherStickyOpen(false)
+      }
+    }
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setEtherStickyOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [etherStickyOpen])
+
+  useEffect(() => {
     if (!me) return
     if (me.email_verified === false) {
       router.replace('/verify-email?next=/myline')
@@ -229,6 +259,16 @@ export default function MyLinePage() {
       setNoticeMsg(e?.response?.data?.detail ?? e?.message ?? 'Failed to load messages')
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function markNotificationsRead() {
+    try {
+      await api.post('/ether/notifications/mark-read')
+      const res = await api.get('/ether/notifications')
+      setNotifications(Array.isArray(res.data) ? res.data : [])
+    } catch {
+      // ignore
     }
   }
 
@@ -807,23 +847,30 @@ export default function MyLinePage() {
             gap: 8,
           }}
         >
-          <div style={{ position: 'relative' }}>
+          <div ref={etherStickyRef} style={{ position: 'relative' }}>
             <button
               type="button"
-              onClick={() => router.push('/ether')}
+              onClick={() => {
+                setEtherStickyOpen((open) => !open)
+                if (!etherStickyOpen) {
+                  markNotificationsRead()
+                }
+              }}
               style={{
                 padding: '6px 12px',
                 borderRadius: 999,
                 border: '1px solid rgba(140, 92, 78, 0.7)',
-                background: 'linear-gradient(135deg, rgba(120, 77, 64, 0.7), rgba(224, 198, 186, 0.95))',
+                background: 'linear-gradient(135deg, rgba(140, 92, 78, 0.35), rgba(245, 234, 226, 0.95))',
                 cursor: 'pointer',
                 fontWeight: 600,
-                color: '#2f1f1a',
+                color: '#4a2f26',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 6,
-                boxShadow: '0 0 18px rgba(140, 92, 78, 0.5)',
+                boxShadow: '0 0 16px rgba(140, 92, 78, 0.45)',
               }}
+              aria-haspopup="menu"
+              aria-expanded={etherStickyOpen}
             >
               The Ether™
               {etherBadgeCount ? (
@@ -844,7 +891,340 @@ export default function MyLinePage() {
                   {etherBadgeCount}
                 </span>
               ) : null}
+              <span style={{ fontSize: 12, opacity: 0.7 }}>▾</span>
             </button>
+            {etherStickyOpen ? (
+              <div
+                ref={etherStickyMenuRef}
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  marginTop: 10,
+                  width: 320,
+                  maxWidth: 'calc(100vw - 24px)',
+                  borderRadius: 16,
+                  border: '1px solid rgba(140, 92, 78, 0.45)',
+                  background: 'linear-gradient(180deg, rgba(252, 245, 239, 0.98), rgba(226, 199, 181, 0.96))',
+                  boxShadow: '0 18px 42px rgba(26, 18, 14, 0.24)',
+                  padding: 12,
+                  color: '#3b2b24',
+                  zIndex: 99999,
+                }}
+                role="menu"
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 13 }}>
+                  Notifications
+                  {unreadNotifications ? (
+                    <span
+                      style={{
+                        minWidth: 18,
+                        height: 18,
+                        borderRadius: 999,
+                        background: '#b67967',
+                        color: '#fff',
+                        fontSize: 11,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '0 6px',
+                      }}
+                    >
+                      {unreadNotifications}
+                    </span>
+                  ) : null}
+                </div>
+                {notifications.length === 0 ? (
+                  <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>No notifications yet.</div>
+                ) : (
+                  <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
+                    {notifications.slice(0, 4).map((note) => (
+                      <div
+                        key={note.id}
+                        style={{
+                          display: 'flex',
+                          gap: 8,
+                          alignItems: 'center',
+                          padding: '6px 6px',
+                          borderRadius: 12,
+                          background: note.read_at ? 'transparent' : 'rgba(182, 121, 103, 0.08)',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 26,
+                            height: 26,
+                            borderRadius: '50%',
+                            border: '1px solid rgba(95, 74, 62, 0.25)',
+                            background: 'rgba(255,255,255,0.9)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            overflow: 'hidden',
+                            fontSize: 11,
+                            fontWeight: 600,
+                          }}
+                        >
+                          {note.actor_avatar_url ? (
+                            <img
+                              src={note.actor_avatar_url}
+                              alt={note.actor_display_name ?? 'Member'}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                          ) : (
+                            (note.actor_display_name ?? 'M').slice(0, 1).toUpperCase()
+                          )}
+                        </div>
+                        <div style={{ fontSize: 12 }}>
+                          <div style={{ fontWeight: 600 }}>{note.actor_display_name}</div>
+                          <div style={{ opacity: 0.7 }}>{note.message}</div>
+                        </div>
+                        <div style={{ marginLeft: 'auto', fontSize: 11, opacity: 0.6 }}>
+                          {new Date(note.created_at).toLocaleString()}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    storeReturnPath()
+                    setEtherStickyOpen(false)
+                    router.push('/notifications')
+                  }}
+                  style={{
+                    marginTop: 10,
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: 12,
+                    border: '1px solid rgba(140, 92, 78, 0.4)',
+                    background: 'rgba(255, 255, 255, 0.75)',
+                    fontWeight: 600,
+                    color: '#4a2f26',
+                    cursor: 'pointer',
+                  }}
+                >
+                  View all notifications
+                </button>
+                <div style={{ height: 1, background: 'rgba(140, 92, 78, 0.25)', margin: '10px 0' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 13 }}>
+                  My Line
+                  {threadUnreadCount ? (
+                    <span
+                      style={{
+                        minWidth: 18,
+                        height: 18,
+                        borderRadius: 999,
+                        background: '#b67967',
+                        color: '#fff',
+                        fontSize: 11,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '0 6px',
+                      }}
+                    >
+                      {threadUnreadCount}
+                    </span>
+                  ) : null}
+                </div>
+                {loading ? (
+                  <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>Loading messages…</div>
+                ) : previews.length === 0 ? (
+                  <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>No messages yet.</div>
+                ) : (
+                  <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
+                    {previews.slice(0, 4).map((preview) => (
+                      <button
+                        key={preview.thread_id}
+                        type="button"
+                        onClick={() => handleOpenThread(preview)}
+                        style={{
+                          border: '1px solid rgba(160, 120, 104, 0.25)',
+                          background: preview.unread ? 'rgba(182, 121, 103, 0.08)' : 'transparent',
+                          padding: '6px 8px',
+                          borderRadius: 12,
+                          display: 'flex',
+                          gap: 8,
+                          alignItems: 'center',
+                          textAlign: 'left',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 26,
+                            height: 26,
+                            borderRadius: '50%',
+                            border: '1px solid rgba(95, 74, 62, 0.25)',
+                            background: 'rgba(255,255,255,0.9)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            overflow: 'hidden',
+                            fontSize: 11,
+                            fontWeight: 600,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {preview.counterpart_avatar_url ? (
+                            <img
+                              src={preview.counterpart_avatar_url}
+                              alt={preview.counterpart_display_name ?? 'Member'}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                          ) : (
+                            (preview.counterpart_display_name ?? 'M').slice(0, 1).toUpperCase()
+                          )}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div
+                            style={{
+                              fontWeight: 600,
+                              fontSize: 12,
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                          >
+                            {preview.counterpart_display_name ?? 'Member'}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 11,
+                              opacity: 0.7,
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                          >
+                            {preview.message ?? ''}
+                          </div>
+                        </div>
+                        {preview.unread ? (
+                          <span
+                            style={{
+                              minWidth: 14,
+                              height: 14,
+                              borderRadius: 999,
+                              background: '#b67967',
+                              color: '#fff',
+                              fontSize: 9,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              padding: '0 4px',
+                            }}
+                          >
+                            ●
+                          </span>
+                        ) : null}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    storeReturnPath()
+                    setEtherStickyOpen(false)
+                    router.push('/myline')
+                  }}
+                  style={{
+                    marginTop: 10,
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: 12,
+                    border: '1px solid rgba(140, 92, 78, 0.4)',
+                    background: 'rgba(255, 255, 255, 0.75)',
+                    fontWeight: 600,
+                    color: '#4a2f26',
+                    cursor: 'pointer',
+                  }}
+                >
+                  View all messages
+                </button>
+                <div style={{ height: 1, background: 'rgba(140, 92, 78, 0.25)', margin: '10px 0' }} />
+                <div style={{ fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  In Sync Requests
+                  {syncRequests.length ? (
+                    <span
+                      style={{
+                        minWidth: 18,
+                        height: 18,
+                        borderRadius: 999,
+                        background: '#b67967',
+                        color: '#fff',
+                        fontSize: 11,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '0 6px',
+                      }}
+                    >
+                      {syncRequests.length}
+                    </span>
+                  ) : null}
+                </div>
+                {syncRequests.length === 0 ? (
+                  <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>No requests.</div>
+                ) : (
+                  <div style={{ marginTop: 8, display: 'grid', gap: 8 }}>
+                    {syncRequests.slice(0, 4).map((req) => (
+                      <div
+                        key={req.id}
+                        style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}
+                      >
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                          <div
+                            style={{
+                              width: 28,
+                              height: 28,
+                              borderRadius: '50%',
+                              border: '1px solid rgba(95, 74, 62, 0.25)',
+                              background: 'rgba(255,255,255,0.9)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              overflow: 'hidden',
+                              fontSize: 12,
+                              fontWeight: 600,
+                            }}
+                          >
+                            <span>{(req.requester_display_name || 'U').slice(0, 1).toUpperCase()}</span>
+                          </div>
+                          <span style={{ fontSize: 12 }}>
+                            {req.requester_display_name || `Profile #${req.requester_profile_id}`}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    storeReturnPath()
+                    setEtherStickyOpen(false)
+                    router.push('/sync?tab=requests')
+                  }}
+                  style={{
+                    marginTop: 10,
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: 12,
+                    border: '1px solid rgba(140, 92, 78, 0.4)',
+                    background: 'rgba(255, 255, 255, 0.75)',
+                    fontWeight: 600,
+                    color: '#4a2f26',
+                    cursor: 'pointer',
+                  }}
+                >
+                  View all requests
+                </button>
+              </div>
+            ) : null}
           </div>
           <div style={{ position: 'relative' }}>
             <button

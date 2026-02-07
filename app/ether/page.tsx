@@ -2144,7 +2144,7 @@ export default function EtherPage() {
                     <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>No notifications yet.</div>
                   ) : (
                     <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
-                      {notifications.map((note) => (
+                      {notifications.slice(0, 4).map((note) => (
                         <div
                           key={note.id}
                           style={{
@@ -2223,6 +2223,27 @@ export default function EtherPage() {
                       ))}
                     </div>
                   )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      rememberReturnTo()
+                      setEtherStickyOpen(false)
+                      router.push('/notifications')
+                    }}
+                    style={{
+                      marginTop: 10,
+                      width: '100%',
+                      padding: '8px 12px',
+                      borderRadius: 12,
+                      border: '1px solid rgba(140, 92, 78, 0.4)',
+                      background: 'rgba(255, 255, 255, 0.75)',
+                      fontWeight: 600,
+                      color: '#4a2f26',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    View all notifications
+                  </button>
                   <div style={{ height: 1, background: 'rgba(140, 92, 78, 0.25)', margin: '10px 0' }} />
                   <div
                     style={{
@@ -2259,7 +2280,7 @@ export default function EtherPage() {
                     <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>No messages yet.</div>
                   ) : (
                     <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
-                      {myLineShownPreviews.map((preview) => (
+                      {myLineShownPreviews.slice(0, 4).map((preview) => (
                         <button
                           key={preview.thread_id}
                           type="button"
@@ -2398,7 +2419,7 @@ export default function EtherPage() {
                     <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>No requests.</div>
                   ) : (
                     <div style={{ marginTop: 8, display: 'grid', gap: 8 }}>
-                      {syncRequests.map((req) => (
+                      {syncRequests.slice(0, 4).map((req) => (
                         <div
                           key={req.id}
                           style={{
