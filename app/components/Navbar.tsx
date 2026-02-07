@@ -321,7 +321,7 @@ export default function Navbar({
                 My Journal
               </Link>
               <Link
-                href="/affirmations"
+                href="/myaffirmations"
                 style={{ textDecoration: 'none', fontWeight: 600, color: 'rgba(95, 74, 62, 0.9)' }}
                 role="menuitem"
                 onClick={() => setTreasureOpen(false)}

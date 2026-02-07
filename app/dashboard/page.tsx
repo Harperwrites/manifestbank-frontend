@@ -999,7 +999,7 @@ export default function DashboardPage() {
                   My Journal
                 </Link>
                 <Link
-                  href="/affirmations"
+                  href="/myaffirmations"
                   style={{ textDecoration: 'none', fontWeight: 600, color: '#4a2f26' }}
                   role="menuitem"
                   onClick={() => setTreasureChipOpen(false)}
