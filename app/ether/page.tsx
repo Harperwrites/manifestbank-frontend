@@ -926,8 +926,6 @@ export default function EtherPage() {
   const [manifestAccountsLoading, setManifestAccountsLoading] = useState(false)
   const [manifestAccountsMsg, setManifestAccountsMsg] = useState('')
   const etherStickyNoticeCount = unreadNotifications + syncRequests.length + myLineUnreadCount
-  const myLineShownPreviews = myLineDisplayPreviews.filter((preview) => isMeaningfulMessage(preview.message))
-  const myLineHasMessages = myLineShownPreviews.length > 0
 
   const rememberEtherView = useCallback(() => {
     if (typeof window === 'undefined') return
@@ -1871,6 +1869,8 @@ export default function EtherPage() {
   const myLineDisplayPreviews = (myLineNewPreviews.length ? myLineNewPreviews : myLineRecentPreviews).filter(
     (preview) => isMeaningfulMessage(preview.message)
   )
+  const myLineShownPreviews = myLineDisplayPreviews
+  const myLineHasMessages = myLineShownPreviews.length > 0
 
   const activePosts = useMemo(() => {
     if (activeTab === 'timeline') return timeline
