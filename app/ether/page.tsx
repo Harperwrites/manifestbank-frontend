@@ -1238,11 +1238,21 @@ export default function EtherPage() {
   async function like(postId: number) {
     setAlignPulseId(postId)
     window.setTimeout(() => setAlignPulseId((prev) => (prev === postId ? null : prev)), 420)
+    const applyOptimistic = (posts: EtherPost[]) =>
+      posts.map((p) => {
+        if (p.id !== postId) return p
+        const liked = !p.liked_by_me
+        const count = (p.like_count ?? 0) + (liked ? 1 : -1)
+        return { ...p, liked_by_me: liked, like_count: Math.max(0, count) }
+      })
+    setFeed((prev) => applyOptimistic(prev))
+    setTimeline((prev) => applyOptimistic(prev))
+    setMyPosts((prev) => applyOptimistic(prev))
     try {
       await api.post(`/ether/posts/${postId}/like`)
-      await load(true)
     } catch (e: any) {
       setMsg(e?.response?.data?.detail ?? e?.message ?? 'Like failed')
+      await load(true)
     }
   }
 
@@ -1315,16 +1325,26 @@ export default function EtherPage() {
     const key = Number(`${postId}${commentId}`)
     setCommentAlignPulseId(key)
     window.setTimeout(() => setCommentAlignPulseId((prev) => (prev === key ? null : prev)), 420)
+    setCommentsByPost((prev) => {
+      const list = prev[postId]
+      if (!list) return prev
+      const nextList = list.map((c) => {
+        if (c.id !== commentId) return c
+        const aligned = !c.aligned_by_me
+        const count = (c.align_count ?? 0) + (aligned ? 1 : -1)
+        return { ...c, aligned_by_me: aligned, align_count: Math.max(0, count) }
+      })
+      return { ...prev, [postId]: nextList }
+    })
     setCommentLoading((prev) => ({ ...prev, [postId]: true }))
     setCommentMsg((prev) => ({ ...prev, [postId]: '' }))
     try {
       await api.post(`/ether/comments/${commentId}/align`)
       await loadComments(postId)
-      const res = await api.get('/ether/notifications')
-      setNotifications(res.data)
     } catch (e: any) {
       const msg = e?.response?.data?.detail ?? e?.message ?? 'Align failed.'
       setCommentMsg((prev) => ({ ...prev, [postId]: msg }))
+      await loadComments(postId)
     } finally {
       setCommentLoading((prev) => ({ ...prev, [postId]: false }))
     }
