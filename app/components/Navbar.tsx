@@ -326,7 +326,7 @@ export default function Navbar({
                 role="menuitem"
                 onClick={() => setTreasureOpen(false)}
               >
-                Affirmations
+                My Affirmations
               </Link>
               <Link
                 href="/mystatments"

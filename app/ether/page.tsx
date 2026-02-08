@@ -1088,9 +1088,11 @@ export default function EtherPage() {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num)
   }
 
-  async function load() {
-    setLoading(true)
-    setMsg('')
+  async function load(silent = false) {
+    if (!silent) {
+      setLoading(true)
+      setMsg('')
+    }
     try {
       const results = await Promise.allSettled([
         api.get('/ether/me-profile'),
@@ -1136,7 +1138,9 @@ export default function EtherPage() {
     } catch (e: any) {
       setMsg(e?.response?.data?.detail ?? e?.message ?? 'Failed to load The Ether™')
     } finally {
-      setLoading(false)
+      if (!silent) {
+        setLoading(false)
+      }
     }
   }
 
@@ -1236,7 +1240,7 @@ export default function EtherPage() {
     window.setTimeout(() => setAlignPulseId((prev) => (prev === postId ? null : prev)), 420)
     try {
       await api.post(`/ether/posts/${postId}/like`)
-      await load()
+      await load(true)
     } catch (e: any) {
       setMsg(e?.response?.data?.detail ?? e?.message ?? 'Like failed')
     }
@@ -2663,7 +2667,7 @@ export default function EtherPage() {
             }}
           >
             <img
-              src="/The Ether Logo.png"
+              src="/The%20Ether%20Logo.png"
               alt="The Ether™"
               style={{ height: 72, width: 'auto', maxWidth: '100%' }}
             />

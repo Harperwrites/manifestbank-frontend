@@ -998,7 +998,7 @@ export default function DashboardPage() {
                   role="menuitem"
                   onClick={() => setTreasureChipOpen(false)}
                 >
-                  Affirmations
+                  My Affirmations
                 </Link>
                 <Link
                   href="/mystatments"
