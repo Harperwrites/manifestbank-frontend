@@ -1252,7 +1252,6 @@ export default function EtherPage() {
       await api.post(`/ether/posts/${postId}/like`)
     } catch (e: any) {
       setMsg(e?.response?.data?.detail ?? e?.message ?? 'Like failed')
-      await load(true)
     }
   }
 
