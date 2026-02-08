@@ -159,11 +159,11 @@ a {
   }
 
   .ether-nav-logo-wrap {
-    display: none;
+    display: none !important;
   }
 
   .ether-nav-logo-below {
-    display: flex;
+    display: flex !important;
     justify-content: center;
     align-items: center;
     padding: 8px 16px 0;

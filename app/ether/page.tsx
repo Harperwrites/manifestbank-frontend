@@ -2717,6 +2717,7 @@ export default function EtherPage() {
                       maxWidth: 'calc(100vw - 24px)',
                       maxHeight: '50vh',
                       overflowY: 'auto',
+                      overflowX: 'hidden',
                       borderRadius: 16,
                       border: '1px solid rgba(182, 121, 103, 0.45)',
                       background: 'linear-gradient(180deg, rgba(252, 245, 239, 0.98), rgba(226, 199, 181, 0.96))',
@@ -2724,6 +2725,7 @@ export default function EtherPage() {
                       padding: 12,
                       color: '#3b2b24',
                       zIndex: 1600,
+                      boxSizing: 'border-box',
                       ...(myLineMenuStyle ?? {}),
                       ...(myLineMenuStyle?.position === 'fixed'
                         ? {
@@ -2731,6 +2733,7 @@ export default function EtherPage() {
                             right: 12,
                             maxWidth: 'calc(100vw - 24px)',
                             boxSizing: 'border-box',
+                            width: 'calc(100vw - 24px)',
                           }
                         : {}),
                     }}
@@ -2780,6 +2783,8 @@ export default function EtherPage() {
                               alignItems: 'center',
                               textAlign: 'left',
                               cursor: 'pointer',
+                              width: '100%',
+                              boxSizing: 'border-box',
                             }}
                           >
                             <div
