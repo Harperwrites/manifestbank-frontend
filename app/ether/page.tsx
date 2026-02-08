@@ -2650,8 +2650,8 @@ export default function EtherPage() {
         <div style={{ display: 'flex', justifyContent: 'center' }} className="ether-logo-below-nav">
           <div
             style={{
-              width: 96,
-              height: 96,
+              width: 120,
+              height: 120,
               borderRadius: '50%',
               background: 'linear-gradient(135deg, rgba(182, 121, 103, 0.28), rgba(245, 236, 228, 0.95))',
               border: '1px solid rgba(182, 121, 103, 0.55)',
@@ -2663,9 +2663,9 @@ export default function EtherPage() {
             }}
           >
             <img
-              src="/ether-logo.png"
+              src="/The Ether Logo.png"
               alt="The Ether™"
-              style={{ height: 56, width: 'auto', maxWidth: '100%' }}
+              style={{ height: 72, width: 'auto', maxWidth: '100%' }}
             />
           </div>
         </div>
@@ -4012,7 +4012,7 @@ export default function EtherPage() {
                           >
                             <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
                               <path
-                                d="M12 21s-7.2-4.4-9.3-8.2C.9 9.1 2.1 5.9 5.3 5.2c2-.5 3.6.4 4.7 1.7 1.1-1.3 2.7-2.2 4.7-1.7 3.2.7 4.4 3.9 2.6 7.6C19.2 16.6 12 21 12 21z"
+                                d="M12 20.4s-6.4-4-8.2-7.1C2.3 10.6 3.4 8.6 5.6 8.1c1.7-.4 3.2.4 4.1 1.5l.3.4.3-.4c.9-1.1 2.4-1.9 4.1-1.5 2.2.5 3.3 2.5 1.8 5.2-1.8 3.1-8.2 7.1-8.2 7.1z"
                                 fill="currentColor"
                               />
                             </svg>
@@ -4027,10 +4027,10 @@ export default function EtherPage() {
                           >
                             <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
                               <path
-                                d="M12 20.1s-6.6-4-8.5-7.4C1.9 9.7 3 7.3 5.4 6.7c1.7-.4 3.2.3 4.2 1.5l.4.5.4-.5c1-1.2 2.5-1.9 4.2-1.5 2.4.6 3.5 3 1.9 6C18.6 16 12 20.1 12 20.1z"
+                                d="M12 20.4s-6.4-4-8.2-7.1C2.3 10.6 3.4 8.6 5.6 8.1c1.7-.4 3.2.4 4.1 1.5l.3.4.3-.4c.9-1.1 2.4-1.9 4.1-1.5 2.2.5 3.3 2.5 1.8 5.2-1.8 3.1-8.2 7.1-8.2 7.1z"
                                 fill="none"
                                 stroke="currentColor"
-                                strokeWidth="1.8"
+                                strokeWidth="1.6"
                               />
                             </svg>
                           </span>
@@ -4192,17 +4192,17 @@ export default function EtherPage() {
                                       {comment.aligned_by_me ? (
                                         <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
                                           <path
-                                            d="M12 21s-7.2-4.4-9.3-8.2C.9 9.1 2.1 5.9 5.3 5.2c2-.5 3.6.4 4.7 1.7 1.1-1.3 2.7-2.2 4.7-1.7 3.2.7 4.4 3.9 2.6 7.6C19.2 16.6 12 21 12 21z"
+                                            d="M12 20.4s-6.4-4-8.2-7.1C2.3 10.6 3.4 8.6 5.6 8.1c1.7-.4 3.2.4 4.1 1.5l.3.4.3-.4c.9-1.1 2.4-1.9 4.1-1.5 2.2.5 3.3 2.5 1.8 5.2-1.8 3.1-8.2 7.1-8.2 7.1z"
                                             fill="currentColor"
                                           />
                                         </svg>
                                       ) : (
                                         <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
                                           <path
-                                            d="M12 20.1s-6.6-4-8.5-7.4C1.9 9.7 3 7.3 5.4 6.7c1.7-.4 3.2.3 4.2 1.5l.4.5.4-.5c1-1.2 2.5-1.9 4.2-1.5 2.4.6 3.5 3 1.9 6C18.6 16 12 20.1 12 20.1z"
+                                            d="M12 20.4s-6.4-4-8.2-7.1C2.3 10.6 3.4 8.6 5.6 8.1c1.7-.4 3.2.4 4.1 1.5l.3.4.3-.4c.9-1.1 2.4-1.9 4.1-1.5 2.2.5 3.3 2.5 1.8 5.2-1.8 3.1-8.2 7.1-8.2 7.1z"
                                             fill="none"
                                             stroke="currentColor"
-                                            strokeWidth="1.8"
+                                            strokeWidth="1.6"
                                           />
                                         </svg>
                                       )}
