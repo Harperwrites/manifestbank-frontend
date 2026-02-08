@@ -13,13 +13,14 @@ function GoogleCallbackContent() {
   useEffect(() => {
     const token = params.get('token')
     const next = params.get('next') || '/dashboard'
+    const keep = params.get('keep')
     if (!token) {
       setMessage('Missing login token. Please try again.')
       return
     }
     ;(async () => {
       try {
-        await loginWithToken(token)
+        await loginWithToken(token, keep !== '0')
         router.replace(next)
       } catch {
         setMessage('Unable to sign in. Please try again.')

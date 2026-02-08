@@ -18,6 +18,7 @@ export default function AuthPage() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [acceptTerms, setAcceptTerms] = useState(false)
+  const [keepSignedIn, setKeepSignedIn] = useState(true)
   const [resetOpen, setResetOpen] = useState(false)
   const [resetEmail, setResetEmail] = useState('')
   const [resetMsg, setResetMsg] = useState('')
@@ -49,7 +50,7 @@ export default function AuthPage() {
         const token = res.data?.access_token
         if (!token) throw new Error('No access_token in response')
 
-        await loginWithToken(token)
+        await loginWithToken(token, keepSignedIn)
         setMsg('✅ Logged in.')
         router.push('/dashboard')
       }
@@ -156,7 +157,7 @@ export default function AuthPage() {
         </div>
 
         <a
-          href={`${apiBase}/auth/google/start?next=/dashboard`}
+          href={`${apiBase}/auth/google/start?next=/dashboard&keep=${keepSignedIn ? '1' : '0'}`}
           style={{
             display: 'inline-flex',
             width: '100%',
@@ -255,6 +256,23 @@ export default function AuthPage() {
             </label>
           ) : null}
 
+          {mode === 'login' ? (
+            <label
+              style={{
+                display: 'flex',
+                gap: 10,
+                alignItems: 'center',
+                fontSize: 13,
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={keepSignedIn}
+                onChange={(e) => setKeepSignedIn(e.target.checked)}
+              />
+              <span>Keep me signed in</span>
+            </label>
+          ) : null}
           <label style={{ display: 'grid', gap: 6 }}>
             <span>Password</span>
             <input

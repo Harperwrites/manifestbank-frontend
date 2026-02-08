@@ -170,6 +170,13 @@ a {
     width: 100%;
   }
 
+  .ether-logo-below-nav {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 6px 0 6px;
+  }
+
   .ether-nav-brand {
     font-size: 16px !important;
   }
@@ -184,6 +191,10 @@ a {
 }
 
 .ether-nav-logo-below {
+  display: none;
+}
+
+.ether-logo-below-nav {
   display: none;
 }
 

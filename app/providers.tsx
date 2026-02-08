@@ -18,7 +18,7 @@ type AuthContextValue = {
   me: Me | null
   isLoading: boolean
   refreshMe: () => Promise<void>
-  loginWithToken: (token: string) => Promise<void>
+  loginWithToken: (token: string, persist?: boolean) => Promise<void>
   logout: () => void
 }
 
@@ -44,8 +44,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [legalSubmitting, setLegalSubmitting] = useState(false)
   const [legalError, setLegalError] = useState('')
 
+  function getStoredToken() {
+    if (typeof window === 'undefined') return null
+    return localStorage.getItem('access_token') || sessionStorage.getItem('access_token')
+  }
+
   async function refreshMe() {
-    const token = localStorage.getItem('access_token')
+    const token = getStoredToken()
     if (!token) {
       setMe(null)
       delete api.defaults.headers.common.Authorization
@@ -63,14 +68,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  async function loginWithToken(token: string) {
-    localStorage.setItem('access_token', token)
+  async function loginWithToken(token: string, persist = true) {
+    if (persist) {
+      localStorage.setItem('access_token', token)
+      sessionStorage.removeItem('access_token')
+    } else {
+      sessionStorage.setItem('access_token', token)
+      localStorage.removeItem('access_token')
+    }
     api.defaults.headers.common.Authorization = `Bearer ${token}`
     await refreshMe()
   }
 
   function logout() {
     localStorage.removeItem('access_token')
+    sessionStorage.removeItem('access_token')
     delete api.defaults.headers.common.Authorization
     setMe(null)
     // no router here; pages decide where to redirect

@@ -2640,6 +2640,13 @@ export default function EtherPage() {
         </div>
       ) : null}
       <Container>
+        <div style={{ display: 'flex', justifyContent: 'center' }} className="ether-logo-below-nav">
+          <img
+            src="/ether-logo.png"
+            alt="The Ether™"
+            style={{ height: 120, width: 'auto', maxWidth: '100%' }}
+          />
+        </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
             <div style={{ fontFamily: 'var(--font-serif)', fontSize: 28, fontWeight: 600 }}>The Ether™</div>
