@@ -2640,19 +2640,20 @@ export default function EtherPage() {
         </div>
       ) : null}
       <Container>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 28, fontWeight: 600 }}>The Ether™</div>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              flexWrap: 'nowrap',
-              overflowX: 'auto',
-              paddingBottom: 4,
-            }}
-          >
-            <div style={{ position: 'relative' }} ref={myLineRef}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
+            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 28, fontWeight: 600 }}>The Ether™</div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                flexWrap: 'nowrap',
+                overflowX: 'auto',
+                paddingBottom: 4,
+              }}
+            >
+              <div style={{ position: 'relative' }} ref={myLineRef}>
                 <button
                   ref={myLineTriggerRef}
                   type="button"
