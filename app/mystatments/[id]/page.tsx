@@ -91,6 +91,7 @@ export default function AccountStatementPage() {
   const [summary, setSummary] = useState<StatementSummary>(buildFallbackSummary())
   const [entries, setEntries] = useState<StatementEntry[]>(buildFallbackEntries())
   const [accountName, setAccountName] = useState('Account')
+  const [asOf, setAsOf] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState('')
 
@@ -122,10 +123,12 @@ export default function AccountStatementPage() {
         const nextEntries = Array.isArray(data.entries) && data.entries.length ? data.entries : buildFallbackEntries()
         setSummary(nextSummary)
         setEntries(nextEntries)
+        setAsOf(typeof data.as_of === 'string' ? data.as_of : null)
       } catch (e: any) {
         setMsg(e?.response?.data?.detail ?? e?.message ?? 'Statements unavailable. Showing sample layout.')
         setSummary(buildFallbackSummary())
         setEntries(buildFallbackEntries())
+        setAsOf(null)
       } finally {
         setLoading(false)
       }
@@ -223,6 +226,11 @@ export default function AccountStatementPage() {
               </div>
               <div style={{ marginTop: 6, opacity: 0.7 }}>Account: {accountName}</div>
               <div style={{ marginTop: 6, opacity: 0.7 }}>Month: {selectedMonth}</div>
+              {asOf ? (
+                <div style={{ marginTop: 4, fontSize: 12, opacity: 0.65 }}>
+                  *As of {new Date(asOf).toLocaleString()}
+                </div>
+              ) : null}
             </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.18em', opacity: 0.6 }}>
