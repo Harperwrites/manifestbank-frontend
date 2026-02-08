@@ -2678,8 +2678,8 @@ export default function EtherPage() {
         <div style={{ display: 'flex', justifyContent: 'center' }} className="ether-logo-below-nav">
           <div
             style={{
-              width: 150,
-              height: 150,
+              width: 120,
+              height: 120,
               borderRadius: '50%',
               background: 'linear-gradient(135deg, rgba(182, 121, 103, 0.28), rgba(245, 236, 228, 0.95))',
               border: '1px solid rgba(182, 121, 103, 0.55)',
@@ -2687,13 +2687,13 @@ export default function EtherPage() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              padding: 8,
+              padding: 6,
             }}
           >
             <img
               src="/ether-logo-card.png"
               alt="The Ether™"
-              style={{ height: 108, width: 'auto', maxWidth: '100%' }}
+              style={{ height: 98, width: 'auto', maxWidth: '100%' }}
             />
           </div>
         </div>
