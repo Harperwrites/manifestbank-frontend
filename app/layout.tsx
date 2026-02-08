@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import './globals.css'
 import { AuthProvider } from './providers'
 import PwaRegister from './components/PwaRegister'
@@ -30,6 +31,33 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <AuthProvider>
           {children}
+          <footer
+            style={{
+              marginTop: 48,
+              padding: '28px 20px 34px',
+              borderTop: '1px solid rgba(95, 74, 62, 0.2)',
+              background:
+                'linear-gradient(180deg, rgba(247, 241, 236, 0.9), rgba(240, 231, 223, 0.9))',
+              color: '#3b2a22',
+            }}
+          >
+            <div style={{ maxWidth: 960, margin: '0 auto', textAlign: 'center' }}>
+              <div style={{ fontFamily: 'var(--font-serif)', fontSize: 18 }}>
+                ManifestBank™
+              </div>
+              <div style={{ marginTop: 8, display: 'flex', gap: 16, justifyContent: 'center' }}>
+                <Link href="/terms" style={{ color: 'inherit', textDecoration: 'underline' }}>
+                  Terms &amp; Conditions
+                </Link>
+                <Link href="/privacy" style={{ color: 'inherit', textDecoration: 'underline' }}>
+                  Privacy Policy
+                </Link>
+              </div>
+              <div style={{ marginTop: 10, fontSize: 12, opacity: 0.7 }}>
+                © 2026 ManifestBank™. All rights reserved.
+              </div>
+            </div>
+          </footer>
           <PwaRegister />
         </AuthProvider>
       </body>

@@ -16,6 +16,7 @@ export default function AuthPage() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [acceptTerms, setAcceptTerms] = useState(false)
   const [resetOpen, setResetOpen] = useState(false)
   const [resetEmail, setResetEmail] = useState('')
   const [resetMsg, setResetMsg] = useState('')
@@ -34,7 +35,12 @@ export default function AuthPage() {
           setLoading(false)
           return
         }
-        await api.post('/auth/register', { email, password, username })
+        if (!acceptTerms) {
+          setMsg('❌ You must accept the Terms & Conditions and Privacy Policy.')
+          setLoading(false)
+          return
+        }
+        await api.post('/auth/register', { email, password, username, accept_terms: true })
         setMsg('✅ Account created. Check your email to verify and unlock full access.')
         setMode('login')
       } else {
@@ -111,7 +117,10 @@ export default function AuthPage() {
         <div style={{ display: 'flex', gap: 10, marginBottom: 18 }}>
           <button
             type="button"
-            onClick={() => setMode('login')}
+            onClick={() => {
+              setMode('login')
+              setAcceptTerms(false)
+            }}
             style={{
               flex: 1,
               padding: 10,
@@ -127,7 +136,10 @@ export default function AuthPage() {
 
           <button
             type="button"
-            onClick={() => setMode('register')}
+            onClick={() => {
+              setMode('register')
+              setAcceptTerms(false)
+            }}
             style={{
               flex: 1,
               padding: 10,
@@ -224,6 +236,37 @@ export default function AuthPage() {
                   color: 'inherit',
                 }}
               />
+            </label>
+          ) : null}
+
+          {mode === 'register' ? (
+            <label
+              style={{
+                display: 'flex',
+                gap: 10,
+                alignItems: 'flex-start',
+                fontSize: 13,
+                lineHeight: 1.4,
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={acceptTerms}
+                onChange={(e) => setAcceptTerms(e.target.checked)}
+                required
+                style={{ marginTop: 3 }}
+              />
+              <span>
+                I agree to the{' '}
+                <a href="/terms" style={{ textDecoration: 'underline', color: 'inherit' }}>
+                  Terms &amp; Conditions
+                </a>{' '}
+                and{' '}
+                <a href="/privacy" style={{ textDecoration: 'underline', color: 'inherit' }}>
+                  Privacy Policy
+                </a>
+                .
+              </span>
             </label>
           ) : null}
 

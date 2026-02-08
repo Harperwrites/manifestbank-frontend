@@ -39,6 +39,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [toast, setToast] = useState('')
   const [notificationToasts, setNotificationToasts] = useState<NotificationToast[]>([])
   const [notificationsPrimed, setNotificationsPrimed] = useState(false)
+  const [legalRequired, setLegalRequired] = useState(false)
+  const [legalChecked, setLegalChecked] = useState(false)
+  const [legalSubmitting, setLegalSubmitting] = useState(false)
+  const [legalError, setLegalError] = useState('')
 
   async function refreshMe() {
     const token = localStorage.getItem('access_token')
@@ -80,6 +84,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    if (!me) {
+      setLegalRequired(false)
+      setLegalChecked(false)
+      setLegalSubmitting(false)
+      setLegalError('')
+      return
+    }
+    let active = true
+    ;(async () => {
+      try {
+        const res = await api.get('/legal/consent')
+        if (!active) return
+        const termsAccepted = Boolean(res.data?.termsAccepted)
+        const privacyAccepted = Boolean(res.data?.privacyAccepted)
+        setLegalRequired(!(termsAccepted && privacyAccepted))
+      } catch {
+        if (!active) return
+        setLegalRequired(true)
+      }
+    })()
+    return () => {
+      active = false
+    }
+  }, [me])
 
   useEffect(() => {
     let active = true
@@ -236,6 +266,107 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={value}>
       {children}
+      {legalRequired ? (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(20, 12, 8, 0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2147483647,
+            padding: 20,
+          }}
+        >
+          <div
+            style={{
+              width: 'min(640px, 100%)',
+              background:
+                'linear-gradient(140deg, rgba(199, 140, 122, 0.98), rgba(236, 214, 201, 0.98))',
+              borderRadius: 22,
+              border: '1px solid rgba(95, 74, 62, 0.35)',
+              padding: '22px 22px 18px',
+              color: '#2b1b16',
+              boxShadow: '0 28px 70px rgba(0,0,0,0.35)',
+            }}
+          >
+            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 22, fontWeight: 600 }}>
+              Accept Terms to Continue
+            </div>
+            <p style={{ marginTop: 8, opacity: 0.8 }}>
+              Please review and accept the ManifestBank™ Terms &amp; Conditions and Privacy
+              Policy to continue using the app.
+            </p>
+            <label
+              style={{
+                display: 'flex',
+                gap: 10,
+                alignItems: 'flex-start',
+                fontSize: 14,
+                marginTop: 12,
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={legalChecked}
+                onChange={(e) => setLegalChecked(e.target.checked)}
+                style={{ marginTop: 4 }}
+              />
+              <span>
+                I agree to the{' '}
+                <a href="/terms" style={{ textDecoration: 'underline', color: 'inherit' }}>
+                  Terms &amp; Conditions
+                </a>{' '}
+                and{' '}
+                <a href="/privacy" style={{ textDecoration: 'underline', color: 'inherit' }}>
+                  Privacy Policy
+                </a>
+                .
+              </span>
+            </label>
+            {legalError ? (
+              <div style={{ marginTop: 8, fontSize: 13, color: '#5a1f1f' }}>{legalError}</div>
+            ) : null}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+              <button
+                type="button"
+                disabled={!legalChecked || legalSubmitting}
+                onClick={async () => {
+                  if (!legalChecked) return
+                  setLegalSubmitting(true)
+                  setLegalError('')
+                  try {
+                    await api.post('/legal/accept')
+                    setLegalRequired(false)
+                  } catch (err: any) {
+                    const detail =
+                      err?.response?.data?.detail ??
+                      err?.response?.data?.message ??
+                      err?.message ??
+                      'Unable to save acceptance'
+                    setLegalError(detail)
+                  } finally {
+                    setLegalSubmitting(false)
+                  }
+                }}
+                style={{
+                  padding: '10px 18px',
+                  borderRadius: 999,
+                  border: '1px solid rgba(182, 121, 103, 0.6)',
+                  background: 'linear-gradient(135deg, #c88a77, #b67967)',
+                  color: '#fff',
+                  cursor: legalChecked && !legalSubmitting ? 'pointer' : 'not-allowed',
+                  fontWeight: 600,
+                  opacity: legalChecked && !legalSubmitting ? 1 : 0.6,
+                }}
+              >
+                {legalSubmitting ? 'Saving...' : 'Accept and Continue'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {toast ? (
         <div
           style={{
