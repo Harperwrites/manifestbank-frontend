@@ -903,6 +903,8 @@ export default function EtherPage() {
   const [commentDrafts, setCommentDrafts] = useState<Record<number, string>>({})
   const [commentLoading, setCommentLoading] = useState<Record<number, boolean>>({})
   const [commentMsg, setCommentMsg] = useState<Record<number, string>>({})
+  const [alignPulseId, setAlignPulseId] = useState<number | null>(null)
+  const [commentAlignPulseId, setCommentAlignPulseId] = useState<number | null>(null)
   const [notifications, setNotifications] = useState<EtherNotification[]>([])
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const notificationsRef = useRef<HTMLDivElement | null>(null)
@@ -1230,6 +1232,8 @@ export default function EtherPage() {
   }
 
   async function like(postId: number) {
+    setAlignPulseId(postId)
+    window.setTimeout(() => setAlignPulseId((prev) => (prev === postId ? null : prev)), 420)
     try {
       await api.post(`/ether/posts/${postId}/like`)
       await load()
@@ -1304,6 +1308,9 @@ export default function EtherPage() {
   }
 
   async function alignComment(postId: number, commentId: number) {
+    const key = Number(`${postId}${commentId}`)
+    setCommentAlignPulseId(key)
+    window.setTimeout(() => setCommentAlignPulseId((prev) => (prev === key ? null : prev)), 420)
     setCommentLoading((prev) => ({ ...prev, [postId]: true }))
     setCommentMsg((prev) => ({ ...prev, [postId]: '' }))
     try {
@@ -3999,12 +4006,34 @@ export default function EtherPage() {
                             gap: 6,
                           }}
                         >
-                          <span style={{ color: '#b67967' }}>♥</span>
+                          <span
+                            className={alignPulseId === post.id ? 'align-heart-pulse' : ''}
+                            style={{ color: '#b67967', display: 'inline-flex', alignItems: 'center' }}
+                          >
+                            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                              <path
+                                d="M12 21s-7.2-4.4-9.3-8.2C.9 9.1 2.1 5.9 5.3 5.2c2-.5 3.6.4 4.7 1.7 1.1-1.3 2.7-2.2 4.7-1.7 3.2.7 4.4 3.9 2.6 7.6C19.2 16.6 12 21 12 21z"
+                                fill="currentColor"
+                              />
+                            </svg>
+                          </span>
                           Aligned · {post.like_count}
                         </button>
                       ) : (
                         <Button variant="outline" onClick={() => like(post.id)}>
-                          <span style={{ marginRight: 6 }}>♡</span>
+                          <span
+                            className={alignPulseId === post.id ? 'align-heart-pulse' : ''}
+                            style={{ marginRight: 6, display: 'inline-flex', alignItems: 'center' }}
+                          >
+                            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                              <path
+                                d="M12 20.1s-6.6-4-8.5-7.4C1.9 9.7 3 7.3 5.4 6.7c1.7-.4 3.2.3 4.2 1.5l.4.5.4-.5c1-1.2 2.5-1.9 4.2-1.5 2.4.6 3.5 3 1.9 6C18.6 16 12 20.1 12 20.1z"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.8"
+                              />
+                            </svg>
+                          </span>
                           Align · {post.like_count}
                         </Button>
                       )}
@@ -4147,8 +4176,36 @@ export default function EtherPage() {
                                         : 'none',
                                     }}
                                   >
-                                    <span style={{ marginRight: 6, color: comment.aligned_by_me ? '#b67967' : 'inherit' }}>
-                                      {comment.aligned_by_me ? '♥' : '♡'}
+                                    <span
+                                      className={
+                                        commentAlignPulseId === Number(`${post.id}${comment.id}`)
+                                          ? 'align-heart-pulse'
+                                          : ''
+                                      }
+                                      style={{
+                                        marginRight: 6,
+                                        color: comment.aligned_by_me ? '#b67967' : 'inherit',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                      }}
+                                    >
+                                      {comment.aligned_by_me ? (
+                                        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                                          <path
+                                            d="M12 21s-7.2-4.4-9.3-8.2C.9 9.1 2.1 5.9 5.3 5.2c2-.5 3.6.4 4.7 1.7 1.1-1.3 2.7-2.2 4.7-1.7 3.2.7 4.4 3.9 2.6 7.6C19.2 16.6 12 21 12 21z"
+                                            fill="currentColor"
+                                          />
+                                        </svg>
+                                      ) : (
+                                        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                                          <path
+                                            d="M12 20.1s-6.6-4-8.5-7.4C1.9 9.7 3 7.3 5.4 6.7c1.7-.4 3.2.3 4.2 1.5l.4.5.4-.5c1-1.2 2.5-1.9 4.2-1.5 2.4.6 3.5 3 1.9 6C18.6 16 12 20.1 12 20.1z"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="1.8"
+                                          />
+                                        </svg>
+                                      )}
                                     </span>
                                     {comment.aligned_by_me ? 'Aligned' : 'Align'} · {comment.align_count ?? 0}
                                   </button>

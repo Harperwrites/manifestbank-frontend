@@ -208,3 +208,19 @@ a {
     transform: translateY(0);
   }
 }
+
+.align-heart-pulse {
+  animation: alignHeartPulse 420ms ease-out;
+}
+
+@keyframes alignHeartPulse {
+  0% {
+    transform: scale(0.9);
+  }
+  40% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
