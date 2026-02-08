@@ -1340,11 +1340,9 @@ export default function EtherPage() {
     setCommentMsg((prev) => ({ ...prev, [postId]: '' }))
     try {
       await api.post(`/ether/comments/${commentId}/align`)
-      await loadComments(postId)
     } catch (e: any) {
       const msg = e?.response?.data?.detail ?? e?.message ?? 'Align failed.'
       setCommentMsg((prev) => ({ ...prev, [postId]: msg }))
-      await loadComments(postId)
     } finally {
       setCommentLoading((prev) => ({ ...prev, [postId]: false }))
     }
