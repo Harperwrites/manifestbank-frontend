@@ -2641,11 +2641,26 @@ export default function EtherPage() {
       ) : null}
       <Container>
         <div style={{ display: 'flex', justifyContent: 'center' }} className="ether-logo-below-nav">
-          <img
-            src="/ether-logo.png"
-            alt="The Ether™"
-            style={{ height: 120, width: 'auto', maxWidth: '100%' }}
-          />
+          <div
+            style={{
+              width: 96,
+              height: 96,
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, rgba(182, 121, 103, 0.28), rgba(245, 236, 228, 0.95))',
+              border: '1px solid rgba(182, 121, 103, 0.55)',
+              boxShadow: '0 10px 24px rgba(120, 78, 64, 0.25)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 10,
+            }}
+          >
+            <img
+              src="/ether-logo.png"
+              alt="The Ether™"
+              style={{ height: 56, width: 'auto', maxWidth: '100%' }}
+            />
+          </div>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
@@ -3979,12 +3994,17 @@ export default function EtherPage() {
                             fontWeight: 600,
                             color: '#6f4a3a',
                             textShadow: '0 0 10px rgba(182, 121, 103, 0.45)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6,
                           }}
                         >
+                          <span style={{ color: '#b67967' }}>♥</span>
                           Aligned · {post.like_count}
                         </button>
                       ) : (
                         <Button variant="outline" onClick={() => like(post.id)}>
+                          <span style={{ marginRight: 6 }}>♡</span>
                           Align · {post.like_count}
                         </Button>
                       )}
@@ -4127,6 +4147,9 @@ export default function EtherPage() {
                                         : 'none',
                                     }}
                                   >
+                                    <span style={{ marginRight: 6, color: comment.aligned_by_me ? '#b67967' : 'inherit' }}>
+                                      {comment.aligned_by_me ? '♥' : '♡'}
+                                    </span>
                                     {comment.aligned_by_me ? 'Aligned' : 'Align'} · {comment.align_count ?? 0}
                                   </button>
                                 </div>
