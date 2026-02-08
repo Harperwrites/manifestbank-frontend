@@ -1251,7 +1251,11 @@ export default function EtherPage() {
     try {
       await api.post(`/ether/posts/${postId}/like`)
     } catch (e: any) {
-      setMsg(e?.response?.data?.detail ?? e?.message ?? 'Like failed')
+      const message = e?.response?.data?.detail ?? e?.message ?? 'Align failed.'
+      setMsg(message)
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('auth:logged_out', { detail: { message } }))
+      }
     }
   }
 
@@ -1342,6 +1346,9 @@ export default function EtherPage() {
     } catch (e: any) {
       const msg = e?.response?.data?.detail ?? e?.message ?? 'Align failed.'
       setCommentMsg((prev) => ({ ...prev, [postId]: msg }))
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('auth:logged_out', { detail: { message: msg } }))
+      }
     } finally {
       setCommentLoading((prev) => ({ ...prev, [postId]: false }))
     }
