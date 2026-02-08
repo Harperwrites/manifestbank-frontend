@@ -5,6 +5,8 @@ import { useParams } from 'next/navigation'
 import Navbar from '@/app/components/Navbar'
 import { api } from '@/lib/api'
 
+export const runtime = 'edge'
+
 const STATEMENT_MONTHS = [
   'January',
   'February',
@@ -308,6 +310,18 @@ export default function AccountStatementPage() {
                 <div>{entry.category}</div>
               </div>
             ))}
+          </div>
+          <div
+            style={{
+              marginTop: 28,
+              fontSize: 11,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              opacity: 0.6,
+              textAlign: 'center',
+            }}
+          >
+            ManifestBank is not a financial institution.
           </div>
         </div>
       </div>

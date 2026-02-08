@@ -372,6 +372,18 @@ export default function MyStatementsPage() {
               </div>
             ))}
           </div>
+          <div
+            style={{
+              marginTop: 28,
+              fontSize: 11,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              opacity: 0.6,
+              textAlign: 'center',
+            }}
+          >
+            ManifestBank is not a financial institution.
+          </div>
         </div>
       </div>
     </main>
