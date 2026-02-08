@@ -321,7 +321,7 @@ export default function AccountStatementPage() {
               textAlign: 'center',
             }}
           >
-            ManifestBank is not a financial institution.
+            ManifestBank™ is not a financial institution.
           </div>
         </div>
       </div>

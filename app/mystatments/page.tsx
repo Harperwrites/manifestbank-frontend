@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Navbar from '@/app/components/Navbar'
 import { api } from '@/lib/api'
 
@@ -85,6 +86,7 @@ function formatMoney(value: number) {
 }
 
 export default function MyStatementsPage() {
+  const router = useRouter()
   const [months] = useState(() => buildMonthOptions(12))
   const [selectedMonth, setSelectedMonth] = useState(months[0]?.value ?? '')
   const [summary, setSummary] = useState<StatementSummary>(buildFallbackSummary())
@@ -303,7 +305,7 @@ export default function MyStatementsPage() {
                 <button
                   key={acct.id}
                   type="button"
-                  onClick={() => (window.location.href = `/mystatments/${acct.id}`)}
+                  onClick={() => router.push(`/mystatments/${acct.id}`)}
                   style={{
                     display: 'grid',
                     gridTemplateColumns: '1.6fr 140px',
@@ -382,7 +384,7 @@ export default function MyStatementsPage() {
               textAlign: 'center',
             }}
           >
-            ManifestBank is not a financial institution.
+            ManifestBank™ is not a financial institution.
           </div>
         </div>
       </div>
