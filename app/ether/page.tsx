@@ -2691,7 +2691,7 @@ export default function EtherPage() {
             }}
           >
             <img
-              src="/The%20Ether%20Logo.png"
+              src="/ether-logo-card.png"
               alt="The Ether™"
               style={{ height: 72, width: 'auto', maxWidth: '100%' }}
             />
