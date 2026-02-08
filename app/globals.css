@@ -167,6 +167,7 @@ a {
     justify-content: center;
     align-items: center;
     padding: 8px 16px 0;
+    width: 100%;
   }
 
   .ether-nav-brand {

@@ -2824,6 +2824,7 @@ export default function EtherPage() {
                                 style={{
                                   fontSize: 12,
                                   opacity: 0.7,
+                                  maxWidth: '100%',
                                   whiteSpace: 'nowrap',
                                   overflow: 'hidden',
                                   textOverflow: 'ellipsis',
