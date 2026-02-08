@@ -932,14 +932,8 @@ export default function DashboardPage() {
                     padding: '0 6px',
                     boxShadow: '0 0 10px rgba(182, 121, 103, 0.65)',
                     marginLeft: 2,
-                    gap: 4,
                   }}
                 >
-                  <img
-                    src="/ManifestBank%20Square%20App%20Logo.png?v=20260118a"
-                    alt=""
-                    style={{ width: 12, height: 12, borderRadius: 3 }}
-                  />
                   {etherNoticeCount}
                 </span>
               ) : null}
@@ -1165,14 +1159,8 @@ export default function DashboardPage() {
                           padding: '0 6px',
                           boxShadow: '0 0 10px rgba(182, 121, 103, 0.65)',
                           marginLeft: 2,
-                          gap: 4,
                         }}
                       >
-                        <img
-                          src="/ManifestBank%20Square%20App%20Logo.png?v=20260118a"
-                          alt=""
-                          style={{ width: 12, height: 12, borderRadius: 3 }}
-                        />
                         {etherNoticeCount}
                       </span>
                     ) : null}
