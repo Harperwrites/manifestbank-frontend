@@ -872,6 +872,8 @@ export default function EtherPage() {
   const [syncMenuOpen, setSyncMenuOpen] = useState(false)
   const [syncMenuTab, setSyncMenuTab] = useState<'syncs' | 'requests' | 'search'>('syncs')
   const syncMenuRef = useRef<HTMLDivElement | null>(null)
+  const syncTriggerRef = useRef<HTMLButtonElement | null>(null)
+  const [syncMenuStyle, setSyncMenuStyle] = useState<React.CSSProperties | null>(null)
   const [threads, setThreads] = useState<EtherThread[]>([])
   const [myLineOpen, setMyLineOpen] = useState(false)
   const myLineRef = useRef<HTMLDivElement | null>(null)
@@ -904,6 +906,8 @@ export default function EtherPage() {
   const [notifications, setNotifications] = useState<EtherNotification[]>([])
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const notificationsRef = useRef<HTMLDivElement | null>(null)
+  const notificationsTriggerRef = useRef<HTMLButtonElement | null>(null)
+  const [notificationsMenuStyle, setNotificationsMenuStyle] = useState<React.CSSProperties | null>(null)
   const unreadNotifications = notifications.filter((n) => !n.read_at).length
   const [focusPostId, setFocusPostId] = useState<number | null>(null)
   const [focusPostOpenComments, setFocusPostOpenComments] = useState<number | null>(null)
@@ -1611,6 +1615,72 @@ export default function EtherPage() {
       window.removeEventListener('scroll', updatePosition, true)
     }
   }, [myLineOpen])
+
+  useEffect(() => {
+    if (!notificationsOpen) {
+      setNotificationsMenuStyle(null)
+      return
+    }
+    if (typeof window === 'undefined') return
+    const trigger = notificationsTriggerRef.current
+    if (!trigger) return
+    const updatePosition = () => {
+      const rect = trigger.getBoundingClientRect()
+      const width = Math.min(320, window.innerWidth - 24)
+      const idealLeft = rect.left + rect.width / 2 - width / 2
+      const left = Math.min(Math.max(12, idealLeft), window.innerWidth - width - 12)
+      setNotificationsMenuStyle({
+        position: 'fixed',
+        top: rect.bottom + 8,
+        left,
+        width,
+        maxWidth: 'calc(100vw - 24px)',
+        maxHeight: '60vh',
+        overflowY: 'auto',
+        overflowX: 'hidden',
+      })
+    }
+    updatePosition()
+    window.addEventListener('resize', updatePosition)
+    window.addEventListener('scroll', updatePosition, true)
+    return () => {
+      window.removeEventListener('resize', updatePosition)
+      window.removeEventListener('scroll', updatePosition, true)
+    }
+  }, [notificationsOpen])
+
+  useEffect(() => {
+    if (!syncMenuOpen) {
+      setSyncMenuStyle(null)
+      return
+    }
+    if (typeof window === 'undefined') return
+    const trigger = syncTriggerRef.current
+    if (!trigger) return
+    const updatePosition = () => {
+      const rect = trigger.getBoundingClientRect()
+      const width = Math.min(320, window.innerWidth - 24)
+      const idealLeft = rect.left + rect.width / 2 - width / 2
+      const left = Math.min(Math.max(12, idealLeft), window.innerWidth - width - 12)
+      setSyncMenuStyle({
+        position: 'fixed',
+        top: rect.bottom + 8,
+        left,
+        width,
+        maxWidth: 'calc(100vw - 24px)',
+        maxHeight: '70vh',
+        overflowY: 'auto',
+        overflowX: 'hidden',
+      })
+    }
+    updatePosition()
+    window.addEventListener('resize', updatePosition)
+    window.addEventListener('scroll', updatePosition, true)
+    return () => {
+      window.removeEventListener('resize', updatePosition)
+      window.removeEventListener('scroll', updatePosition, true)
+    }
+  }, [syncMenuOpen])
 
   function getThreadReadKey(threadId: number) {
     return `ether:thread_read:${threadId}`
@@ -2570,11 +2640,19 @@ export default function EtherPage() {
         </div>
       ) : null}
       <Container>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <div style={{ fontFamily: 'var(--font-serif)', fontSize: 28, fontWeight: 600 }}>The Ether™</div>
-              <div style={{ position: 'relative' }} ref={myLineRef}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 28, fontWeight: 600 }}>The Ether™</div>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              flexWrap: 'nowrap',
+              overflowX: 'auto',
+              paddingBottom: 4,
+            }}
+          >
+            <div style={{ position: 'relative' }} ref={myLineRef}>
                 <button
                   ref={myLineTriggerRef}
                   type="button"
@@ -2801,6 +2879,7 @@ export default function EtherPage() {
               </div>
               <div style={{ position: 'relative' }} ref={notificationsRef}>
                 <button
+                  ref={notificationsTriggerRef}
                   type="button"
                   onClick={() => {
                     setNotificationsOpen((open) => !open)
@@ -2848,11 +2927,8 @@ export default function EtherPage() {
                     style={{
                       position: 'absolute',
                       top: '100%',
-                      left: 'auto',
-                      right: 0,
+                      left: 0,
                       marginTop: 10,
-                      width: 'min(320px, 92vw)',
-                      maxWidth: '92vw',
                       borderRadius: 16,
                       border: '1px solid rgba(182, 121, 103, 0.45)',
                       background: 'linear-gradient(180deg, rgba(252, 245, 239, 0.98), rgba(226, 199, 181, 0.96))',
@@ -2860,6 +2936,7 @@ export default function EtherPage() {
                       padding: 12,
                       color: '#3b2b24',
                       zIndex: 20,
+                      ...(notificationsMenuStyle ?? {}),
                     }}
                   >
                       {notifications.length === 0 ? (
@@ -3033,6 +3110,7 @@ export default function EtherPage() {
               </div>
               <div style={{ position: 'relative' }} ref={syncMenuRef}>
                 <button
+                  ref={syncTriggerRef}
                   type="button"
                   onClick={() => setSyncMenuOpen((open) => !open)}
                   style={{
@@ -3077,7 +3155,6 @@ export default function EtherPage() {
                       top: '100%',
                       left: 0,
                       marginTop: 10,
-                      width: 320,
                       borderRadius: 16,
                       border: '1px solid rgba(182, 121, 103, 0.45)',
                       background: 'linear-gradient(180deg, rgba(252, 245, 239, 0.98), rgba(226, 199, 181, 0.96))',
@@ -3085,6 +3162,7 @@ export default function EtherPage() {
                       padding: 12,
                       color: '#3b2b24',
                       zIndex: 20,
+                      ...(syncMenuStyle ?? {}),
                     }}
                   >
                     <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>

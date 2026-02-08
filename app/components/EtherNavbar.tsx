@@ -503,6 +503,16 @@ function EtherNavbar({
         </div>
       </div>
 
+      <div className="ether-nav-logo-below">
+        <Link href="/ether" style={{ display: 'inline-flex', alignItems: 'center' }}>
+          <img
+            src="/ether-logo.png"
+            alt="The Ether™"
+            style={{ height: 150, width: 'auto', maxWidth: '100%' }}
+          />
+        </Link>
+      </div>
+
       {profileEditOpen && portalReady
         ? createPortal(
             <div
