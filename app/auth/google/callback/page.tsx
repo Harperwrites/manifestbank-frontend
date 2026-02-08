@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/app/providers'
 
-export default function GoogleCallbackPage() {
+function GoogleCallbackContent() {
   const params = useSearchParams()
   const router = useRouter()
   const { loginWithToken } = useAuth()
@@ -44,5 +44,32 @@ export default function GoogleCallbackPage() {
         <div style={{ opacity: 0.8 }}>{message}</div>
       </div>
     </main>
+  )
+}
+
+export default function GoogleCallbackPage() {
+  return (
+    <Suspense
+      fallback={
+        <main style={{ maxWidth: 520, margin: '60px auto', padding: 20, textAlign: 'center' }}>
+          <div
+            style={{
+              borderRadius: 18,
+              padding: '22px 20px',
+              border: '1px solid rgba(95, 74, 62, 0.2)',
+              background: 'rgba(255, 255, 255, 0.9)',
+              boxShadow: '0 16px 30px rgba(0,0,0,0.12)',
+            }}
+          >
+            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 22, marginBottom: 6 }}>
+              ManifestBank™
+            </div>
+            <div style={{ opacity: 0.8 }}>Signing you in…</div>
+          </div>
+        </main>
+      }
+    >
+      <GoogleCallbackContent />
+    </Suspense>
   )
 }
