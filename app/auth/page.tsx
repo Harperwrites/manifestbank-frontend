@@ -10,6 +10,7 @@ type Mode = 'login' | 'register'
 export default function AuthPage() {
   const router = useRouter()
   const { loginWithToken } = useAuth()
+  const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://127.0.0.1:8001'
 
   const [mode, setMode] = useState<Mode>('login')
   const [email, setEmail] = useState('')
@@ -153,6 +154,26 @@ export default function AuthPage() {
             Register
           </button>
         </div>
+
+        <a
+          href={`${apiBase}/auth/google/start?next=/dashboard`}
+          style={{
+            display: 'inline-flex',
+            width: '100%',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 12,
+            borderRadius: 999,
+            border: '1px solid rgba(95, 74, 62, 0.35)',
+            background: 'rgba(255, 255, 255, 0.9)',
+            color: 'inherit',
+            textDecoration: 'none',
+            fontWeight: 600,
+            marginBottom: 12,
+          }}
+        >
+          Continue with Google
+        </a>
 
         <form onSubmit={submit} style={{ display: 'grid', gap: 12 }}>
           <label style={{ display: 'grid', gap: 6 }}>
