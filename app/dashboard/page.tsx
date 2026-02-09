@@ -899,7 +899,6 @@ export default function DashboardPage() {
 
   const isVerified = Boolean(me?.email_verified)
   const transactionsLocked = !isVerified
-  const isAdmin = me?.role === 'admin'
 
   return (
     <main>
