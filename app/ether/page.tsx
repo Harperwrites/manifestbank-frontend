@@ -927,6 +927,11 @@ export default function EtherPage() {
   const [etherStickyOpen, setEtherStickyOpen] = useState(false)
   const etherStickyRef = useRef<HTMLDivElement | null>(null)
   const etherStickyMenuRef = useRef<HTMLDivElement | null>(null)
+  const [etherStickyMenuPos, setEtherStickyMenuPos] = useState<{ left: number; top: number; width: number }>({
+    left: 0,
+    top: 0,
+    width: 320,
+  })
   const [manifestAccounts, setManifestAccounts] = useState<any[]>([])
   const [manifestAccountsLoaded, setManifestAccountsLoaded] = useState(false)
   const [manifestAccountsLoading, setManifestAccountsLoading] = useState(false)
@@ -1079,6 +1084,26 @@ export default function EtherPage() {
     return () => {
       document.removeEventListener('mousedown', handleClick)
       document.removeEventListener('keydown', handleKey)
+    }
+  }, [etherStickyOpen])
+
+  useEffect(() => {
+    if (!etherStickyOpen) return
+    const updatePosition = () => {
+      const rect = etherStickyRef.current?.getBoundingClientRect()
+      if (!rect) return
+      const menuWidth = Math.min(360, Math.floor(window.innerWidth * 0.92))
+      const centerX = rect.left + rect.width / 2
+      const left = Math.max(8, Math.min(window.innerWidth - menuWidth - 8, centerX - menuWidth / 2))
+      const top = rect.bottom + 10
+      setEtherStickyMenuPos({ left, top, width: menuWidth })
+    }
+    updatePosition()
+    window.addEventListener('resize', updatePosition)
+    window.addEventListener('scroll', updatePosition, true)
+    return () => {
+      window.removeEventListener('resize', updatePosition)
+      window.removeEventListener('scroll', updatePosition, true)
     }
   }, [etherStickyOpen])
 
@@ -2232,13 +2257,10 @@ export default function EtherPage() {
                 <div
                   ref={etherStickyMenuRef}
                   style={{
-                    position: 'absolute',
-                    top: '100%',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    marginTop: 10,
-                    width: 'min(360px, 92vw)',
-                    maxWidth: '92vw',
+                    position: 'fixed',
+                    top: etherStickyMenuPos.top,
+                    left: etherStickyMenuPos.left,
+                    width: etherStickyMenuPos.width,
                     borderRadius: 16,
                     border: '1px solid rgba(140, 92, 78, 0.45)',
                     background: 'linear-gradient(180deg, rgba(252, 245, 239, 0.98), rgba(226, 199, 181, 0.96))',
