@@ -2234,10 +2234,11 @@ export default function EtherPage() {
                   style={{
                     position: 'absolute',
                     top: '100%',
-                    left: 0,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
                     marginTop: 10,
-                    width: 320,
-                    maxWidth: 'calc(100vw - 24px)',
+                    width: 'min(360px, 92vw)',
+                    maxWidth: '92vw',
                     borderRadius: 16,
                     border: '1px solid rgba(140, 92, 78, 0.45)',
                     background: 'linear-gradient(180deg, rgba(252, 245, 239, 0.98), rgba(226, 199, 181, 0.96))',
@@ -2245,6 +2246,8 @@ export default function EtherPage() {
                     padding: 12,
                     color: '#3b2b24',
                     zIndex: 99999,
+                    boxSizing: 'border-box',
+                    overflow: 'hidden',
                   }}
                   role="menu"
                 >
@@ -2291,6 +2294,8 @@ export default function EtherPage() {
                             padding: '6px 6px',
                             borderRadius: 12,
                             background: note.read_at ? 'transparent' : 'rgba(182, 121, 103, 0.08)',
+                            width: '100%',
+                            boxSizing: 'border-box',
                           }}
                         >
                           <button
@@ -2348,12 +2353,31 @@ export default function EtherPage() {
                                 (note.actor_display_name ?? 'M').slice(0, 1).toUpperCase()
                               )}
                             </div>
-                            <div style={{ fontSize: 12 }}>
+                            <div style={{ fontSize: 12, minWidth: 0 }}>
                               <div style={{ fontWeight: 600 }}>{note.actor_display_name}</div>
-                              <div style={{ opacity: 0.7 }}>{note.message}</div>
+                              <div
+                                style={{
+                                  opacity: 0.7,
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                }}
+                              >
+                                {note.message}
+                              </div>
                             </div>
                           </button>
-                          <div style={{ marginLeft: 'auto', fontSize: 11, opacity: 0.6 }}>
+                          <div
+                            style={{
+                              marginLeft: 'auto',
+                              fontSize: 11,
+                              opacity: 0.6,
+                              maxWidth: 90,
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                          >
                             {new Date(note.created_at).toLocaleString()}
                           </div>
                         </div>
@@ -2432,6 +2456,9 @@ export default function EtherPage() {
                             alignItems: 'center',
                             textAlign: 'left',
                             cursor: 'pointer',
+                            width: '100%',
+                            boxSizing: 'border-box',
+                            overflow: 'hidden',
                           }}
                         >
                           <div
@@ -4651,7 +4678,8 @@ export default function EtherPage() {
           <div
             style={{
               width: 'min(420px, 100%)',
-              background: 'var(--paper)',
+              background:
+                'linear-gradient(135deg, rgba(199, 140, 122, 0.98), rgba(226, 203, 190, 0.98))',
               borderRadius: 18,
               border: '1px solid rgba(95, 74, 62, 0.2)',
               padding: 18,
@@ -4661,8 +4689,12 @@ export default function EtherPage() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 20, fontWeight: 600 }}>Profile photo</div>
-            <div style={{ fontSize: 12, opacity: 0.7 }}>Upload a new photo and confirm the crop.</div>
+            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 20, fontWeight: 600, color: '#3b2b24' }}>
+              Profile photo
+            </div>
+            <div style={{ fontSize: 12, opacity: 0.85, color: '#3b2b24' }}>
+              Upload a new photo and confirm the crop.
+            </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <button
                 type="button"
@@ -4670,10 +4702,11 @@ export default function EtherPage() {
                 style={{
                   padding: '8px 12px',
                   borderRadius: 999,
-                  border: '1px solid rgba(95, 74, 62, 0.35)',
-                  background: 'transparent',
+                  border: '1px solid rgba(182, 121, 103, 0.6)',
+                  background: 'linear-gradient(135deg, #c88a77, #b67967)',
                   cursor: 'pointer',
                   fontWeight: 600,
+                  color: '#fff',
                 }}
               >
                 Upload
@@ -4699,10 +4732,11 @@ export default function EtherPage() {
                 style={{
                   padding: '8px 12px',
                   borderRadius: 999,
-                  border: '1px solid rgba(95, 74, 62, 0.35)',
-                  background: 'transparent',
+                  border: '1px solid rgba(140, 92, 78, 0.55)',
+                  background: 'rgba(255,255,255,0.75)',
                   cursor: 'pointer',
                   fontWeight: 600,
+                  color: '#3b2b24',
                 }}
               >
                 Close

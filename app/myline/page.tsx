@@ -1655,12 +1655,12 @@ export default function MyLinePage() {
                   type="button"
                   onClick={() => handleOpenThread(preview)}
                   style={{
-                    border: '1px solid rgba(255,255,255,0.25)',
+                    border: '1px solid rgba(182, 121, 103, 0.35)',
                     borderRadius: 18,
                     padding: 16,
                     background: preview.unread
-                      ? 'linear-gradient(135deg, rgba(182, 121, 103, 0.16), rgba(255,255,255,0.9))'
-                      : 'rgba(255,255,255,0.85)',
+                      ? 'linear-gradient(135deg, rgba(199, 140, 122, 0.34), rgba(255,255,255,0.92))'
+                      : 'linear-gradient(135deg, rgba(226, 203, 190, 0.85), rgba(255,255,255,0.95))',
                     textAlign: 'left',
                     cursor: 'pointer',
                     display: 'flex',
@@ -1713,7 +1713,7 @@ export default function MyLinePage() {
                       (preview.counterpart_display_name ?? 'Member').slice(0, 1).toUpperCase()
                     )}
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ flex: 1, minWidth: 0, color: '#3b2b24' }}>
                     <div
                       style={{
                         display: 'flex',
@@ -1741,7 +1741,7 @@ export default function MyLinePage() {
                           event.currentTarget.style.textDecorationLine = 'underline'
                         }}
                         onMouseLeave={(event) => {
-                          event.currentTarget.style.color = '#2d1f1a'
+                          event.currentTarget.style.color = '#3b2b24'
                           event.currentTarget.style.textShadow = 'none'
                           event.currentTarget.style.textDecorationLine = 'none'
                         }}
@@ -1771,8 +1771,8 @@ export default function MyLinePage() {
                       style={{
                         marginTop: 6,
                         fontSize: 13,
-                        opacity: 0.92,
-                        color: '#241914',
+                        opacity: 0.9,
+                        color: '#3b2b24',
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',

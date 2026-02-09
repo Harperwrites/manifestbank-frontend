@@ -702,7 +702,7 @@ export default function MyLineThreadPage() {
                 boxShadow: '0 14px 24px rgba(8, 6, 8, 0.28)',
               }}
             >
-              ← Back to My Line
+              ← Back
             </button>
             <div style={{ display: 'grid', justifyItems: 'center', gap: 4 }}>
               <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.08, opacity: 0.65 }}>
