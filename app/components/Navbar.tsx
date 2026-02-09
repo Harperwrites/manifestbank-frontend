@@ -344,7 +344,7 @@ export default function Navbar({
         ) : me ? (
           <>
             <span style={{ opacity: 0.9 }}>
-              Signed in as <b>{me.email}</b>
+              Signed in as <b>{me.username ?? me.email}</b>
             </span>
           </>
         ) : (

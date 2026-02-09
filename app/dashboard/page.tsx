@@ -137,6 +137,10 @@ export default function DashboardPage() {
   const [showWelcome, setShowWelcome] = useState(false)
   const [claimingWelcome, setClaimingWelcome] = useState(false)
   const [welcomeError, setWelcomeError] = useState('')
+  const [showUsernamePrompt, setShowUsernamePrompt] = useState(false)
+  const [usernameDraft, setUsernameDraft] = useState('')
+  const [usernameSaving, setUsernameSaving] = useState(false)
+  const [usernameError, setUsernameError] = useState('')
   const [transferFromId, setTransferFromId] = useState<number | ''>('')
   const [transferToId, setTransferToId] = useState<number | ''>('')
   const [transferAmount, setTransferAmount] = useState('')
@@ -224,6 +228,7 @@ export default function DashboardPage() {
     } else {
       setProfile(null)
     }
+    return res
   }
 
   async function loadProfile() {
@@ -625,19 +630,56 @@ export default function DashboardPage() {
     setWelcomeError('')
     try {
       await api.post('/auth/claim-welcome')
-      await checkMe()
+      const nextMe = await checkMe()
       await loadPortfolio()
       await loadSummary()
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new Event('accounts:refresh'))
       }
       setShowWelcome(false)
+      if (typeof window !== 'undefined') {
+        const promptedKey = nextMe?.id ? `username_prompted:${nextMe.id}` : null
+        if (
+          promptedKey &&
+          !window.localStorage.getItem(promptedKey) &&
+          nextMe?.email?.toLowerCase().endsWith('@gmail.com')
+        ) {
+          setUsernameDraft(nextMe?.username ?? '')
+          setShowUsernamePrompt(true)
+        }
+      }
     } catch (e: any) {
       const msg = errText(e)
       setWelcomeError(msg)
       setLog((prev) => prev + `\n❌ Welcome bonus failed: ${msg}\n`)
     } finally {
       setClaimingWelcome(false)
+    }
+  }
+
+  async function saveUsernamePrompt() {
+    const trimmed = usernameDraft.trim()
+    if (!trimmed) {
+      setUsernameError('Username is required.')
+      return
+    }
+    setUsernameSaving(true)
+    setUsernameError('')
+    try {
+      await api.patch('/auth/username', { username: trimmed })
+      await checkMe()
+      await loadProfile()
+      if (typeof window !== 'undefined') {
+        const key = me?.id ? `username_prompted:${me.id}` : null
+        if (key) window.localStorage.setItem(key, '1')
+        window.dispatchEvent(new CustomEvent('auth:logged_out', { detail: { message: 'Username saved.' } }))
+      }
+      setShowUsernamePrompt(false)
+    } catch (e: any) {
+      const msg = errText(e)
+      setUsernameError(msg)
+    } finally {
+      setUsernameSaving(false)
     }
   }
 
@@ -830,8 +872,9 @@ export default function DashboardPage() {
 
   const accountsCount = summary?.accounts_count ?? '—'
   const ledgerCount = summary?.ledger_entries_count ?? '—'
-  const identity = me?.email ?? 'Not signed in'
+  const identity = me?.username ?? me?.email ?? 'Not signed in'
   const role = me?.role ?? 'guest'
+  const isAdmin = role === 'admin'
   const uptime = health?.status ?? '—'
 
   const alerts: AlertItem[] = useMemo(
@@ -1078,10 +1121,12 @@ export default function DashboardPage() {
             <div style={{ opacity: 0.7, marginTop: 6 }}>
               Private banking overview and risk posture.
             </div>
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 14 }}>
-              <Pill>Identity: {identity}</Pill>
-              <Pill>Role: {role}</Pill>
-            </div>
+            {isAdmin ? (
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 14 }}>
+                <Pill>Identity: {identity}</Pill>
+                <Pill>Role: {role}</Pill>
+              </div>
+            ) : null}
           </div>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
             {isVerified ? (
@@ -2240,6 +2285,62 @@ export default function DashboardPage() {
             <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
               <Button variant="solid" onClick={claimWelcome} disabled={claimingWelcome}>
                 {claimingWelcome ? 'Accepting…' : 'Accept'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {showUsernamePrompt ? (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(21, 16, 12, 0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 90,
+            padding: 20,
+          }}
+        >
+          <div
+            style={{
+              position: 'relative',
+              width: 'min(520px, 100%)',
+              background:
+                'linear-gradient(135deg, rgba(199, 140, 122, 0.96), rgba(220, 193, 179, 0.98))',
+              borderRadius: 22,
+              border: '1px solid rgba(95, 74, 62, 0.25)',
+              padding: 24,
+              boxShadow: '0 20px 44px rgba(14, 10, 8, 0.28)',
+            }}
+          >
+            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 22, fontWeight: 600 }}>
+              Choose Your Username
+            </div>
+            <div style={{ opacity: 0.8, marginTop: 8 }}>
+              This will be how you show up across ManifestBank™ and The Ether™.
+            </div>
+            <div style={{ marginTop: 14, display: 'grid', gap: 8 }}>
+              <input
+                value={usernameDraft}
+                onChange={(e) => setUsernameDraft(e.target.value)}
+                placeholder="yourname"
+                style={{
+                  padding: '10px 12px',
+                  borderRadius: 12,
+                  border: '1px solid rgba(95, 74, 62, 0.3)',
+                  background: 'rgba(255, 255, 255, 0.95)',
+                  fontSize: 13,
+                }}
+              />
+              {usernameError ? (
+                <div style={{ fontSize: 12, color: '#7a2e2e' }}>{usernameError}</div>
+              ) : null}
+            </div>
+            <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
+              <Button variant="solid" onClick={saveUsernamePrompt} disabled={usernameSaving}>
+                {usernameSaving ? 'Saving…' : 'Save Username'}
               </Button>
             </div>
           </div>

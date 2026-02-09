@@ -407,7 +407,7 @@ function EtherNavbar({
               ) : me ? (
                 <>
                 <span className="ether-nav-signed" style={{ opacity: 0.9, wordBreak: 'break-word' }}>
-                  Signed in as <b>{me.email}</b>
+                  Signed in as <b>{me.username ?? me.email}</b>
                 </span>
                 </>
               ) : (
