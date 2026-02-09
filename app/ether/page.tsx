@@ -1358,8 +1358,10 @@ export default function EtherPage() {
     const form = new FormData()
     form.append('file', file)
     const res = await api.post('/ether/upload/avatar', form)
-    setProfile((prev) => (prev ? { ...prev, avatar_url: res.data.url } : prev))
-    return res.data.url as string
+    const rawUrl = res.data.url as string
+    const cacheBusted = `${rawUrl}${rawUrl.includes('?') ? '&' : '?'}t=${Date.now()}`
+    setProfile((prev) => (prev ? { ...prev, avatar_url: cacheBusted } : prev))
+    return cacheBusted
   }
 
   async function uploadPostImage(file: File) {
@@ -1409,6 +1411,7 @@ export default function EtherPage() {
       return
     }
     setAvatarCropSaving(true)
+    let saved = false
     try {
       const canvasSize = 260
       const zoom = Math.max(1, avatarCropZoom)
@@ -1438,6 +1441,7 @@ export default function EtherPage() {
         return
       }
       await uploadAvatar(new File([blob], 'avatar.jpg', { type: 'image/jpeg' }))
+      saved = true
       setAvatarCropOpen(false)
       setAvatarCropSrc(null)
       setAvatarOptionsOpen(false)
@@ -1447,8 +1451,14 @@ export default function EtherPage() {
     } catch (e: any) {
       const msg = e?.response?.data?.detail ?? e?.message ?? 'Avatar save failed.'
       setMsg(msg)
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('auth:logged_out', { detail: { message: msg } }))
+      }
     } finally {
       setAvatarCropSaving(false)
+      if (saved) {
+        setAvatarCropLoaded(false)
+      }
     }
   }
 
