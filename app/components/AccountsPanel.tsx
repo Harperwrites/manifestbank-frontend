@@ -23,6 +23,11 @@ function errMsg(err: any) {
   return detail ?? err?.message ?? 'Unknown error'
 }
 
+function toast(message: string) {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new CustomEvent('auth:logged_out', { detail: { message } }))
+}
+
 const targetOwnerStorageKey = 'manifestbank_wealth_target_owner'
 const persistWealthTarget = async (value: number | null) => {
   try {
@@ -132,7 +137,11 @@ export default function AccountsPanel({
         is_active: true,
       })
       setMsg(`✅ Created account #${res.data?.id ?? 'new'} . Reloading…`)
+      toast(`Account created: ${newName || 'Primary Account'}.`)
       await load()
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('accounts:refresh'))
+      }
       setNewName('Primary Account')
       setNewType('personal')
       setNewParentId('')

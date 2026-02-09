@@ -381,7 +381,9 @@ export default function DashboardPage() {
           memo: depositMemo || 'Scheduled deposit via dashboard',
           scheduled_for: new Date(depositWhen).toISOString(),
         })
-        addNote(`Deposit scheduled for ${new Date(depositWhen).toLocaleString()}.`)
+        const whenText = new Date(depositWhen).toLocaleString()
+        addNote(`Deposit scheduled for ${whenText}.`)
+        toast(`Deposit scheduled for ${whenText}.`)
         await loadPendingDeposits(Number(depositAccountId))
       } else {
         await api.post('/ledger/entries', {
@@ -396,6 +398,7 @@ export default function DashboardPage() {
           memo: depositMemo || 'Deposit via dashboard',
           meta: { source: 'dashboard', kind: 'deposit' },
         })
+        toast(`Deposit posted to ${accountLabelById(depositAccountId)}.`)
       }
       setDepositAmount('')
       setDepositMemo('')
@@ -409,6 +412,9 @@ export default function DashboardPage() {
       await loadPortfolio()
       await loadSummary()
       await loadRecentActivity(accounts)
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('accounts:refresh'))
+      }
     } catch (e: any) {
       const msg = errText(e)
       setDepositError(`Deposit failed: ${msg}`)
@@ -453,7 +459,9 @@ export default function DashboardPage() {
           memo: expenseMemo || 'Scheduled withdrawal via dashboard',
           scheduled_for: new Date(expenseWhen).toISOString(),
         })
-        addNote(`Withdrawal scheduled for ${new Date(expenseWhen).toLocaleString()}.`)
+        const whenText = new Date(expenseWhen).toLocaleString()
+        addNote(`Withdrawal scheduled for ${whenText}.`)
+        toast(`Withdrawal scheduled for ${whenText}.`)
       } else {
         await api.post('/ledger/entries', {
           account_id: Number(expenseAccountId),
@@ -467,6 +475,7 @@ export default function DashboardPage() {
           memo: expenseMemo || 'Withdrawal via dashboard',
           meta: { source: 'dashboard', kind: 'withdrawal' },
         })
+        toast(`Withdrawal posted from ${accountLabelById(expenseAccountId)}.`)
       }
       setExpenseAmount('')
       setExpenseMemo('')
@@ -480,6 +489,9 @@ export default function DashboardPage() {
       await loadPortfolio()
       await loadSummary()
       await loadRecentActivity(accounts)
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('accounts:refresh'))
+      }
     } catch (e: any) {
       const msg = errText(e)
       setExpenseError(`Withdrawal failed: ${msg}`)
@@ -615,9 +627,13 @@ export default function DashboardPage() {
       setTransferFromId('')
       setTransferToId('')
       addNote('Transfer executed.')
+      toast(`Transfer sent from ${accountLabelById(transferFromId)} to ${accountLabelById(transferToId)}.`)
       await loadPortfolio()
       await loadSummary()
       await loadRecentActivity(accounts)
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('accounts:refresh'))
+      }
     } catch (e: any) {
       setLog((prev) => prev + `\n❌ Transfer failed: ${errText(e)}\n`)
     } finally {
@@ -715,6 +731,17 @@ export default function DashboardPage() {
 
   function addNote(note: string) {
     setLog((prev) => prev + `\n• ${note}`)
+  }
+
+  function toast(message: string) {
+    if (typeof window === 'undefined') return
+    window.dispatchEvent(new CustomEvent('auth:logged_out', { detail: { message } }))
+  }
+
+  function accountLabelById(id: number | '') {
+    if (!id) return 'this account'
+    const match = accounts.find((acct) => acct.id === Number(id))
+    return match?.name ?? `Account #${id}`
   }
 
   const targetStorageKey = useMemo(() => {

@@ -1409,35 +1409,47 @@ export default function EtherPage() {
       return
     }
     setAvatarCropSaving(true)
-    const canvasSize = 260
-    const zoom = Math.max(1, avatarCropZoom)
-    const baseScale = Math.max(canvasSize / img.naturalWidth, canvasSize / img.naturalHeight)
-    const scale = baseScale * zoom
-    const srcW = canvasSize / scale
-    const srcH = canvasSize / scale
-    let srcX = img.naturalWidth / 2 - (canvasSize / 2 + avatarCropOffset.x) / scale
-    let srcY = img.naturalHeight / 2 - (canvasSize / 2 + avatarCropOffset.y) / scale
-    srcX = Math.max(0, Math.min(img.naturalWidth - srcW, srcX))
-    srcY = Math.max(0, Math.min(img.naturalHeight - srcH, srcY))
+    try {
+      const canvasSize = 260
+      const zoom = Math.max(1, avatarCropZoom)
+      const baseScale = Math.max(canvasSize / img.naturalWidth, canvasSize / img.naturalHeight)
+      const scale = baseScale * zoom
+      const srcW = canvasSize / scale
+      const srcH = canvasSize / scale
+      let srcX = img.naturalWidth / 2 - (canvasSize / 2 + avatarCropOffset.x) / scale
+      let srcY = img.naturalHeight / 2 - (canvasSize / 2 + avatarCropOffset.y) / scale
+      srcX = Math.max(0, Math.min(img.naturalWidth - srcW, srcX))
+      srcY = Math.max(0, Math.min(img.naturalHeight - srcH, srcY))
 
-    const canvas = document.createElement('canvas')
-    canvas.width = canvasSize
-    canvas.height = canvasSize
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-    ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, canvasSize, canvasSize)
-    const blob: Blob | null = await new Promise((resolve) =>
-      canvas.toBlob((result) => resolve(result), 'image/jpeg', 0.9)
-    )
-    if (!blob) {
-      setMsg('Avatar save failed. Please reupload and try again.')
+      const canvas = document.createElement('canvas')
+      canvas.width = canvasSize
+      canvas.height = canvasSize
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        setMsg('Avatar save failed. Please reupload and try again.')
+        return
+      }
+      ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, canvasSize, canvasSize)
+      const blob: Blob | null = await new Promise((resolve) =>
+        canvas.toBlob((result) => resolve(result), 'image/jpeg', 0.9)
+      )
+      if (!blob) {
+        setMsg('Avatar save failed. Please reupload and try again.')
+        return
+      }
+      await uploadAvatar(new File([blob], 'avatar.jpg', { type: 'image/jpeg' }))
+      setAvatarCropOpen(false)
+      setAvatarCropSrc(null)
+      setAvatarOptionsOpen(false)
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('auth:logged_out', { detail: { message: 'Profile avatar saved.' } }))
+      }
+    } catch (e: any) {
+      const msg = e?.response?.data?.detail ?? e?.message ?? 'Avatar save failed.'
+      setMsg(msg)
+    } finally {
       setAvatarCropSaving(false)
-      return
     }
-    await uploadAvatar(new File([blob], 'avatar.jpg', { type: 'image/jpeg' }))
-    setAvatarCropOpen(false)
-    setAvatarCropSrc(null)
-    setAvatarCropSaving(false)
   }
 
   useEffect(() => {
