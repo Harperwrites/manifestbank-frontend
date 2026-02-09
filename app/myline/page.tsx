@@ -1668,6 +1668,10 @@ export default function MyLinePage() {
                     alignItems: 'center',
                     boxShadow: '0 14px 26px rgba(12, 10, 12, 0.25)',
                     transition: 'transform 160ms ease, box-shadow 160ms ease',
+                    width: '100%',
+                    maxWidth: '100%',
+                    boxSizing: 'border-box',
+                    overflow: 'hidden',
                   }}
                   onMouseEnter={(event) => {
                     event.currentTarget.style.transform = 'translateY(-1px)'
@@ -1777,7 +1781,18 @@ export default function MyLinePage() {
                       {preview.message ?? ''}
                     </div>
                   </div>
-                  <div style={{ fontSize: 11, opacity: 0.6 }}>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      opacity: 0.6,
+                      flexShrink: 0,
+                      maxWidth: 120,
+                      textAlign: 'right',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
                     {preview.created_at ? new Date(preview.created_at).toLocaleString() : ''}
                   </div>
                 </button>

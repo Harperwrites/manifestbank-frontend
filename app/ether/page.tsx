@@ -4578,7 +4578,8 @@ export default function EtherPage() {
             style={{
               width: 'min(360px, 100%)',
               borderRadius: 24,
-              background: 'rgba(255, 255, 255, 0.96)',
+              background:
+                'linear-gradient(135deg, rgba(199, 140, 122, 0.98), rgba(226, 203, 190, 0.98))',
               border: '1px solid rgba(95, 74, 62, 0.2)',
               boxShadow: 'var(--shadow)',
               padding: 16,
@@ -4586,6 +4587,9 @@ export default function EtherPage() {
               gap: 12,
             }}
           >
+            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 18, fontWeight: 600, color: '#3b2b24' }}>
+              Profile photo
+            </div>
             <img
               src={avatarPreviewUrl}
               alt="Profile"
@@ -4598,10 +4602,11 @@ export default function EtherPage() {
                 style={{
                   padding: '8px 12px',
                   borderRadius: 999,
-                  border: '1px solid rgba(95, 74, 62, 0.35)',
-                  background: 'transparent',
+                  border: '1px solid rgba(140, 92, 78, 0.55)',
+                  background: 'rgba(255,255,255,0.75)',
                   cursor: 'pointer',
                   fontWeight: 600,
+                  color: '#3b2b24',
                 }}
               >
                 Close
@@ -4615,10 +4620,11 @@ export default function EtherPage() {
                 style={{
                   padding: '8px 12px',
                   borderRadius: 999,
-                  border: '1px solid rgba(95, 74, 62, 0.35)',
-                  background: 'rgba(255,255,255,0.9)',
+                  border: '1px solid rgba(182, 121, 103, 0.6)',
+                  background: 'linear-gradient(135deg, #c88a77, #b67967)',
                   cursor: 'pointer',
                   fontWeight: 600,
+                  color: '#fff',
                 }}
               >
                 Edit photo

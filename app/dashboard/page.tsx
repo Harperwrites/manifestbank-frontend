@@ -153,6 +153,18 @@ export default function DashboardPage() {
   const [pendingModalOpen, setPendingModalOpen] = useState(false)
   const [pendingDetail, setPendingDetail] = useState<PendingCredit | null>(null)
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null)
+  const [avatarOptionsOpen, setAvatarOptionsOpen] = useState(false)
+  const [avatarCropOpen, setAvatarCropOpen] = useState(false)
+  const [avatarCropSrc, setAvatarCropSrc] = useState<string | null>(null)
+  const [avatarCropZoom, setAvatarCropZoom] = useState(1)
+  const [avatarCropSaving, setAvatarCropSaving] = useState(false)
+  const [avatarCropLoaded, setAvatarCropLoaded] = useState(false)
+  const avatarImageRef = useRef<HTMLImageElement | null>(null)
+  const [avatarCropOffset, setAvatarCropOffset] = useState({ x: 0, y: 0 })
+  const [avatarDragStart, setAvatarDragStart] = useState({ x: 0, y: 0 })
+  const [avatarOffsetStart, setAvatarOffsetStart] = useState({ x: 0, y: 0 })
+  const [avatarDragging, setAvatarDragging] = useState(false)
+  const avatarReuploadRef = useRef<HTMLInputElement | null>(null)
   const [balancesPeekOpen, setBalancesPeekOpen] = useState(false)
   const [verificationMsg, setVerificationMsg] = useState('')
   const [verificationSending, setVerificationSending] = useState(false)
@@ -744,6 +756,96 @@ export default function DashboardPage() {
     return match?.name ?? `Account #${id}`
   }
 
+  async function uploadAvatar(file: File) {
+    const form = new FormData()
+    form.append('file', file)
+    const res = await api.post('/ether/upload/avatar', form)
+    const rawUrl = res.data.url as string
+    const cacheBusted = `${rawUrl}${rawUrl.includes('?') ? '&' : '?'}t=${Date.now()}`
+    setProfile((prev: any) => (prev ? { ...prev, avatar_url: cacheBusted } : prev))
+    return cacheBusted
+  }
+
+  function clampAvatarOffset(next: { x: number; y: number }) {
+    const img = avatarImageRef.current
+    const cropSize = 260
+    if (!img || !avatarCropLoaded) return { x: 0, y: 0 }
+    const baseScale = Math.max(cropSize / img.naturalWidth, cropSize / img.naturalHeight)
+    const scale = baseScale * Math.max(1, avatarCropZoom)
+    const displayW = img.naturalWidth * scale
+    const displayH = img.naturalHeight * scale
+    const maxX = Math.max(0, (displayW - cropSize) / 2)
+    const maxY = Math.max(0, (displayH - cropSize) / 2)
+    return {
+      x: Math.max(-maxX, Math.min(maxX, next.x)),
+      y: Math.max(-maxY, Math.min(maxY, next.y)),
+    }
+  }
+
+  function openAvatarCrop(file: File) {
+    const reader = new FileReader()
+    reader.onload = () => {
+      setAvatarCropSrc(String(reader.result))
+      setAvatarCropZoom(1)
+      setAvatarCropLoaded(false)
+      setAvatarCropOffset({ x: 0, y: 0 })
+      setAvatarCropOpen(true)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  async function saveAvatarCrop() {
+    const img = avatarImageRef.current
+    if (!img || !avatarCropLoaded) {
+      toast('Avatar not ready yet. Please wait for the image to load.')
+      return
+    }
+    setAvatarCropSaving(true)
+    let saved = false
+    try {
+      const canvasSize = 260
+      const zoom = Math.max(1, avatarCropZoom)
+      const baseScale = Math.max(canvasSize / img.naturalWidth, canvasSize / img.naturalHeight)
+      const scale = baseScale * zoom
+      const srcW = canvasSize / scale
+      const srcH = canvasSize / scale
+      let srcX = img.naturalWidth / 2 - (canvasSize / 2 + avatarCropOffset.x) / scale
+      let srcY = img.naturalHeight / 2 - (canvasSize / 2 + avatarCropOffset.y) / scale
+      srcX = Math.max(0, Math.min(img.naturalWidth - srcW, srcX))
+      srcY = Math.max(0, Math.min(img.naturalHeight - srcH, srcY))
+
+      const canvas = document.createElement('canvas')
+      canvas.width = canvasSize
+      canvas.height = canvasSize
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        toast('Avatar save failed. Please reupload and try again.')
+        return
+      }
+      ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, canvasSize, canvasSize)
+      const blob: Blob | null = await new Promise((resolve) =>
+        canvas.toBlob((result) => resolve(result), 'image/jpeg', 0.9)
+      )
+      if (!blob) {
+        toast('Avatar save failed. Please reupload and try again.')
+        return
+      }
+      await uploadAvatar(new File([blob], 'avatar.jpg', { type: 'image/jpeg' }))
+      saved = true
+      setAvatarCropOpen(false)
+      setAvatarCropSrc(null)
+      setAvatarOptionsOpen(false)
+      toast('Profile avatar saved.')
+    } catch (e: any) {
+      toast(e?.response?.data?.detail ?? e?.message ?? 'Avatar save failed.')
+    } finally {
+      setAvatarCropSaving(false)
+      if (saved) {
+        setAvatarCropLoaded(false)
+      }
+    }
+  }
+
   const targetStorageKey = useMemo(() => {
     if (me?.id) return `${baseTargetStorageKey}:${me.id}`
     if (me?.email) return `${baseTargetStorageKey}:${me.email.toLowerCase()}`
@@ -843,6 +945,11 @@ export default function DashboardPage() {
       document.body.style.overflow = prev
     }
   }, [selectedActivity, pendingModalOpen, pendingDetail, avatarPreviewUrl])
+
+  useEffect(() => {
+    if (!avatarCropOpen || !avatarCropLoaded) return
+    setAvatarCropOffset((prev) => clampAvatarOffset(prev))
+  }, [avatarCropZoom, avatarCropOpen, avatarCropLoaded])
 
   useEffect(() => {
     const target = dashboardNavRef.current
@@ -1160,8 +1267,11 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    if (!profile?.avatar_url) return
-                    setAvatarPreviewUrl(profile.avatar_url)
+                    if (profile?.avatar_url) {
+                      setAvatarPreviewUrl(profile.avatar_url)
+                    } else {
+                      setAvatarOptionsOpen(true)
+                    }
                   }}
                   style={{
                     width: 64,
@@ -1174,7 +1284,7 @@ export default function DashboardPage() {
                     justifyContent: 'center',
                     overflow: 'hidden',
                     fontWeight: 700,
-                    cursor: profile?.avatar_url ? 'pointer' : 'default',
+                    cursor: 'pointer',
                     padding: 0,
                     boxShadow: '0 0 18px rgba(182, 121, 103, 0.45)',
                   }}
@@ -2254,17 +2364,268 @@ export default function DashboardPage() {
             style={{
               width: 'min(360px, 100%)',
               borderRadius: 24,
-              background: 'rgba(255, 255, 255, 0.96)',
+              background:
+                'linear-gradient(135deg, rgba(199, 140, 122, 0.98), rgba(226, 203, 190, 0.98))',
               border: '1px solid rgba(95, 74, 62, 0.2)',
               boxShadow: 'var(--shadow)',
               padding: 16,
+              display: 'grid',
+              gap: 12,
             }}
           >
+            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 18, fontWeight: 600, color: '#3b2b24' }}>
+              Profile photo
+            </div>
             <img
               src={avatarPreviewUrl}
               alt="Profile"
               style={{ width: '100%', height: 'auto', borderRadius: 18, display: 'block' }}
             />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => setAvatarPreviewUrl(null)}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: 999,
+                  border: '1px solid rgba(140, 92, 78, 0.55)',
+                  background: 'rgba(255,255,255,0.75)',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  color: '#3b2b24',
+                }}
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAvatarPreviewUrl(null)
+                  setAvatarOptionsOpen(true)
+                }}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: 999,
+                  border: '1px solid rgba(182, 121, 103, 0.6)',
+                  background: 'linear-gradient(135deg, #c88a77, #b67967)',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  color: '#fff',
+                }}
+              >
+                Edit photo
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {avatarOptionsOpen ? (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(21, 16, 12, 0.45)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 70,
+            padding: 20,
+          }}
+          onClick={() => setAvatarOptionsOpen(false)}
+        >
+          <div
+            style={{
+              width: 'min(420px, 100%)',
+              background:
+                'linear-gradient(135deg, rgba(199, 140, 122, 0.98), rgba(226, 203, 190, 0.98))',
+              borderRadius: 18,
+              border: '1px solid rgba(95, 74, 62, 0.2)',
+              padding: 18,
+              boxShadow: 'var(--shadow)',
+              display: 'grid',
+              gap: 10,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 20, fontWeight: 600, color: '#3b2b24' }}>
+              Profile photo
+            </div>
+            <div style={{ fontSize: 12, opacity: 0.8, color: '#3b2b24' }}>
+              Upload a new photo and confirm the crop.
+            </div>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => avatarReuploadRef.current?.click()}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: 999,
+                  border: '1px solid rgba(182, 121, 103, 0.6)',
+                  background: 'linear-gradient(135deg, #c88a77, #b67967)',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                }}
+              >
+                Upload photo
+              </button>
+              <button
+                type="button"
+                onClick={() => setAvatarOptionsOpen(false)}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: 999,
+                  border: '1px solid rgba(140, 92, 78, 0.55)',
+                  background: 'rgba(255,255,255,0.75)',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  color: '#3b2b24',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+            <input
+              ref={avatarReuploadRef}
+              type="file"
+              accept="image/*"
+              onChange={(event) => {
+                const file = event.target.files?.[0]
+                if (!file) return
+                setAvatarOptionsOpen(false)
+                openAvatarCrop(file)
+                event.target.value = ''
+              }}
+              style={{ display: 'none' }}
+            />
+          </div>
+        </div>
+      ) : null}
+
+      {avatarCropOpen && avatarCropSrc ? (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(21, 16, 12, 0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 80,
+            padding: 20,
+          }}
+          onClick={() => setAvatarCropOpen(false)}
+        >
+          <div
+            style={{
+              width: 'min(440px, 100%)',
+              borderRadius: 24,
+              background:
+                'linear-gradient(135deg, rgba(199, 140, 122, 0.98), rgba(226, 203, 190, 0.98))',
+              border: '1px solid rgba(95, 74, 62, 0.2)',
+              boxShadow: 'var(--shadow)',
+              padding: 18,
+              display: 'grid',
+              gap: 12,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 22, fontWeight: 600, color: '#3b2b24' }}>
+              Crop avatar
+            </div>
+            <div style={{ fontSize: 12, opacity: 0.8, color: '#3b2b24' }}>
+              Drag to reposition and zoom to fit.
+            </div>
+            <div
+              style={{
+                width: 260,
+                height: 260,
+                margin: '0 auto',
+                borderRadius: '50%',
+                overflow: 'hidden',
+                background: 'rgba(255,255,255,0.65)',
+                border: '1px solid rgba(140, 92, 78, 0.3)',
+                position: 'relative',
+                cursor: avatarDragging ? 'grabbing' : 'grab',
+                touchAction: 'none',
+              }}
+              onPointerDown={(e) => {
+                if (!avatarCropLoaded) return
+                setAvatarDragging(true)
+                setAvatarDragStart({ x: e.clientX, y: e.clientY })
+                setAvatarOffsetStart(avatarCropOffset)
+              }}
+              onPointerUp={() => setAvatarDragging(false)}
+              onPointerLeave={() => setAvatarDragging(false)}
+              onPointerMove={(e) => {
+                if (!avatarDragging) return
+                setAvatarCropOffset(
+                  clampAvatarOffset({
+                    x: avatarOffsetStart.x + (e.clientX - avatarDragStart.x),
+                    y: avatarOffsetStart.y + (e.clientY - avatarDragStart.y),
+                  })
+                )
+              }}
+            >
+              <img
+                ref={avatarImageRef}
+                src={avatarCropSrc}
+                alt="Crop avatar"
+                onLoad={() => setAvatarCropLoaded(true)}
+                style={{
+                  width: 260,
+                  height: 260,
+                  objectFit: 'cover',
+                  transform: `translate(${avatarCropOffset.x}px, ${avatarCropOffset.y}px) scale(${avatarCropZoom})`,
+                  transformOrigin: 'center',
+                  transition: avatarDragging ? 'none' : 'transform 120ms ease',
+                }}
+              />
+            </div>
+            <input
+              type="range"
+              min="1"
+              max="2.6"
+              step="0.01"
+              value={avatarCropZoom}
+              onChange={(event) => setAvatarCropZoom(Number(event.target.value))}
+              style={{ width: '100%' }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => setAvatarCropOpen(false)}
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: 999,
+                  border: '1px solid rgba(140, 92, 78, 0.55)',
+                  background: 'rgba(255,255,255,0.75)',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  color: '#3b2b24',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={saveAvatarCrop}
+                disabled={avatarCropSaving || !avatarCropLoaded}
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: 999,
+                  border: '1px solid rgba(182, 121, 103, 0.6)',
+                  background: 'linear-gradient(135deg, #c88a77, #b67967)',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  opacity: avatarCropSaving ? 0.7 : 1,
+                }}
+              >
+                {avatarCropSaving ? 'Saving…' : 'Save avatar'}
+              </button>
+            </div>
           </div>
         </div>
       ) : null}
