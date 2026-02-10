@@ -27,6 +27,12 @@ const recipientPresets = [
   'Partner',
 ]
 
+function formatAmountWithCommas(value: string) {
+  const parsed = Number(normalizeMoneyInput(value))
+  if (!Number.isFinite(parsed)) return '0.00'
+  return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(parsed)
+}
+
 function toast(message: string) {
   if (typeof window === 'undefined') return
   window.dispatchEvent(new CustomEvent('auth:logged_out', { detail: { message } }))
@@ -57,6 +63,8 @@ export default function MyChecksPage() {
   const [isSigning, setIsSigning] = useState(false)
   const [signatureOpen, setSignatureOpen] = useState(false)
   const [signatureConfirmed, setSignatureConfirmed] = useState(false)
+  const [signatureOpen, setSignatureOpen] = useState(false)
+  const [signatureConfirmed, setSignatureConfirmed] = useState(false)
   const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const signatureLastPoint = useRef<{ x: number; y: number } | null>(null)
 
@@ -75,7 +83,63 @@ export default function MyChecksPage() {
     fromChoice === 'me' ? meLabel : fromChoice === 'custom' ? fromCustom || 'Custom sender' : fromChoice
   const toDisplay =
     toChoice === 'me' ? meLabel : toChoice === 'custom' ? toCustom || 'Custom recipient' : toChoice
-  const requiresSignature = fromChoice === 'me'
+  const requiresSignature = fromChoice === 'me' && direction === 'outgoing'
+  const amountDisplay = amount ? `S${amount}` : ''
+
+  async function buildCheckSnapshot() {
+    const canvas = document.createElement('canvas')
+    canvas.width = 900
+    canvas.height = 260
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return null
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.strokeStyle = 'rgba(95, 74, 62, 0.7)'
+    ctx.lineWidth = 3
+    ctx.strokeRect(8, 8, canvas.width - 16, canvas.height - 16)
+
+    ctx.fillStyle = '#3b2b24'
+    ctx.font = '700 20px serif'
+    ctx.fillText('Manifestation Check', 30, 45)
+
+    ctx.font = '500 16px serif'
+    if (checkDate) {
+      ctx.fillText(`Date: ${checkDate}`, 30, 78)
+    }
+    ctx.fillText(`From: ${fromDisplay}`, 30, 110)
+    ctx.fillText(`To: ${toDisplay}`, 30, 140)
+    if (memo) {
+      ctx.fillText(`Memo: ${memo}`, 30, 170)
+    }
+
+    ctx.strokeStyle = 'rgba(95, 74, 62, 0.7)'
+    ctx.lineWidth = 2
+    ctx.strokeRect(640, 30, 230, 50)
+    ctx.font = '700 18px serif'
+    ctx.fillText(`$${formatAmountWithCommas(amount)}`, 650, 62)
+
+    ctx.font = '500 14px serif'
+    ctx.fillText('Signature:', 640, 120)
+
+    if (requiresSignature && signatureDataUrl) {
+      await new Promise<void>((resolve) => {
+        const img = new Image()
+        img.onload = () => {
+          ctx.drawImage(img, 640, 130, 230, 70)
+          resolve()
+        }
+        img.onerror = () => resolve()
+        img.src = signatureDataUrl
+      })
+    } else {
+      ctx.font = 'italic 26px \"Allura\", \"Great Vibes\", \"Pacifico\", \"Brush Script MT\", cursive'
+      ctx.fillText(fromDisplay, 640, 175)
+    }
+
+    ctx.font = '500 12px serif'
+    ctx.fillText('*ManifestBank™ is NOT a financial institution.', 520, 245)
+    return canvas.toDataURL('image/png')
+  }
 
   useEffect(() => {
     let mounted = true
@@ -142,6 +206,7 @@ export default function MyChecksPage() {
     }
     setSaving(true)
     try {
+      const checkSnapshot = typeof window !== 'undefined' ? await buildCheckSnapshot() : null
       await api.post('/ledger/entries', {
         account_id: Number(accountId),
         direction: directionLabel,
@@ -151,7 +216,7 @@ export default function MyChecksPage() {
         status: 'posted',
         reference,
         memo: memo || `Check ${direction === 'incoming' ? 'deposit' : 'expense'}`,
-        meta: detail,
+        meta: { ...detail, check_snapshot: checkSnapshot },
       })
       toast(`Check ${direction === 'incoming' ? 'deposit' : 'expense'} posted.`)
       setAmount('')
@@ -316,6 +381,7 @@ export default function MyChecksPage() {
                       border: '1px solid rgba(95, 74, 62, 0.28)',
                       background: 'rgba(255,255,255,0.9)',
                     }}
+                    className="mb-placeholder"
                   />
                 ) : null}
               </div>
@@ -369,6 +435,7 @@ export default function MyChecksPage() {
                       border: '1px solid rgba(95, 74, 62, 0.28)',
                       background: 'rgba(255,255,255,0.9)',
                     }}
+                    className="mb-placeholder"
                   />
                 ) : null}
               </div>
@@ -376,15 +443,19 @@ export default function MyChecksPage() {
               <label style={{ display: 'grid', gap: 6 }}>
                 <span style={{ fontSize: 12, opacity: 0.7 }}>Amount</span>
                 <input
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="$0.00"
+                  value={amountDisplay}
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/^s/i, '')
+                    setAmount(raw.replace(/[^\d.,]/g, ''))
+                  }}
+                  placeholder="S0.00"
                   style={{
                     padding: '10px 12px',
                     borderRadius: 12,
                     border: '1px solid rgba(95, 74, 62, 0.28)',
                     background: 'rgba(255,255,255,0.9)',
                   }}
+                  className="mb-placeholder"
                 />
               </label>
 
@@ -400,6 +471,7 @@ export default function MyChecksPage() {
                     border: '1px solid rgba(95, 74, 62, 0.28)',
                     background: 'rgba(255,255,255,0.9)',
                   }}
+                  className="mb-placeholder"
                 />
               </label>
               <label style={{ display: 'grid', gap: 6 }}>
@@ -450,6 +522,7 @@ export default function MyChecksPage() {
                     border: '1px solid rgba(95, 74, 62, 0.28)',
                     background: 'rgba(255,255,255,0.9)',
                   }}
+                  className="mb-placeholder"
                 />
               </label>
 
@@ -525,9 +598,9 @@ export default function MyChecksPage() {
               <div style={{ display: 'grid', gap: 8, flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
                   <span>Manifestation Check</span>
-                  <span style={{ fontSize: 12, opacity: 0.7 }}>
-                    {checkNumber ? `#${checkNumber}` : 'Draft'}
-                  </span>
+                  {checkNumber ? (
+                    <span style={{ fontSize: 12, opacity: 0.7 }}>#{checkNumber}</span>
+                  ) : null}
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
                   <div style={{ fontWeight: 600 }}>Date:</div>
@@ -576,7 +649,7 @@ export default function MyChecksPage() {
                             padding: '8px 12px',
                             borderRadius: 999,
                             border: '1px solid rgba(140, 92, 78, 0.55)',
-                            background: 'rgba(255,255,255,0.75)',
+                            background: 'rgba(226, 203, 190, 0.45)',
                             cursor: 'pointer',
                             fontWeight: 600,
                             color: '#3b2b24',

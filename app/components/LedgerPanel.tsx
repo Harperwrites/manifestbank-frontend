@@ -78,6 +78,7 @@ export default function LedgerPanel({
   const [depositRef, setDepositRef] = useState('')
   const [showDeposit, setShowDeposit] = useState(false)
   const [selectedEntry, setSelectedEntry] = useState<LedgerEntry | null>(null)
+  const [checkPreviewUrl, setCheckPreviewUrl] = useState<string | null>(null)
   const [showSchedule, setShowSchedule] = useState(false)
   const [scheduleAmount, setScheduleAmount] = useState('')
   const [scheduleMemo, setScheduleMemo] = useState('')
@@ -490,12 +491,62 @@ export default function LedgerPanel({
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
+              {selectedEntry.meta?.check_snapshot ? (
+                <Button
+                  variant="outline"
+                  onClick={() => setCheckPreviewUrl(selectedEntry.meta.check_snapshot)}
+                >
+                  View Check
+                </Button>
+              ) : null}
               <Button
                 variant="outline"
                 onClick={() => {
                   setSelectedEntry(null)
                 }}
               >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+        , document.body)
+        : null}
+
+      {checkPreviewUrl && typeof document !== 'undefined'
+        ? createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            height: '100dvh',
+            background: 'rgba(21, 16, 12, 0.45)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 70,
+            padding: 20,
+          }}
+          onClick={() => setCheckPreviewUrl(null)}
+        >
+          <div
+            style={{
+              width: 'min(900px, 100%)',
+              borderRadius: 20,
+              border: '1px solid rgba(95, 74, 62, 0.2)',
+              background: 'rgba(255,255,255,0.96)',
+              padding: 16,
+              boxShadow: 'var(--shadow)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={checkPreviewUrl}
+              alt="Check preview"
+              style={{ width: '100%', height: 'auto', borderRadius: 12, display: 'block' }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+              <Button variant="outline" onClick={() => setCheckPreviewUrl(null)}>
                 Close
               </Button>
             </div>

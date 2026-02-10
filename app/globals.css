@@ -224,3 +224,7 @@ a {
     transform: scale(1);
   }
 }
+
+.mb-placeholder::placeholder {
+  color: rgba(120, 96, 84, 0.55);
+}
