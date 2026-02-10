@@ -459,6 +459,14 @@ export default function MyAffirmationsPage() {
                 >
                   My Statements
                 </Link>
+                <Link
+                  href="/mychecks"
+                  style={{ textDecoration: 'none', fontWeight: 600, color: '#4a2f26' }}
+                  role="menuitem"
+                  onClick={() => setTreasureChipOpen(false)}
+                >
+                  My Checks
+                </Link>
               </div>
             ) : null}
           </div>

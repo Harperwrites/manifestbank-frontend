@@ -1184,6 +1184,14 @@ export default function DashboardPage() {
                 >
                   My Statements
                 </Link>
+                <Link
+                  href="/mychecks"
+                  style={{ textDecoration: 'none', fontWeight: 600, color: '#4a2f26' }}
+                  role="menuitem"
+                  onClick={() => setTreasureChipOpen(false)}
+                >
+                  My Checks
+                </Link>
               </div>
             ) : null}
           </div>
@@ -2374,7 +2382,7 @@ export default function DashboardPage() {
             }}
           >
             <div style={{ fontFamily: 'var(--font-serif)', fontSize: 18, fontWeight: 600, color: '#3b2b24' }}>
-              Profile photo
+              Profile Photo
             </div>
             <img
               src={avatarPreviewUrl}
@@ -2449,7 +2457,7 @@ export default function DashboardPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ fontFamily: 'var(--font-serif)', fontSize: 20, fontWeight: 600, color: '#3b2b24' }}>
-              Profile photo
+              Profile Photo
             </div>
             <div style={{ fontSize: 12, opacity: 0.8, color: '#3b2b24' }}>
               Upload a new photo and confirm the crop.

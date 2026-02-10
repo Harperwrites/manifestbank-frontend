@@ -336,6 +336,14 @@ export default function Navbar({
               >
                 My Statements
               </Link>
+              <Link
+                href="/mychecks"
+                style={{ textDecoration: 'none', fontWeight: 600, color: 'rgba(95, 74, 62, 0.9)' }}
+                role="menuitem"
+                onClick={() => setTreasureOpen(false)}
+              >
+                My Checks
+              </Link>
             </div>
           ) : null}
         </div>

@@ -927,11 +927,7 @@ export default function EtherPage() {
   const [etherStickyOpen, setEtherStickyOpen] = useState(false)
   const etherStickyRef = useRef<HTMLDivElement | null>(null)
   const etherStickyMenuRef = useRef<HTMLDivElement | null>(null)
-  const [etherStickyMenuPos, setEtherStickyMenuPos] = useState<{ left: number; top: number; width: number }>({
-    left: 0,
-    top: 0,
-    width: 320,
-  })
+  const [etherStickyMenuPos, setEtherStickyMenuPos] = useState<{ top: number }>({ top: 0 })
   const [manifestAccounts, setManifestAccounts] = useState<any[]>([])
   const [manifestAccountsLoaded, setManifestAccountsLoaded] = useState(false)
   const [manifestAccountsLoading, setManifestAccountsLoading] = useState(false)
@@ -1092,11 +1088,8 @@ export default function EtherPage() {
     const updatePosition = () => {
       const rect = etherStickyRef.current?.getBoundingClientRect()
       if (!rect) return
-      const menuWidth = Math.min(360, Math.floor(window.innerWidth * 0.92))
-      const centerX = rect.left + rect.width / 2
-      const left = Math.max(8, Math.min(window.innerWidth - menuWidth - 8, centerX - menuWidth / 2))
       const top = rect.bottom + 10
-      setEtherStickyMenuPos({ left, top, width: menuWidth })
+      setEtherStickyMenuPos({ top })
     }
     updatePosition()
     window.addEventListener('resize', updatePosition)
@@ -2259,8 +2252,11 @@ export default function EtherPage() {
                   style={{
                     position: 'fixed',
                     top: etherStickyMenuPos.top,
-                    left: etherStickyMenuPos.left,
-                    width: etherStickyMenuPos.width,
+                    left: 12,
+                    right: 12,
+                    width: 'min(360px, calc(100vw - 24px))',
+                    marginLeft: 'auto',
+                    marginRight: 'auto',
                     borderRadius: 16,
                     border: '1px solid rgba(140, 92, 78, 0.45)',
                     background: 'linear-gradient(180deg, rgba(252, 245, 239, 0.98), rgba(226, 199, 181, 0.96))',
@@ -4712,7 +4708,7 @@ export default function EtherPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ fontFamily: 'var(--font-serif)', fontSize: 20, fontWeight: 600, color: '#3b2b24' }}>
-              Profile photo
+              Profile Photo
             </div>
             <div style={{ fontSize: 12, opacity: 0.85, color: '#3b2b24' }}>
               Upload a new photo and confirm the crop.
