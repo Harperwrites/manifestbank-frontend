@@ -50,6 +50,7 @@ export default function MyChecksPage() {
   const [amount, setAmount] = useState('')
   const [memo, setMemo] = useState('')
   const [checkNumber, setCheckNumber] = useState('')
+  const [checkDate, setCheckDate] = useState('')
   const [accountId, setAccountId] = useState<number | ''>('')
   const [saving, setSaving] = useState(false)
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null)
@@ -134,6 +135,7 @@ export default function MyChecksPage() {
       memo: memo || null,
       kind: 'check',
       direction,
+      check_date: checkDate || null,
       signature: requiresSignature ? signatureDataUrl : null,
     }
     setSaving(true)
@@ -153,6 +155,7 @@ export default function MyChecksPage() {
       setAmount('')
       setMemo('')
       setCheckNumber('')
+      setCheckDate('')
       setFromChoice('me')
       setToChoice('custom')
       setFromCustom('')
@@ -402,6 +405,20 @@ export default function MyChecksPage() {
                   }}
                 />
               </label>
+              <label style={{ display: 'grid', gap: 6 }}>
+                <span style={{ fontSize: 12, opacity: 0.7 }}>Check date</span>
+                <input
+                  type="date"
+                  value={checkDate}
+                  onChange={(e) => setCheckDate(e.target.value)}
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: 12,
+                    border: '1px solid rgba(95, 74, 62, 0.28)',
+                    background: 'rgba(255,255,255,0.9)',
+                  }}
+                />
+              </label>
 
               <label style={{ display: 'grid', gap: 6 }}>
                 <span style={{ fontSize: 12, opacity: 0.7 }}>Account to post</span>
@@ -478,50 +495,56 @@ export default function MyChecksPage() {
                 border: '2px solid rgba(95, 74, 62, 0.45)',
                 background: 'rgba(255,255,255,0.95)',
                 padding: 18,
-                minHeight: 220,
+                minHeight: 180,
                 display: 'grid',
-                gap: 10,
+                gap: 12,
+                gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
+                alignItems: 'center',
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
-                Manifestation Check
-                <span style={{ fontSize: 12, opacity: 0.7 }}>{checkNumber ? `#${checkNumber}` : 'Draft'}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                <div style={{ display: 'grid', gap: 8, flex: 1 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <div style={{ fontWeight: 600 }}>From:</div>
-                    <div>{fromDisplay}</div>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <div style={{ fontWeight: 600 }}>To:</div>
-                    <div>{toDisplay}</div>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <div style={{ fontWeight: 600 }}>Memo:</div>
-                    <div>{memo || '—'}</div>
-                  </div>
+              <div style={{ display: 'grid', gap: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
+                  <span>Manifestation Check</span>
+                  <span style={{ fontSize: 12, opacity: 0.7 }}>
+                    {checkNumber ? `#${checkNumber}` : 'Draft'}
+                  </span>
                 </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                  <div style={{ fontWeight: 600 }}>From:</div>
+                  <div>{fromDisplay}</div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                  <div style={{ fontWeight: 600 }}>To:</div>
+                  <div>{toDisplay}</div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                  <div style={{ fontWeight: 600 }}>Memo:</div>
+                  <div>{memo || '—'}</div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                  <div style={{ fontWeight: 600 }}>Date:</div>
+                  <div>{checkDate || '—'}</div>
+                </div>
+                <div style={{ fontWeight: 600, fontSize: 13, opacity: 0.8 }}>
+                  {direction === 'incoming' ? 'Incoming (Deposit)' : 'Outgoing (Expense)'}
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gap: 10, justifyItems: 'end' }}>
                 <div
                   style={{
                     border: '2px solid rgba(95, 74, 62, 0.5)',
                     borderRadius: 10,
                     padding: '10px 12px',
-                    minWidth: 140,
+                    minWidth: 160,
                     textAlign: 'right',
                     fontWeight: 700,
-                    fontSize: 16,
+                    fontSize: 18,
                   }}
                 >
                   {amount ? `$${normalizeMoneyInput(amount)}` : '$0.00'}
                 </div>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-end' }}>
-                <div style={{ fontWeight: 600, fontSize: 13, opacity: 0.8 }}>
-                  {direction === 'incoming' ? 'Incoming (Deposit)' : 'Outgoing (Expense)'}
-                </div>
-                <div style={{ flex: 1 }} />
-                <div style={{ textAlign: 'right', minWidth: 160 }}>
+                <div style={{ textAlign: 'right', minWidth: 200 }}>
                   <div style={{ fontSize: 12, opacity: 0.7 }}>Signature</div>
                   {requiresSignature ? (
                     <div style={{ marginTop: 6 }}>
@@ -580,9 +603,9 @@ export default function MyChecksPage() {
                     </div>
                   )}
                 </div>
-              </div>
-              <div style={{ marginTop: 4, fontSize: 12, opacity: 0.75 }}>
-                *ManifestBank™ is NOT a financial institution.
+                <div style={{ fontSize: 12, opacity: 0.75, textAlign: 'right' }}>
+                  *ManifestBank™ is NOT a financial institution.
+                </div>
               </div>
             </div>
           </div>
