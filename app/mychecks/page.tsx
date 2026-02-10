@@ -484,9 +484,8 @@ export default function MyChecksPage() {
               background: 'linear-gradient(160deg, rgba(255,255,255,0.95), rgba(226, 203, 190, 0.65))',
               padding: 22,
               boxShadow: '0 20px 36px rgba(18, 12, 10, 0.18)',
-              minHeight: 320,
-              display: 'grid',
-              gap: 12,
+              display: 'flex',
+              justifyContent: 'center',
             }}
           >
             <div
@@ -495,14 +494,14 @@ export default function MyChecksPage() {
                 border: '2px solid rgba(95, 74, 62, 0.45)',
                 background: 'rgba(255,255,255,0.95)',
                 padding: 18,
-                minHeight: 180,
-                display: 'grid',
-                gap: 12,
-                gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
-                alignItems: 'center',
+                width: 'min(820px, 100%)',
+                height: 230,
+                display: 'flex',
+                gap: 18,
+                alignItems: 'stretch',
               }}
             >
-              <div style={{ display: 'grid', gap: 8 }}>
+              <div style={{ display: 'grid', gap: 8, flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
                   <span>Manifestation Check</span>
                   <span style={{ fontSize: 12, opacity: 0.7 }}>
@@ -530,7 +529,7 @@ export default function MyChecksPage() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gap: 10, justifyItems: 'end' }}>
+              <div style={{ display: 'grid', gap: 10, justifyItems: 'end', minWidth: 240 }}>
                 <div
                   style={{
                     border: '2px solid rgba(95, 74, 62, 0.5)',
