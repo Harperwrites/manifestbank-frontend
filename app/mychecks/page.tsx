@@ -63,8 +63,6 @@ export default function MyChecksPage() {
   const [isSigning, setIsSigning] = useState(false)
   const [signatureOpen, setSignatureOpen] = useState(false)
   const [signatureConfirmed, setSignatureConfirmed] = useState(false)
-  const [signatureOpen, setSignatureOpen] = useState(false)
-  const [signatureConfirmed, setSignatureConfirmed] = useState(false)
   const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const signatureLastPoint = useRef<{ x: number; y: number } | null>(null)
 
