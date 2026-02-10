@@ -252,14 +252,7 @@ export default function MyChecksPage() {
           <div style={{ marginTop: 16, color: '#7a2e2e', fontSize: 13 }}>{error}</div>
         ) : null}
 
-        <div
-          style={{
-            marginTop: 26,
-            display: 'grid',
-            gap: 18,
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-          }}
-        >
+        <div style={{ marginTop: 26, display: 'grid', gap: 18 }}>
           <div
             style={{
               borderRadius: 18,
@@ -494,10 +487,10 @@ export default function MyChecksPage() {
                 border: '2px solid rgba(95, 74, 62, 0.45)',
                 background: 'rgba(255,255,255,0.95)',
                 padding: 18,
-                width: 'min(820px, 100%)',
-                height: 230,
+                width: 'min(920px, 100%)',
+                minHeight: 220,
                 display: 'flex',
-                gap: 18,
+                gap: 20,
                 alignItems: 'stretch',
               }}
             >
@@ -529,13 +522,13 @@ export default function MyChecksPage() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gap: 10, justifyItems: 'end', minWidth: 240 }}>
+              <div style={{ display: 'grid', gap: 10, justifyItems: 'end', minWidth: 260 }}>
                 <div
                   style={{
                     border: '2px solid rgba(95, 74, 62, 0.5)',
                     borderRadius: 10,
                     padding: '10px 12px',
-                    minWidth: 160,
+                    minWidth: 170,
                     textAlign: 'right',
                     fontWeight: 700,
                     fontSize: 18,
@@ -543,16 +536,16 @@ export default function MyChecksPage() {
                 >
                   {amount ? `$${normalizeMoneyInput(amount)}` : '$0.00'}
                 </div>
-                <div style={{ textAlign: 'right', minWidth: 200 }}>
+                <div style={{ textAlign: 'right', minWidth: 220 }}>
                   <div style={{ fontSize: 12, opacity: 0.7 }}>Signature</div>
                   {requiresSignature ? (
                     <div style={{ marginTop: 6 }}>
                       <canvas
                         ref={signatureCanvasRef}
-                        width={220}
+                        width={240}
                         height={80}
                         style={{
-                          width: 220,
+                          width: 240,
                           height: 80,
                           border: '1px solid rgba(95, 74, 62, 0.35)',
                           borderRadius: 8,
