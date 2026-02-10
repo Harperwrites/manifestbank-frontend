@@ -82,7 +82,7 @@ export default function MyChecksPage() {
   const toDisplay =
     toChoice === 'me' ? meLabel : toChoice === 'custom' ? toCustom || 'Custom recipient' : toChoice
   const requiresSignature = fromChoice === 'me' && direction === 'outgoing'
-  const amountDisplay = amount ? `S${amount}` : ''
+  const amountDisplay = amount ? `$${amount}` : ''
 
   async function buildCheckSnapshot() {
     const canvas = document.createElement('canvas')
@@ -104,10 +104,9 @@ export default function MyChecksPage() {
     if (checkDate) {
       ctx.fillText(`Date: ${checkDate}`, 30, 78)
     }
-    ctx.fillText(`From: ${fromDisplay}`, 30, 110)
-    ctx.fillText(`To: ${toDisplay}`, 30, 140)
+    ctx.fillText(`PAY TO THE ORDER OF ${toDisplay}`, 30, 120)
     if (memo) {
-      ctx.fillText(`Memo: ${memo}`, 30, 170)
+      ctx.fillText(`Memo: ${memo}`, 30, 150)
     }
 
     ctx.strokeStyle = 'rgba(95, 74, 62, 0.7)'
@@ -115,6 +114,8 @@ export default function MyChecksPage() {
     ctx.strokeRect(640, 30, 230, 50)
     ctx.font = '700 18px serif'
     ctx.fillText(`$${formatAmountWithCommas(amount)}`, 650, 62)
+    ctx.font = '600 14px serif'
+    ctx.fillText(`${formatAmountWithCommas(amount)} dollars`, 30, 175)
 
     ctx.font = '500 14px serif'
     ctx.fillText('Signature:', 640, 120)
@@ -443,10 +444,10 @@ export default function MyChecksPage() {
                 <input
                   value={amountDisplay}
                   onChange={(e) => {
-                    const raw = e.target.value.replace(/^s/i, '')
+                    const raw = e.target.value.replace(/^\$/i, '')
                     setAmount(raw.replace(/[^\d.,]/g, ''))
                   }}
-                  placeholder="S0.00"
+                  placeholder="$0.00"
                   style={{
                     padding: '10px 12px',
                     borderRadius: 12,
@@ -605,16 +606,16 @@ export default function MyChecksPage() {
                   <div>{checkDate || '—'}</div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                  <div style={{ fontWeight: 600 }}>From:</div>
-                  <div>{fromDisplay}</div>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                  <div style={{ fontWeight: 600 }}>To:</div>
+                  <div style={{ fontWeight: 600 }}>PAY TO THE ORDER OF:</div>
                   <div>{toDisplay}</div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
                   <div style={{ fontWeight: 600 }}>Memo:</div>
                   <div>{memo || '—'}</div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                  <div style={{ fontWeight: 600 }}>Amount in words:</div>
+                  <div>{amount ? `${formatAmountWithCommas(amount)} dollars` : '—'}</div>
                 </div>
                 <div style={{ fontWeight: 600, fontSize: 13, opacity: 0.8 }}>
                   {direction === 'incoming' ? 'Incoming (Deposit)' : 'Outgoing (Expense)'}
