@@ -55,6 +55,8 @@ export default function MyChecksPage() {
   const [saving, setSaving] = useState(false)
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null)
   const [isSigning, setIsSigning] = useState(false)
+  const [signatureOpen, setSignatureOpen] = useState(false)
+  const [signatureConfirmed, setSignatureConfirmed] = useState(false)
   const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const signatureLastPoint = useRef<{ x: number; y: number } | null>(null)
 
@@ -112,8 +114,8 @@ export default function MyChecksPage() {
 
   async function createCheckEntry() {
     setError('')
-    if (requiresSignature && !signatureDataUrl) {
-      setError('Please sign the check before posting.')
+    if (requiresSignature && (!signatureDataUrl || !signatureConfirmed)) {
+      setError('Please sign and confirm your check below before posting.')
       return
     }
     const parsed = Number(normalizeMoneyInput(amount).trim())
@@ -161,6 +163,8 @@ export default function MyChecksPage() {
       setFromCustom('')
       setToCustom('')
       setSignatureDataUrl(null)
+      setSignatureOpen(false)
+      setSignatureConfirmed(false)
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new Event('accounts:refresh'))
       }
@@ -449,6 +453,30 @@ export default function MyChecksPage() {
                 />
               </label>
 
+              {requiresSignature ? (
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: '#3b2b24',
+                    background: 'rgba(226, 203, 190, 0.45)',
+                    border: '1px solid rgba(140, 92, 78, 0.35)',
+                    borderRadius: 12,
+                    padding: '10px 12px',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={signatureConfirmed}
+                    onChange={(e) => setSignatureConfirmed(e.target.checked)}
+                  />
+                  I have signed this check below.
+                </label>
+              ) : null}
+
               <button
                 type="button"
                 onClick={createCheckEntry}
@@ -502,6 +530,10 @@ export default function MyChecksPage() {
                   </span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                  <div style={{ fontWeight: 600 }}>Date:</div>
+                  <div>{checkDate || '—'}</div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
                   <div style={{ fontWeight: 600 }}>From:</div>
                   <div>{fromDisplay}</div>
                 </div>
@@ -512,10 +544,6 @@ export default function MyChecksPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
                   <div style={{ fontWeight: 600 }}>Memo:</div>
                   <div>{memo || '—'}</div>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                  <div style={{ fontWeight: 600 }}>Date:</div>
-                  <div>{checkDate || '—'}</div>
                 </div>
                 <div style={{ fontWeight: 600, fontSize: 13, opacity: 0.8 }}>
                   {direction === 'incoming' ? 'Incoming (Deposit)' : 'Outgoing (Expense)'}
@@ -539,37 +567,13 @@ export default function MyChecksPage() {
                 <div style={{ textAlign: 'right', minWidth: 220 }}>
                   <div style={{ fontSize: 12, opacity: 0.7 }}>Signature</div>
                   {requiresSignature ? (
-                    <div style={{ marginTop: 6 }}>
-                      <canvas
-                        ref={signatureCanvasRef}
-                        width={240}
-                        height={80}
-                        style={{
-                          width: 240,
-                          height: 80,
-                          border: '1px solid rgba(95, 74, 62, 0.35)',
-                          borderRadius: 8,
-                          background: 'rgba(255,255,255,0.95)',
-                          cursor: 'crosshair',
-                        }}
-                        onPointerDown={(e) => {
-                          const rect = (e.target as HTMLCanvasElement).getBoundingClientRect()
-                          startSignature(e.clientX - rect.left, e.clientY - rect.top)
-                        }}
-                        onPointerMove={(e) => {
-                          if (!isSigning) return
-                          const rect = (e.target as HTMLCanvasElement).getBoundingClientRect()
-                          drawSignature(e.clientX - rect.left, e.clientY - rect.top)
-                        }}
-                        onPointerUp={endSignature}
-                        onPointerLeave={endSignature}
-                      />
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
+                    <div style={{ marginTop: 6, display: 'grid', gap: 6, justifyItems: 'end' }}>
+                      {!signatureOpen ? (
                         <button
                           type="button"
-                          onClick={clearSignature}
+                          onClick={() => setSignatureOpen(true)}
                           style={{
-                            padding: '6px 10px',
+                            padding: '8px 12px',
                             borderRadius: 999,
                             border: '1px solid rgba(140, 92, 78, 0.55)',
                             background: 'rgba(255,255,255,0.75)',
@@ -578,9 +582,53 @@ export default function MyChecksPage() {
                             color: '#3b2b24',
                           }}
                         >
-                          Clear
+                          Click to sign
                         </button>
-                      </div>
+                      ) : (
+                        <>
+                          <canvas
+                            ref={signatureCanvasRef}
+                            width={240}
+                            height={80}
+                            style={{
+                              width: 240,
+                              height: 80,
+                              border: '1px solid rgba(95, 74, 62, 0.35)',
+                              borderRadius: 8,
+                              background: 'rgba(255,255,255,0.95)',
+                              cursor: 'crosshair',
+                            }}
+                            onPointerDown={(e) => {
+                              const rect = (e.target as HTMLCanvasElement).getBoundingClientRect()
+                              startSignature(e.clientX - rect.left, e.clientY - rect.top)
+                            }}
+                            onPointerMove={(e) => {
+                              if (!isSigning) return
+                              const rect = (e.target as HTMLCanvasElement).getBoundingClientRect()
+                              drawSignature(e.clientX - rect.left, e.clientY - rect.top)
+                            }}
+                            onPointerUp={endSignature}
+                            onPointerLeave={endSignature}
+                          />
+                          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
+                            <button
+                              type="button"
+                              onClick={clearSignature}
+                              style={{
+                                padding: '6px 10px',
+                                borderRadius: 999,
+                                border: '1px solid rgba(140, 92, 78, 0.55)',
+                                background: 'rgba(255,255,255,0.75)',
+                                cursor: 'pointer',
+                                fontWeight: 600,
+                                color: '#3b2b24',
+                              }}
+                            >
+                              Clear
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   ) : (
                     <div
