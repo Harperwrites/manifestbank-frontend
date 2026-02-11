@@ -2252,11 +2252,10 @@ export default function EtherPage() {
                   style={{
                     position: 'fixed',
                     top: etherStickyMenuPos.top,
-                    left: 12,
-                    right: 12,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
                     width: 'min(360px, calc(100vw - 24px))',
-                    marginLeft: 'auto',
-                    marginRight: 'auto',
+                    maxWidth: 'calc(100vw - 24px)',
                     borderRadius: 16,
                     border: '1px solid rgba(140, 92, 78, 0.45)',
                     background: 'linear-gradient(180deg, rgba(252, 245, 239, 0.98), rgba(226, 199, 181, 0.96))',
@@ -4697,9 +4696,9 @@ export default function EtherPage() {
             style={{
               width: 'min(420px, 100%)',
               background:
-                'linear-gradient(135deg, rgba(199, 140, 122, 0.98), rgba(226, 203, 190, 0.98))',
+                'linear-gradient(150deg, rgba(74, 50, 44, 0.98), rgba(40, 28, 25, 0.96))',
               borderRadius: 18,
-              border: '1px solid rgba(95, 74, 62, 0.2)',
+              border: '1px solid rgba(214, 178, 160, 0.35)',
               padding: 18,
               boxShadow: 'var(--shadow)',
               display: 'grid',
@@ -4707,10 +4706,10 @@ export default function EtherPage() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 20, fontWeight: 600, color: '#3b2b24' }}>
+            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 20, fontWeight: 600, color: '#f7eee8' }}>
               Profile Photo
             </div>
-            <div style={{ fontSize: 12, opacity: 0.85, color: '#3b2b24' }}>
+            <div style={{ fontSize: 12, opacity: 0.88, color: '#f2e6de' }}>
               Upload a new photo and confirm the crop.
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -4720,7 +4719,7 @@ export default function EtherPage() {
                 style={{
                   padding: '8px 12px',
                   borderRadius: 999,
-                  border: '1px solid rgba(182, 121, 103, 0.6)',
+                  border: '1px solid rgba(182, 121, 103, 0.7)',
                   background: 'linear-gradient(135deg, #c88a77, #b67967)',
                   cursor: 'pointer',
                   fontWeight: 600,
@@ -4750,11 +4749,11 @@ export default function EtherPage() {
                 style={{
                   padding: '8px 12px',
                   borderRadius: 999,
-                  border: '1px solid rgba(140, 92, 78, 0.55)',
-                  background: 'rgba(255,255,255,0.75)',
+                  border: '1px solid rgba(214, 178, 160, 0.45)',
+                  background: 'rgba(255,255,255,0.12)',
                   cursor: 'pointer',
                   fontWeight: 600,
-                  color: '#3b2b24',
+                  color: '#f7eee8',
                 }}
               >
                 Close

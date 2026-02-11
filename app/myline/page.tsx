@@ -913,9 +913,10 @@ export default function MyLinePage() {
                 style={{
                   position: 'absolute',
                   top: '100%',
-                  left: 0,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
                   marginTop: 10,
-                  width: 320,
+                  width: 'min(360px, calc(100vw - 24px))',
                   maxWidth: 'calc(100vw - 24px)',
                   borderRadius: 16,
                   border: '1px solid rgba(140, 92, 78, 0.45)',
@@ -924,6 +925,7 @@ export default function MyLinePage() {
                   padding: 12,
                   color: '#3b2b24',
                   zIndex: 99999,
+                  boxSizing: 'border-box',
                 }}
                 role="menu"
               >
@@ -1655,12 +1657,12 @@ export default function MyLinePage() {
                   type="button"
                   onClick={() => handleOpenThread(preview)}
                   style={{
-                    border: '1px solid rgba(182, 121, 103, 0.35)',
+                    border: '1px solid rgba(140, 92, 78, 0.45)',
                     borderRadius: 18,
                     padding: 16,
                     background: preview.unread
-                      ? 'linear-gradient(135deg, rgba(199, 140, 122, 0.34), rgba(255,255,255,0.92))'
-                      : 'linear-gradient(135deg, rgba(226, 203, 190, 0.85), rgba(255,255,255,0.95))',
+                      ? 'linear-gradient(135deg, rgba(182, 121, 103, 0.55), rgba(255,255,255,0.94))'
+                      : 'linear-gradient(135deg, rgba(226, 203, 190, 0.92), rgba(255,255,255,0.98))',
                     textAlign: 'left',
                     cursor: 'pointer',
                     display: 'flex',
@@ -1672,6 +1674,7 @@ export default function MyLinePage() {
                     maxWidth: '100%',
                     boxSizing: 'border-box',
                     overflow: 'hidden',
+                    color: '#3b2b24',
                   }}
                   onMouseEnter={(event) => {
                     event.currentTarget.style.transform = 'translateY(-1px)'
