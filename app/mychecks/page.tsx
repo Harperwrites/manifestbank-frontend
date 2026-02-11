@@ -33,6 +33,59 @@ function formatAmountWithCommas(value: string) {
   return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(parsed)
 }
 
+function numberToWords(n: number): string {
+  const ones = [
+    '',
+    'One',
+    'Two',
+    'Three',
+    'Four',
+    'Five',
+    'Six',
+    'Seven',
+    'Eight',
+    'Nine',
+    'Ten',
+    'Eleven',
+    'Twelve',
+    'Thirteen',
+    'Fourteen',
+    'Fifteen',
+    'Sixteen',
+    'Seventeen',
+    'Eighteen',
+    'Nineteen',
+  ]
+  const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety']
+
+  if (n === 0) return 'Zero'
+  const toWords = (num: number): string => {
+    if (num < 20) return ones[num]
+    if (num < 100) return `${tens[Math.floor(num / 10)]}${num % 10 ? ` ${ones[num % 10]}` : ''}`
+    if (num < 1000)
+      return `${ones[Math.floor(num / 100)]} Hundred${num % 100 ? ` ${toWords(num % 100)}` : ''}`
+    if (num < 1_000_000)
+      return `${toWords(Math.floor(num / 1000))} Thousand${num % 1000 ? ` ${toWords(num % 1000)}` : ''}`
+    if (num < 1_000_000_000)
+      return `${toWords(Math.floor(num / 1_000_000))} Million${
+        num % 1_000_000 ? ` ${toWords(num % 1_000_000)}` : ''
+      }`
+    return `${toWords(Math.floor(num / 1_000_000_000))} Billion${
+      num % 1_000_000_000 ? ` ${toWords(num % 1_000_000_000)}` : ''
+    }`
+  }
+  return toWords(n).trim()
+}
+
+function formatLegalAmount(value: string): string {
+  const parsed = Number(normalizeMoneyInput(value))
+  if (!Number.isFinite(parsed) || parsed <= 0) return ''
+  const dollars = Math.floor(parsed)
+  const cents = Math.round((parsed - dollars) * 100)
+  const centsText = String(cents).padStart(2, '0')
+  return `${numberToWords(dollars)} and ${centsText}/100`
+}
+
 function toast(message: string) {
   if (typeof window === 'undefined') return
   window.dispatchEvent(new CustomEvent('auth:logged_out', { detail: { message } }))
@@ -114,8 +167,11 @@ export default function MyChecksPage() {
     ctx.strokeRect(640, 30, 230, 50)
     ctx.font = '700 18px serif'
     ctx.fillText(`$${formatAmountWithCommas(amount)}`, 650, 62)
-    ctx.font = '600 14px serif'
-    ctx.fillText(`${formatAmountWithCommas(amount)} dollars`, 30, 175)
+    const legalAmount = formatLegalAmount(amount)
+    if (legalAmount) {
+      ctx.font = '600 14px serif'
+      ctx.fillText(legalAmount, 30, 175)
+    }
 
     ctx.font = '500 14px serif'
     ctx.fillText('Signature:', 640, 120)
@@ -613,9 +669,20 @@ export default function MyChecksPage() {
                   <div style={{ fontWeight: 600 }}>Memo:</div>
                   <div>{memo || '—'}</div>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                  <div style={{ fontWeight: 600 }}>Amount in words:</div>
-                  <div>{amount ? `${formatAmountWithCommas(amount)} dollars` : '—'}</div>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                    borderBottom: '1px solid rgba(95, 74, 62, 0.35)',
+                    paddingBottom: 6,
+                    minHeight: 22,
+                  }}
+                >
+                  <div style={{ fontWeight: 600 }}>
+                    {amount ? formatLegalAmount(amount) : ''}
+                  </div>
+                  <div />
                 </div>
                 <div style={{ fontWeight: 600, fontSize: 13, opacity: 0.8 }}>
                   {direction === 'incoming' ? 'Incoming (Deposit)' : 'Outgoing (Expense)'}
@@ -634,7 +701,7 @@ export default function MyChecksPage() {
                     fontSize: 18,
                   }}
                 >
-                  {amount ? `$${normalizeMoneyInput(amount)}` : '$0.00'}
+                  {amount ? `$${formatAmountWithCommas(amount)}` : '$0.00'}
                 </div>
                 <div style={{ textAlign: 'right', minWidth: 220 }}>
                   <div style={{ fontSize: 12, opacity: 0.7 }}>Signature</div>
