@@ -181,7 +181,7 @@ export default function AffirmationsEntryPage() {
     setLoading(true)
     setError('')
     api
-      .get(`/journal/${id}`)
+      .get(`/affirmations/${id}`)
       .then((res) => {
         setEntry(res.data)
         setDraftTitle(res.data?.title ?? '')
@@ -199,7 +199,7 @@ export default function AffirmationsEntryPage() {
     if (!draftImageFile) return draftImageUrl || null
     const body = new FormData()
     body.append('file', draftImageFile)
-    const res = await api.post('/journal/upload-image', body, {
+    const res = await api.post('/affirmations/upload-image', body, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
     return res.data?.url ?? null
@@ -215,7 +215,7 @@ export default function AffirmationsEntryPage() {
     setError('')
     try {
       const imageUrl = await uploadImageIfNeeded()
-      const res = await api.put(`/journal/${entry.id}`, {
+      const res = await api.put(`/affirmations/${entry.id}`, {
         title: draftTitle.trim(),
         entry_date: draftDate,
         content: draftContent.trim(),

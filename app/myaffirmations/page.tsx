@@ -187,7 +187,7 @@ export default function MyAffirmationsPage() {
     setLoading(true)
     setError('')
     api
-      .get('/journal')
+      .get('/affirmations')
       .then((res) => {
         const list = Array.isArray(res.data) ? res.data : []
         setEntries(list)
@@ -225,7 +225,7 @@ export default function MyAffirmationsPage() {
     if (!draftImageFile) return draftImageUrl || null
     const body = new FormData()
     body.append('file', draftImageFile)
-    const res = await api.post('/journal/upload-image', body, {
+    const res = await api.post('/affirmations/upload-image', body, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
     return res.data?.url ?? null
@@ -240,7 +240,7 @@ export default function MyAffirmationsPage() {
     setError('')
     try {
       const imageUrl = await uploadImageIfNeeded()
-      await api.post('/journal', {
+      await api.post('/affirmations', {
         title: draftTitle.trim(),
         entry_date: draftDate,
         content: draftContent.trim(),
@@ -257,7 +257,7 @@ export default function MyAffirmationsPage() {
   }
 
   async function refreshAfterSave() {
-    const res = await api.get('/journal')
+    const res = await api.get('/affirmations')
     const list = Array.isArray(res.data) ? res.data : []
     setEntries(list)
   }
