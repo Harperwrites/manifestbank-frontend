@@ -188,6 +188,25 @@ a {
 .ether-nav-menu-button {
   font-size: 18px !important;
 }
+
+  .mychecks-preview {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .mychecks-amount {
+    transform: none !important;
+    align-self: flex-end;
+  }
+
+  .mychecks-affirmation {
+    position: static !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin-top: 8px;
+    text-align: center !important;
+    transform: none !important;
+  }
 }
 
 .ether-nav-logo-below {

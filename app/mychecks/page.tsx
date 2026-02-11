@@ -735,6 +735,7 @@ export default function MyChecksPage() {
             }}
           >
             <div
+              className="mychecks-preview"
               style={{
                 borderRadius: 18,
                 border: '2px solid rgba(95, 74, 62, 0.45)',
@@ -880,6 +881,7 @@ export default function MyChecksPage() {
                 }}
               >
                 <div
+                  className="mychecks-amount"
                   style={{
                     border: '2px solid rgba(95, 74, 62, 0.5)',
                     borderRadius: 10,
@@ -901,6 +903,7 @@ export default function MyChecksPage() {
               </div>
               {affirmation ? (
                 <div
+                  className="mychecks-affirmation"
                   style={{
                     position: 'absolute',
                     right: 28,

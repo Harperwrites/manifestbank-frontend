@@ -911,13 +911,14 @@ export default function MyLinePage() {
               <div
                 ref={etherStickyMenuRef}
                 style={{
-                  position: 'absolute',
-                  top: '100%',
+                  position: 'fixed',
+                  top: 'calc(env(safe-area-inset-top) + 64px)',
                   left: '50%',
                   transform: 'translateX(-50%)',
                   marginTop: 10,
                   width: 'min(360px, calc(100vw - 24px))',
                   maxWidth: 'calc(100vw - 24px)',
+                  maxHeight: '60vh',
                   borderRadius: 16,
                   border: '1px solid rgba(140, 92, 78, 0.45)',
                   background: 'linear-gradient(180deg, rgba(252, 245, 239, 0.98), rgba(226, 199, 181, 0.96))',
@@ -926,6 +927,8 @@ export default function MyLinePage() {
                   color: '#3b2b24',
                   zIndex: 99999,
                   boxSizing: 'border-box',
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
                 }}
                 role="menu"
               >
