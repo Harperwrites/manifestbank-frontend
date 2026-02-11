@@ -913,11 +913,11 @@ export default function MyLinePage() {
                 style={{
                   position: 'fixed',
                   top: 'calc(env(safe-area-inset-top) + 64px)',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
+                  left: 'max(12px, env(safe-area-inset-left))',
+                  right: 'max(12px, env(safe-area-inset-right))',
+                  transform: 'none',
                   marginTop: 10,
-                  width: 'min(360px, calc(100vw - 24px))',
-                  maxWidth: 'calc(100vw - 24px)',
+                  width: 'auto',
                   maxHeight: '60vh',
                   borderRadius: 16,
                   border: '1px solid rgba(140, 92, 78, 0.45)',
@@ -1069,6 +1069,9 @@ export default function MyLinePage() {
                           alignItems: 'center',
                           textAlign: 'left',
                           cursor: 'pointer',
+                          width: '100%',
+                          boxSizing: 'border-box',
+                          overflow: 'hidden',
                         }}
                       >
                         <div
@@ -1102,9 +1105,12 @@ export default function MyLinePage() {
                             style={{
                               fontWeight: 600,
                               fontSize: 12,
-                              whiteSpace: 'nowrap',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 1,
+                              WebkitBoxOrient: 'vertical',
                               overflow: 'hidden',
-                              textOverflow: 'ellipsis',
+                              whiteSpace: 'normal',
+                              wordBreak: 'break-word',
                             }}
                           >
                             {preview.counterpart_display_name ?? 'Member'}
@@ -1113,9 +1119,12 @@ export default function MyLinePage() {
                             style={{
                               fontSize: 11,
                               opacity: 0.7,
-                              whiteSpace: 'nowrap',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
                               overflow: 'hidden',
-                              textOverflow: 'ellipsis',
+                              whiteSpace: 'normal',
+                              wordBreak: 'break-word',
                             }}
                           >
                             {preview.message ?? ''}
@@ -1664,8 +1673,8 @@ export default function MyLinePage() {
                     borderRadius: 18,
                     padding: 16,
                     background: preview.unread
-                      ? 'linear-gradient(135deg, rgba(182, 121, 103, 0.55), rgba(255,255,255,0.94))'
-                      : 'linear-gradient(135deg, rgba(226, 203, 190, 0.92), rgba(255,255,255,0.98))',
+                      ? 'linear-gradient(135deg, rgba(170, 110, 96, 0.75), rgba(250, 238, 232, 0.98))'
+                      : 'linear-gradient(135deg, rgba(210, 180, 168, 0.9), rgba(255,255,255,0.98))',
                     textAlign: 'left',
                     cursor: 'pointer',
                     display: 'flex',
@@ -1777,11 +1786,14 @@ export default function MyLinePage() {
                       style={{
                         marginTop: 6,
                         fontSize: 13,
-                        opacity: 0.9,
+                        opacity: 0.92,
                         color: '#3b2b24',
-                        whiteSpace: 'nowrap',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
                         overflow: 'hidden',
-                        textOverflow: 'ellipsis',
+                        whiteSpace: 'normal',
+                        wordBreak: 'break-word',
                       }}
                     >
                       {preview.message ?? ''}

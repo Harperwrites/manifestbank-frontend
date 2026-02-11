@@ -829,12 +829,15 @@ export default function MyChecksPage() {
                                 borderRadius: 8,
                                 background: 'rgba(255,255,255,0.95)',
                                 cursor: 'crosshair',
+                                touchAction: 'none',
                               }}
                               onPointerDown={(e) => {
+                                e.preventDefault()
                                 const rect = (e.target as HTMLCanvasElement).getBoundingClientRect()
                                 startSignature(e.clientX - rect.left, e.clientY - rect.top)
                               }}
                               onPointerMove={(e) => {
+                                e.preventDefault()
                                 if (!isSigning) return
                                 const rect = (e.target as HTMLCanvasElement).getBoundingClientRect()
                                 drawSignature(e.clientX - rect.left, e.clientY - rect.top)

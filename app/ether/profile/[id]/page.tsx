@@ -841,13 +841,14 @@ export default function EtherProfilePage() {
                               />
                             ) : null}
                             <div style={{ marginTop: 8, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                              <Button
-                                variant={post.liked_by_me ? 'solid' : 'outline'}
-                                onClick={() => alignPost(post.id)}
-                                className={alignPulseId === post.id ? 'align-heart-pulse' : undefined}
-                              >
-                                {post.liked_by_me ? 'Aligned' : 'Align'} · {post.like_count}
-                              </Button>
+                              <div className={alignPulseId === post.id ? 'align-heart-pulse' : undefined}>
+                                <Button
+                                  variant={post.liked_by_me ? 'solid' : 'outline'}
+                                  onClick={() => alignPost(post.id)}
+                                >
+                                  {post.liked_by_me ? 'Aligned' : 'Align'} · {post.like_count}
+                                </Button>
+                              </div>
                               <Button
                                 variant="outline"
                                 onClick={() => {

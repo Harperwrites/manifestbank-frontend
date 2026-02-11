@@ -2252,10 +2252,10 @@ export default function EtherPage() {
                   style={{
                     position: 'fixed',
                     top: etherStickyMenuPos.top,
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    width: 'min(360px, calc(100vw - 24px))',
-                    maxWidth: 'calc(100vw - 24px)',
+                    left: 'max(12px, env(safe-area-inset-left))',
+                    right: 'max(12px, env(safe-area-inset-right))',
+                    transform: 'none',
+                    width: 'auto',
                     borderRadius: 16,
                     border: '1px solid rgba(140, 92, 78, 0.45)',
                     background: 'linear-gradient(180deg, rgba(252, 245, 239, 0.98), rgba(226, 199, 181, 0.96))',
@@ -2375,9 +2375,12 @@ export default function EtherPage() {
                               <div
                                 style={{
                                   opacity: 0.7,
-                                  whiteSpace: 'nowrap',
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: 'vertical',
                                   overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'normal',
+                                  wordBreak: 'break-word',
                                 }}
                               >
                                 {note.message}
