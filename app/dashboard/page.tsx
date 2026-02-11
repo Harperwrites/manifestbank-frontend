@@ -66,6 +66,7 @@ type ActivityItem = {
   memo: string | null
   entryId: string | number | null
   accountId: number
+  checkSnapshot?: string | null
 }
 
 type PortfolioSummary = {
@@ -150,6 +151,7 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState<any>(null)
   const [wealthTarget, setWealthTarget] = useState<number | null>(null)
   const [selectedActivity, setSelectedActivity] = useState<ActivityItem | null>(null)
+  const [activityCheckPreview, setActivityCheckPreview] = useState<string | null>(null)
   const [pendingModalOpen, setPendingModalOpen] = useState(false)
   const [pendingDetail, setPendingDetail] = useState<PendingCredit | null>(null)
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null)
@@ -578,7 +580,7 @@ export default function DashboardPage() {
       const results = await Promise.all(
         list.map(async (acct) => {
           try {
-            const res = await api.get(`/accounts/${acct.id}/ledger?limit=20&offset=0`)
+              const res = await api.get(`/accounts/${acct.id}/ledger?limit=20&offset=0`)
             const entries = Array.isArray(res.data) ? res.data : []
             return entries.map((entry: any) => ({
               id: `acct-${acct.id}-${entry.id ?? entry.created_at ?? Math.random()}`,
@@ -594,6 +596,7 @@ export default function DashboardPage() {
               memo: entry.memo ?? null,
               entryId: entry.id ?? null,
               accountId: acct.id,
+              checkSnapshot: entry.meta?.check_snapshot ?? null,
             }))
           } catch {
             return []
@@ -2180,8 +2183,77 @@ export default function DashboardPage() {
                   label="Entry ID"
                   value={selectedActivity.entryId ? String(selectedActivity.entryId) : '—'}
                 />
+                {selectedActivity.checkSnapshot ? (
+                  <button
+                    type="button"
+                    onClick={() => setActivityCheckPreview(selectedActivity.checkSnapshot ?? null)}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: 12,
+                      border: '1px solid rgba(140, 92, 78, 0.4)',
+                      background: 'rgba(255, 255, 255, 0.7)',
+                      fontWeight: 600,
+                      color: '#3b2b24',
+                      cursor: 'pointer',
+                      marginTop: 8,
+                    }}
+                  >
+                    View Check
+                  </button>
+                ) : null}
               </div>
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {activityCheckPreview ? (
+        <div
+          onClick={() => setActivityCheckPreview(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(21, 16, 12, 0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 90,
+            padding: 20,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: 'min(720px, 100%)',
+              background: '#f8f4f0',
+              borderRadius: 20,
+              padding: 16,
+              boxShadow: 'var(--shadow)',
+              display: 'grid',
+              gap: 12,
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
+              <div style={{ fontWeight: 600 }}>Check Preview</div>
+              <button
+                type="button"
+                onClick={() => setActivityCheckPreview(null)}
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  fontSize: 14,
+                  opacity: 0.7,
+                }}
+              >
+                Close
+              </button>
+            </div>
+            <img
+              src={activityCheckPreview}
+              alt="Check preview"
+              style={{ width: '100%', height: 'auto', borderRadius: 12 }}
+            />
           </div>
         </div>
       ) : null}

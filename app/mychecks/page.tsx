@@ -306,6 +306,18 @@ export default function MyChecksPage() {
     }
   }, [])
 
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    if (signatureOpen) {
+      const prevOverflow = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+      return () => {
+        document.body.style.overflow = prevOverflow
+      }
+    }
+    return undefined
+  }, [signatureOpen])
+
   function swapParties() {
     const nextFrom = toChoice
     const nextTo = fromChoice
