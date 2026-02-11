@@ -25,6 +25,7 @@ type EtherPost = {
   image_url?: string | null
   created_at: string
   like_count: number
+  liked_by_me?: boolean
   comment_count: number
   author_display_name?: string | null
   author_avatar_url?: string | null
@@ -39,6 +40,7 @@ type EtherComment = {
   author_display_name?: string | null
   author_avatar_url?: string | null
   align_count?: number
+  aligned_by_me?: boolean
 }
 
 const IMAGE_FALLBACK =
@@ -66,6 +68,7 @@ export default function EtherProfilePage() {
   const [commentDrafts, setCommentDrafts] = useState<Record<number, string>>({})
   const [commentLoading, setCommentLoading] = useState<Record<number, boolean>>({})
   const [commentMsg, setCommentMsg] = useState<Record<number, string>>({})
+  const [alignPulseId, setAlignPulseId] = useState<number | null>(null)
   const [confirmAction, setConfirmAction] = useState<null | 'unsync' | 'cancel'>(null)
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null)
   const [etherNoticeCount, setEtherNoticeCount] = useState(0)
@@ -274,6 +277,25 @@ export default function EtherProfilePage() {
       setCommentMsg((prev) => ({ ...prev, [postId]: msg }))
     } finally {
       setCommentLoading((prev) => ({ ...prev, [postId]: false }))
+    }
+  }
+
+  async function alignPost(postId: number) {
+    setAlignPulseId(postId)
+    window.setTimeout(() => setAlignPulseId((prev) => (prev === postId ? null : prev)), 420)
+    setPosts((prev) =>
+      prev.map((p) => {
+        if (p.id !== postId) return p
+        const liked = !p.liked_by_me
+        const count = (p.like_count ?? 0) + (liked ? 1 : -1)
+        return { ...p, liked_by_me: liked, like_count: Math.max(0, count) }
+      })
+    )
+    try {
+      await api.post(`/ether/posts/${postId}/like`)
+    } catch (e: any) {
+      const message = e?.response?.data?.detail ?? e?.message ?? 'Align failed.'
+      setMsg(message)
     }
   }
 
@@ -819,7 +841,13 @@ export default function EtherProfilePage() {
                               />
                             ) : null}
                             <div style={{ marginTop: 8, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                              <div style={{ fontSize: 12, opacity: 0.7 }}>Aligned · {post.like_count}</div>
+                              <Button
+                                variant={post.liked_by_me ? 'solid' : 'outline'}
+                                onClick={() => alignPost(post.id)}
+                                className={alignPulseId === post.id ? 'align-heart-pulse' : undefined}
+                              >
+                                {post.liked_by_me ? 'Aligned' : 'Align'} · {post.like_count}
+                              </Button>
                               <Button
                                 variant="outline"
                                 onClick={() => {
@@ -930,7 +958,7 @@ export default function EtherProfilePage() {
                                             onClick={() => alignComment(post.id, comment.id)}
                                             disabled={commentLoading[post.id]}
                                           >
-                                            Align · {comment.align_count ?? 0}
+                                            {comment.aligned_by_me ? 'Aligned' : 'Align'} · {comment.align_count ?? 0}
                                           </Button>
                                         </div>
                                       </div>
