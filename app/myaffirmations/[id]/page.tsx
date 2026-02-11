@@ -8,6 +8,11 @@ import Link from 'next/link'
 import Navbar from '@/app/components/Navbar'
 import { api } from '@/lib/api'
 
+function toast(message: string) {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new CustomEvent('auth:logged_out', { detail: { message } }))
+}
+
 const buttonStyle: CSSProperties = {
   borderRadius: 999,
   border: '1px solid rgba(95, 74, 62, 0.35)',
@@ -176,7 +181,7 @@ export default function AffirmationsEntryPage() {
     setLoading(true)
     setError('')
     api
-      .get(`/affirmations/${id}`)
+      .get(`/journal/${id}`)
       .then((res) => {
         setEntry(res.data)
         setDraftTitle(res.data?.title ?? '')
@@ -194,7 +199,7 @@ export default function AffirmationsEntryPage() {
     if (!draftImageFile) return draftImageUrl || null
     const body = new FormData()
     body.append('file', draftImageFile)
-    const res = await api.post('/affirmations/upload-image', body, {
+    const res = await api.post('/journal/upload-image', body, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
     return res.data?.url ?? null
@@ -210,7 +215,7 @@ export default function AffirmationsEntryPage() {
     setError('')
     try {
       const imageUrl = await uploadImageIfNeeded()
-      const res = await api.put(`/affirmations/${entry.id}`, {
+      const res = await api.put(`/journal/${entry.id}`, {
         title: draftTitle.trim(),
         entry_date: draftDate,
         content: draftContent.trim(),
@@ -220,6 +225,7 @@ export default function AffirmationsEntryPage() {
       setDraftImageUrl(res.data?.image_url ?? '')
       setDraftImageFile(null)
       setEditing(false)
+      toast('Affirmation updated.')
     } catch (err: any) {
       setError(err?.response?.data?.detail ?? err?.message ?? 'Failed to save entry.')
     } finally {
