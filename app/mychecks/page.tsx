@@ -27,6 +27,61 @@ const recipientPresets = [
   'Partner',
 ]
 
+const checkAffirmations = [
+  'Money flows to me.',
+  'I welcome aligned wealth.',
+  'Abundance is natural to me.',
+  'I receive with ease.',
+  'Wealth supports my vision.',
+  'I am financially expanding.',
+  'Money loves clarity.',
+  'I honor my prosperity.',
+  'Income increases daily.',
+  'I circulate wealth wisely.',
+  'My value multiplies.',
+  'Prosperity finds me.',
+  'I expect overflow.',
+  'I am paid in full.',
+  'Wealth answers my call.',
+  'I attract premium opportunities.',
+  'Money meets momentum.',
+  'I approve abundance.',
+  'My accounts grow steadily.',
+  'I am a wealth magnet.',
+  'Revenue rises naturally.',
+  'I invest in myself.',
+  'Cash flows continuously.',
+  'I am richly supported.',
+  'My work is well rewarded.',
+  'Wealth feels safe here.',
+  'I allow financial miracles.',
+  'My income is scalable.',
+  'I receive without guilt.',
+  'I create valuable impact.',
+  'Abundance backs me.',
+  'Money moves toward me.',
+  'I choose profitable paths.',
+  'My worth compounds.',
+  'I operate in overflow.',
+  'Wealth is my baseline.',
+  'I expand my earning power.',
+  'Prosperity is expected.',
+  'I attract high-value exchanges.',
+  'Money responds to focus.',
+  'I am divinely resourced.',
+  'My finances align.',
+  'Income streams activate.',
+  'I deposit confidence.',
+  'My wealth circulates back.',
+  'I trust financial growth.',
+  'Abundance feels familiar.',
+  'I approve premium pricing.',
+  'Wealth builds through me.',
+  'I am financially favored.',
+  'My prosperity is lawful.',
+  'Money arrives on time.',
+]
+
 function formatAmountWithCommas(value: string) {
   const parsed = Number(normalizeMoneyInput(value))
   if (!Number.isFinite(parsed)) return '0.00'
@@ -95,6 +150,13 @@ function normalizeMoneyInput(value: string) {
   return value.replace(/[^\d.,]/g, '').replace(/,/g, '')
 }
 
+function pickCheckAffirmation() {
+  if (checkAffirmations.length === 0) return { text: '', angle: 0 }
+  const text = checkAffirmations[Math.floor(Math.random() * checkAffirmations.length)]
+  const angle = Math.random() < 0.5 ? -2 : 2
+  return { text, angle }
+}
+
 export default function MyChecksPage() {
   const router = useRouter()
   const [me, setMe] = useState<Me | null>(null)
@@ -112,6 +174,8 @@ export default function MyChecksPage() {
   const [checkDate, setCheckDate] = useState('')
   const [accountId, setAccountId] = useState<number | ''>('')
   const [saving, setSaving] = useState(false)
+  const [affirmation, setAffirmation] = useState('')
+  const [affirmationAngle, setAffirmationAngle] = useState(0)
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null)
   const [isSigning, setIsSigning] = useState(false)
   const [signatureOpen, setSignatureOpen] = useState(false)
@@ -137,7 +201,7 @@ export default function MyChecksPage() {
   const requiresSignature = fromChoice === 'me' && direction === 'outgoing'
   const amountDisplay = amount ? `$${amount}` : ''
 
-  async function buildCheckSnapshot() {
+  async function buildCheckSnapshot(payload?: { affirmation?: string; angle?: number }) {
     const canvas = document.createElement('canvas')
     canvas.width = 900
     canvas.height = 260
@@ -167,6 +231,24 @@ export default function MyChecksPage() {
     ctx.strokeRect(640, 30, 230, 50)
     ctx.font = '700 18px serif'
     ctx.fillText(`$${formatAmountWithCommas(amount)}`, 650, 62)
+
+    const affirmationText = payload?.affirmation ?? ''
+    if (affirmationText) {
+      const boxX = 640
+      const boxY = 90
+      const boxW = 230
+      const boxH = 36
+      ctx.save()
+      ctx.translate(boxX + boxW / 2, boxY + boxH / 2)
+      const rotateAngle = ((payload?.angle ?? 0) * Math.PI) / 180
+      ctx.rotate(rotateAngle)
+      ctx.font = 'italic 18px "Allura", "Great Vibes", "Dancing Script", cursive'
+      ctx.fillStyle = 'rgba(122, 86, 72, 0.85)'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(affirmationText, 0, 0, boxW - 8)
+      ctx.restore()
+    }
     const legalAmount = formatLegalAmount(amount)
     if (legalAmount) {
       ctx.font = '600 14px serif'
@@ -174,13 +256,13 @@ export default function MyChecksPage() {
     }
 
     ctx.font = '500 14px serif'
-    ctx.fillText('Signature:', 640, 120)
+    ctx.fillText('Signature:', 640, 135)
 
     if (requiresSignature && signatureDataUrl) {
       await new Promise<void>((resolve) => {
         const img = new Image()
         img.onload = () => {
-          ctx.drawImage(img, 640, 130, 230, 70)
+          ctx.drawImage(img, 640, 145, 230, 70)
           resolve()
         }
         img.onerror = () => resolve()
@@ -188,7 +270,7 @@ export default function MyChecksPage() {
       })
     } else {
       ctx.font = 'italic 26px \"Allura\", \"Great Vibes\", \"Pacifico\", \"Brush Script MT\", cursive'
-      ctx.fillText(fromDisplay, 640, 175)
+      ctx.fillText(fromDisplay, 640, 190)
     }
 
     ctx.font = '500 12px serif'
@@ -212,6 +294,11 @@ export default function MyChecksPage() {
       } finally {
         if (mounted) setLoading(false)
       }
+    }
+    const initialAffirmation = pickCheckAffirmation()
+    if (mounted) {
+      setAffirmation(initialAffirmation.text)
+      setAffirmationAngle(initialAffirmation.angle)
     }
     load()
     return () => {
@@ -249,6 +336,9 @@ export default function MyChecksPage() {
     const directionLabel = direction === 'incoming' ? 'credit' : 'debit'
     const entryType = direction === 'incoming' ? 'deposit' : 'withdrawal'
     const reference = checkNumber ? `check-${checkNumber}` : 'check'
+    const affirmationPick = pickCheckAffirmation()
+    setAffirmation(affirmationPick.text)
+    setAffirmationAngle(affirmationPick.angle)
     const detail = {
       from: fromDisplay,
       to: toDisplay,
@@ -258,10 +348,15 @@ export default function MyChecksPage() {
       direction,
       check_date: checkDate || null,
       signature: requiresSignature ? signatureDataUrl : null,
+      affirmation: affirmationPick.text,
+      affirmation_angle: affirmationPick.angle,
     }
     setSaving(true)
     try {
-      const checkSnapshot = typeof window !== 'undefined' ? await buildCheckSnapshot() : null
+      const checkSnapshot =
+        typeof window !== 'undefined'
+          ? await buildCheckSnapshot({ affirmation: affirmationPick.text, angle: affirmationPick.angle })
+          : null
       await api.post('/ledger/entries', {
         account_id: Number(accountId),
         direction: directionLabel,
@@ -285,6 +380,8 @@ export default function MyChecksPage() {
       setSignatureDataUrl(null)
       setSignatureOpen(false)
       setSignatureConfirmed(false)
+      setAffirmation('')
+      setAffirmationAngle(0)
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new Event('accounts:refresh'))
       }
@@ -648,6 +745,7 @@ export default function MyChecksPage() {
                 display: 'flex',
                 gap: 20,
                 alignItems: 'stretch',
+                position: 'relative',
               }}
             >
               <div style={{ display: 'grid', gap: 8, flex: 1, minWidth: 0 }}>
@@ -684,108 +782,152 @@ export default function MyChecksPage() {
                   </div>
                   <div />
                 </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <div style={{ textAlign: 'right', minWidth: 220 }}>
+                    <div style={{ fontSize: 12, opacity: 0.7 }}>Signature</div>
+                    {requiresSignature ? (
+                      <div style={{ marginTop: 6, display: 'grid', gap: 6, justifyItems: 'end' }}>
+                        {!signatureOpen ? (
+                          <button
+                            type="button"
+                            onClick={() => setSignatureOpen(true)}
+                            style={{
+                              padding: '8px 12px',
+                              borderRadius: 999,
+                              border: '1px solid rgba(140, 92, 78, 0.55)',
+                              background: 'rgba(226, 203, 190, 0.45)',
+                              cursor: 'pointer',
+                              fontWeight: 600,
+                              color: '#3b2b24',
+                            }}
+                          >
+                            Click to sign
+                          </button>
+                        ) : (
+                          <>
+                            <canvas
+                              ref={signatureCanvasRef}
+                              width={240}
+                              height={80}
+                              style={{
+                                width: 240,
+                                height: 80,
+                                border: '1px solid rgba(95, 74, 62, 0.35)',
+                                borderRadius: 8,
+                                background: 'rgba(255,255,255,0.95)',
+                                cursor: 'crosshair',
+                              }}
+                              onPointerDown={(e) => {
+                                const rect = (e.target as HTMLCanvasElement).getBoundingClientRect()
+                                startSignature(e.clientX - rect.left, e.clientY - rect.top)
+                              }}
+                              onPointerMove={(e) => {
+                                if (!isSigning) return
+                                const rect = (e.target as HTMLCanvasElement).getBoundingClientRect()
+                                drawSignature(e.clientX - rect.left, e.clientY - rect.top)
+                              }}
+                              onPointerUp={endSignature}
+                              onPointerLeave={endSignature}
+                            />
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
+                              <button
+                                type="button"
+                                onClick={clearSignature}
+                                style={{
+                                  padding: '6px 10px',
+                                  borderRadius: 999,
+                                  border: '1px solid rgba(140, 92, 78, 0.55)',
+                                  background: 'rgba(255,255,255,0.75)',
+                                  cursor: 'pointer',
+                                  fontWeight: 600,
+                                  color: '#3b2b24',
+                                }}
+                              >
+                                Clear
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      <div
+                        style={{
+                          marginTop: 8,
+                          fontFamily: '"Allura", "Great Vibes", "Pacifico", "Brush Script MT", cursive',
+                          fontSize: 28,
+                          color: '#3b2b24',
+                        }}
+                      >
+                        {fromDisplay}
+                      </div>
+                    )}
+                    <div style={{ fontSize: 12, opacity: 0.75, textAlign: 'right', marginTop: 8 }}>
+                      *ManifestBank™ is NOT a financial institution.
+                    </div>
+                  </div>
+                </div>
                 <div style={{ fontWeight: 600, fontSize: 13, opacity: 0.8 }}>
                   {direction === 'incoming' ? 'Incoming (Deposit)' : 'Outgoing (Expense)'}
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gap: 10, justifyItems: 'end', minWidth: 260 }}>
+              <div
+                style={{
+                  display: 'grid',
+                  gap: 10,
+                  justifyItems: 'end',
+                  alignSelf: 'flex-start',
+                }}
+              >
                 <div
                   style={{
                     border: '2px solid rgba(95, 74, 62, 0.5)',
                     borderRadius: 10,
-                    padding: '10px 12px',
-                    minWidth: 170,
-                    textAlign: 'right',
+                    padding: '4px 10px',
+                    width: 150,
+                    height: 28,
+                    textAlign: 'center',
                     fontWeight: 700,
-                    fontSize: 18,
+                    fontSize: 16,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'flex-end',
+                    marginTop: 6,
+                    transform: 'translateX(-156px)',
                   }}
                 >
                   {amount ? `$${formatAmountWithCommas(amount)}` : '$0.00'}
                 </div>
-                <div style={{ textAlign: 'right', minWidth: 220 }}>
-                  <div style={{ fontSize: 12, opacity: 0.7 }}>Signature</div>
-                  {requiresSignature ? (
-                    <div style={{ marginTop: 6, display: 'grid', gap: 6, justifyItems: 'end' }}>
-                      {!signatureOpen ? (
-                        <button
-                          type="button"
-                          onClick={() => setSignatureOpen(true)}
-                          style={{
-                            padding: '8px 12px',
-                            borderRadius: 999,
-                            border: '1px solid rgba(140, 92, 78, 0.55)',
-                            background: 'rgba(226, 203, 190, 0.45)',
-                            cursor: 'pointer',
-                            fontWeight: 600,
-                            color: '#3b2b24',
-                          }}
-                        >
-                          Click to sign
-                        </button>
-                      ) : (
-                        <>
-                          <canvas
-                            ref={signatureCanvasRef}
-                            width={240}
-                            height={80}
-                            style={{
-                              width: 240,
-                              height: 80,
-                              border: '1px solid rgba(95, 74, 62, 0.35)',
-                              borderRadius: 8,
-                              background: 'rgba(255,255,255,0.95)',
-                              cursor: 'crosshair',
-                            }}
-                            onPointerDown={(e) => {
-                              const rect = (e.target as HTMLCanvasElement).getBoundingClientRect()
-                              startSignature(e.clientX - rect.left, e.clientY - rect.top)
-                            }}
-                            onPointerMove={(e) => {
-                              if (!isSigning) return
-                              const rect = (e.target as HTMLCanvasElement).getBoundingClientRect()
-                              drawSignature(e.clientX - rect.left, e.clientY - rect.top)
-                            }}
-                            onPointerUp={endSignature}
-                            onPointerLeave={endSignature}
-                          />
-                          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
-                            <button
-                              type="button"
-                              onClick={clearSignature}
-                              style={{
-                                padding: '6px 10px',
-                                borderRadius: 999,
-                                border: '1px solid rgba(140, 92, 78, 0.55)',
-                                background: 'rgba(255,255,255,0.75)',
-                                cursor: 'pointer',
-                                fontWeight: 600,
-                                color: '#3b2b24',
-                              }}
-                            >
-                              Clear
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  ) : (
-                    <div
-                      style={{
-                        marginTop: 8,
-                        fontFamily: '"Allura", "Great Vibes", "Pacifico", "Brush Script MT", cursive',
-                        fontSize: 28,
-                        color: '#3b2b24',
-                      }}
-                    >
-                      {fromDisplay}
-                    </div>
-                  )}
-                </div>
-                <div style={{ fontSize: 12, opacity: 0.75, textAlign: 'right' }}>
-                  *ManifestBank™ is NOT a financial institution.
-                </div>
               </div>
+              {affirmation ? (
+                <div
+                  style={{
+                    position: 'absolute',
+                    right: 28,
+                    top: 78,
+                    width: 110,
+                    textAlign: 'center',
+                    fontFamily: '"Playfair Display", "Cormorant Garamond", "Libre Baskerville", serif',
+                    fontSize: 22,
+                    fontWeight: 700,
+                    color: 'rgba(122, 86, 72, 0.85)',
+                    transform: `rotate(${affirmationAngle}deg)`,
+                    lineHeight: 1.3,
+                    wordBreak: 'break-word',
+                    pointerEvents: 'none',
+                    padding: '6px 4px',
+                    borderRadius: 12,
+                    background:
+                      'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.7), rgba(255,255,255,0) 55%), radial-gradient(circle at 80% 30%, rgba(255,233,210,0.75), rgba(255,233,210,0) 60%), radial-gradient(circle at 40% 80%, rgba(255,255,255,0.6), rgba(255,255,255,0) 55%)',
+                    textShadow:
+                      '0 0 6px rgba(255, 236, 215, 0.7), 0 0 10px rgba(255, 236, 215, 0.5)',
+                  }}
+                >
+                  {affirmation.split(' ').map((word, index) => (
+                    <div key={`${word}-${index}`}>{word}</div>
+                  ))}
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
