@@ -829,10 +829,17 @@ export default function MyAffirmationsPage() {
             <div style={{ opacity: 0.7 }}>No affirmation entries yet.</div>
           ) : (
             affirmationsEntries.map((entry) => (
-              <button
+              <div
                 key={entry.id}
-                type="button"
+                role="button"
+                tabIndex={0}
                 onClick={() => router.push(`/myaffirmations/${entry.id}`)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    router.push(`/myaffirmations/${entry.id}`)
+                  }
+                }}
                 style={{
                   textAlign: 'left',
                   borderRadius: 16,
@@ -842,6 +849,7 @@ export default function MyAffirmationsPage() {
                   cursor: 'pointer',
                   boxShadow: '0 12px 24px rgba(0,0,0,0.05)',
                   position: 'relative',
+                  outline: 'none',
                 }}
               >
                 <button
@@ -870,7 +878,7 @@ export default function MyAffirmationsPage() {
                 <div style={{ fontSize: 13, opacity: 0.8 }}>
                   {entry.content.length > 120 ? `${entry.content.slice(0, 120)}…` : entry.content}
                 </div>
-              </button>
+              </div>
             ))
           )}
         </div>

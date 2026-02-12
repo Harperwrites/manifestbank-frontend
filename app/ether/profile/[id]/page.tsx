@@ -841,14 +841,56 @@ export default function EtherProfilePage() {
                               />
                             ) : null}
                             <div style={{ marginTop: 8, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                              <div className={alignPulseId === post.id ? 'align-heart-pulse' : undefined}>
-                                <Button
-                                  variant={post.liked_by_me ? 'solid' : 'outline'}
+                              {post.liked_by_me ? (
+                                <button
+                                  type="button"
                                   onClick={() => alignPost(post.id)}
+                                  style={{
+                                    borderRadius: 999,
+                                    border: '1px solid rgba(140, 92, 78, 0.45)',
+                                    background: 'rgba(182, 121, 103, 0.2)',
+                                    padding: '6px 12px',
+                                    cursor: 'pointer',
+                                    fontSize: 12,
+                                    fontWeight: 600,
+                                    color: '#6f4a3a',
+                                    textShadow: '0 0 10px rgba(182, 121, 103, 0.45)',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 6,
+                                  }}
                                 >
-                                  {post.liked_by_me ? 'Aligned' : 'Align'} · {post.like_count}
+                                  <span
+                                    className={alignPulseId === post.id ? 'align-heart-pulse' : ''}
+                                    style={{ color: '#b67967', display: 'inline-flex', alignItems: 'center' }}
+                                  >
+                                    <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                                      <path
+                                        d="M12 20.4s-6.4-4-8.2-7.1C2.3 10.6 3.4 8.6 5.6 8.1c1.7-.4 3.2.4 4.1 1.5l.3.4.3-.4c.9-1.1 2.4-1.9 4.1-1.5 2.2.5 3.3 2.5 1.8 5.2-1.8 3.1-8.2 7.1-8.2 7.1z"
+                                        fill="currentColor"
+                                      />
+                                    </svg>
+                                  </span>
+                                  Aligned · {post.like_count}
+                                </button>
+                              ) : (
+                                <Button variant="outline" onClick={() => alignPost(post.id)}>
+                                  <span
+                                    className={alignPulseId === post.id ? 'align-heart-pulse' : ''}
+                                    style={{ marginRight: 6, display: 'inline-flex', alignItems: 'center' }}
+                                  >
+                                    <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                                      <path
+                                        d="M12 20.4s-6.4-4-8.2-7.1C2.3 10.6 3.4 8.6 5.6 8.1c1.7-.4 3.2.4 4.1 1.5l.3.4.3-.4c.9-1.1 2.4-1.9 4.1-1.5 2.2.5 3.3 2.5 1.8 5.2-1.8 3.1-8.2 7.1-8.2 7.1z"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="1.6"
+                                      />
+                                    </svg>
+                                  </span>
+                                  Align · {post.like_count}
                                 </Button>
-                              </div>
+                              )}
                               <Button
                                 variant="outline"
                                 onClick={() => {
