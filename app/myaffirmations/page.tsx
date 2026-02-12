@@ -354,10 +354,8 @@ export default function MyAffirmationsPage() {
   )
 
   const isDailySaved = useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10)
-    return savedAffirmations.some(
-      (entry) => entry.entry_date === today && entry.content.trim() === dailyAffirmation.trim()
-    )
+    const needle = dailyAffirmation.trim()
+    return savedAffirmations.some((entry) => entry.content.trim() === needle)
   }, [savedAffirmations, dailyAffirmation])
 
   function resetDraft() {
@@ -416,6 +414,10 @@ export default function MyAffirmationsPage() {
 
   async function saveDailyAffirmation() {
     if (!dailyAffirmation || savingDaily) return
+    if (isDailySaved) {
+      toast('Affirmation already saved.')
+      return
+    }
     setSavingDaily(true)
     setError('')
     try {
@@ -686,7 +688,7 @@ export default function MyAffirmationsPage() {
             <button
               type="button"
               onClick={saveDailyAffirmation}
-              disabled={savingDaily}
+              disabled={savingDaily || isDailySaved}
               style={{
                 borderRadius: 999,
                 border: '1px solid rgba(130, 92, 78, 0.6)',
@@ -725,7 +727,7 @@ export default function MyAffirmationsPage() {
                   </svg>
                 )}
               </span>
-              {savingDaily ? 'Saving…' : 'Save affirmation'}
+              {savingDaily ? 'Saving…' : isDailySaved ? 'Saved' : 'Save affirmation'}
             </button>
           </div>
         </div>
@@ -751,13 +753,22 @@ export default function MyAffirmationsPage() {
                 New Entry
               </button>
             </div>
-            <div
+            <button
+              type="button"
+              onClick={() => {
+                if (savedAffirmations.length > 0) {
+                  router.push('/myaffirmations/saved')
+                }
+              }}
               style={{
                 borderRadius: 16,
                 border: '1px solid rgba(95, 74, 62, 0.2)',
                 background: 'rgba(255, 255, 255, 0.75)',
                 padding: 12,
                 boxShadow: '0 12px 24px rgba(0,0,0,0.05)',
+                textAlign: 'left',
+                cursor: savedAffirmations.length > 0 ? 'pointer' : 'default',
+                width: '100%',
               }}
             >
               <div style={{ fontWeight: 600, marginBottom: 8 }}>Saved affirmations</div>
@@ -767,29 +778,26 @@ export default function MyAffirmationsPage() {
                 <div style={{ fontSize: 12, opacity: 0.7 }}>No saved affirmations yet.</div>
               ) : (
                 <div style={{ display: 'grid', gap: 8 }}>
-                  {savedAffirmations.slice(0, 6).map((entry) => (
-                    <button
+                  {savedAffirmations.slice(0, 1).map((entry) => (
+                    <div
                       key={entry.id}
-                      type="button"
-                      onClick={() => router.push(`/myaffirmations/${entry.id}`)}
                       style={{
                         textAlign: 'left',
                         borderRadius: 12,
                         padding: 10,
                         border: '1px solid rgba(95, 74, 62, 0.2)',
                         background: 'rgba(255, 255, 255, 0.85)',
-                        cursor: 'pointer',
                       }}
                     >
                       <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 4 }}>{entry.entry_date}</div>
                       <div style={{ fontSize: 13, fontWeight: 600, color: '#3b2b24' }}>
                         {entry.content.length > 60 ? `${entry.content.slice(0, 60)}…` : entry.content}
                       </div>
-                    </button>
+                    </div>
                   ))}
                 </div>
               )}
-            </div>
+            </button>
           </div>
         </div>
 
