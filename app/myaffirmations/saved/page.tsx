@@ -5,6 +5,11 @@ import { useRouter } from 'next/navigation'
 import Navbar from '@/app/components/Navbar'
 import { api } from '@/lib/api'
 
+function toast(message: string) {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new CustomEvent('auth:logged_out', { detail: { message } }))
+}
+
 type AffirmationsEntry = {
   id: number
   title: string
@@ -52,6 +57,7 @@ export default function SavedAffirmationsPage() {
       const res = await api.get('/affirmations')
       const list = Array.isArray(res.data) ? res.data : []
       setEntries(list)
+      toast('Affirmation deleted.')
     } catch (err: any) {
       setError(err?.response?.data?.detail ?? err?.message ?? 'Failed to delete entry.')
     }
