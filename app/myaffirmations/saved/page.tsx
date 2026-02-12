@@ -28,10 +28,6 @@ export default function SavedAffirmationsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
-  const confirmDeleteEntry = useMemo(
-    () => savedAffirmations.find((entry) => entry.id === confirmDeleteId) ?? null,
-    [savedAffirmations, confirmDeleteId]
-  )
 
   useEffect(() => {
     setLoading(true)
@@ -54,6 +50,10 @@ export default function SavedAffirmationsPage() {
         .filter((entry) => entry.title === SAVED_AFFIRMATION_TITLE)
         .sort((a, b) => (a.created_at < b.created_at ? 1 : -1)),
     [entries]
+  )
+  const confirmDeleteEntry = useMemo(
+    () => savedAffirmations.find((entry) => entry.id === confirmDeleteId) ?? null,
+    [savedAffirmations, confirmDeleteId]
   )
 
   async function deleteEntry(entryId: number) {

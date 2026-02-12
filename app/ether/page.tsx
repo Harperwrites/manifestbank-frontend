@@ -2252,9 +2252,8 @@ export default function EtherPage() {
                   style={{
                     position: 'fixed',
                     top: etherStickyMenuPos.top,
-                    left: 'max(12px, env(safe-area-inset-left))',
-                    right: 'max(12px, env(safe-area-inset-right))',
-                    transform: 'none',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
                     width: 'min(360px, calc(100vw - 24px))',
                     maxWidth: 'calc(100vw - 24px)',
                     borderRadius: 16,
@@ -2857,15 +2856,6 @@ export default function EtherPage() {
                       zIndex: 1600,
                       boxSizing: 'border-box',
                       ...(myLineMenuStyle ?? {}),
-                      ...(myLineMenuStyle?.position === 'fixed'
-                        ? {
-                            left: 12,
-                            right: 12,
-                            maxWidth: 'calc(100vw - 24px)',
-                            boxSizing: 'border-box',
-                            width: 'calc(100vw - 24px)',
-                          }
-                        : {}),
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 13 }}>

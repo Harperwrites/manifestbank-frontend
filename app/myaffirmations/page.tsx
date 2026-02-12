@@ -198,10 +198,6 @@ export default function MyAffirmationsPage() {
   const [savingDaily, setSavingDaily] = useState(false)
   const [savePulse, setSavePulse] = useState(false)
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
-  const confirmDeleteEntry = useMemo(
-    () => affirmationsEntries.find((entry) => entry.id === confirmDeleteId) ?? null,
-    [affirmationsEntries, confirmDeleteId]
-  )
   const affirmationNavRef = useRef<HTMLDivElement | null>(null)
   const [etherPortalVisible, setEtherPortalVisible] = useState(false)
   const [treasureChipOpen, setTreasureChipOpen] = useState(false)
@@ -356,6 +352,10 @@ export default function MyAffirmationsPage() {
   const affirmationsEntries = useMemo(
     () => sortedEntries.filter((entry) => entry.title !== SAVED_AFFIRMATION_TITLE),
     [sortedEntries]
+  )
+  const confirmDeleteEntry = useMemo(
+    () => affirmationsEntries.find((entry) => entry.id === confirmDeleteId) ?? null,
+    [affirmationsEntries, confirmDeleteId]
   )
 
   const isDailySaved = useMemo(() => {
