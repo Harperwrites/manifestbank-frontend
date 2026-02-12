@@ -413,6 +413,10 @@ export default function MyAffirmationsPage() {
   }
 
   async function deleteEntry(entryId: number) {
+    if (typeof window !== 'undefined') {
+      const ok = window.confirm('Delete this affirmation? This cannot be undone.')
+      if (!ok) return
+    }
     try {
       await api.delete(`/affirmations/${entryId}`)
       await refreshAfterSave()
@@ -698,7 +702,7 @@ export default function MyAffirmationsPage() {
             <button
               type="button"
               onClick={saveDailyAffirmation}
-              disabled={savingDaily || isDailySaved}
+              disabled={savingDaily}
               style={{
                 borderRadius: 999,
                 border: '1px solid rgba(130, 92, 78, 0.6)',

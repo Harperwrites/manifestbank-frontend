@@ -6,7 +6,7 @@ import { api } from '@/lib/api'
 
 function toast(message: string) {
   if (typeof window === 'undefined') return
-  window.dispatchEvent(new CustomEvent('auth:logged_out', { detail: { message } }))
+  window.dispatchEvent(new CustomEvent('auth:logged_out', { detail: { message, persist: true } }))
 }
 
 export default function ContactPage() {

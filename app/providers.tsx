@@ -37,6 +37,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [me, setMe] = useState<Me | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [toast, setToast] = useState('')
+  const [toastPersistent, setToastPersistent] = useState(false)
   const [notificationToasts, setNotificationToasts] = useState<NotificationToast[]>([])
   const [notificationsPrimed, setNotificationsPrimed] = useState(false)
   const [legalRequired, setLegalRequired] = useState(false)
@@ -147,11 +148,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     function handleToastEvent(event: Event) {
-      const detail = (event as CustomEvent<{ message?: string }>).detail
+      const detail = (event as CustomEvent<{ message?: string; persist?: boolean }>).detail
       if (detail?.message) {
         setToast(detail.message)
+        setToastPersistent(Boolean(detail.persist))
       } else {
         setToast('You were logged out. Please sign in again.')
+        setToastPersistent(false)
       }
     }
 
@@ -160,10 +163,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   useEffect(() => {
-    if (!toast) return
+    if (!toast || toastPersistent) return
     const timer = window.setTimeout(() => setToast(''), 3500)
     return () => window.clearTimeout(timer)
-  }, [toast])
+  }, [toast, toastPersistent])
 
   useEffect(() => {
     if (!me || !me.email_verified) return
@@ -392,9 +395,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             boxShadow: '0 16px 32px rgba(0,0,0,0.18)',
             fontSize: 13,
             zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
           }}
         >
           {toast}
+          {toastPersistent ? (
+            <button
+              type="button"
+              onClick={() => {
+                setToast('')
+                setToastPersistent(false)
+              }}
+              style={{
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                fontSize: 14,
+                opacity: 0.7,
+              }}
+            >
+              ×
+            </button>
+          ) : null}
         </div>
       ) : null}
       {notificationToasts.length ? (

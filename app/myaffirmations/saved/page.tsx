@@ -52,6 +52,10 @@ export default function SavedAffirmationsPage() {
   )
 
   async function deleteEntry(entryId: number) {
+    if (typeof window !== 'undefined') {
+      const ok = window.confirm('Delete this saved affirmation? This cannot be undone.')
+      if (!ok) return
+    }
     try {
       await api.delete(`/affirmations/${entryId}`)
       const res = await api.get('/affirmations')

@@ -234,6 +234,10 @@ export default function AffirmationsEntryPage() {
   }
 
   async function deleteEntry(entryId: number) {
+    if (typeof window !== 'undefined') {
+      const ok = window.confirm('Delete this affirmation? This cannot be undone.')
+      if (!ok) return
+    }
     try {
       await api.delete(`/affirmations/${entryId}`)
       toast('Affirmation deleted.')
