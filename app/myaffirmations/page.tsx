@@ -774,7 +774,8 @@ export default function MyAffirmationsPage() {
               style={{
                 borderRadius: 16,
                 border: '1px solid rgba(95, 74, 62, 0.2)',
-                background: 'rgba(255, 255, 255, 0.75)',
+                background:
+                  'linear-gradient(140deg, rgba(199, 140, 122, 0.35), rgba(255, 244, 236, 0.92))',
                 padding: 12,
                 boxShadow: '0 12px 24px rgba(0,0,0,0.05)',
                 textAlign: 'left',
