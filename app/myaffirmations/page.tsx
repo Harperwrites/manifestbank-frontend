@@ -67,6 +67,115 @@ type AffirmationsEntry = {
   updated_at: string
 }
 
+const DAILY_AFFIRMATIONS = [
+  'Wealth is my standard.',
+  'Money respects me.',
+  'I earn at higher levels.',
+  'Profit follows purpose.',
+  'My net worth grows.',
+  'I think like an owner.',
+  'Capital flows freely.',
+  'I steward wealth wisely.',
+  'My income upgrades.',
+  'I welcome large sums.',
+  'Money meets mastery.',
+  'I scale with integrity.',
+  'I create surplus.',
+  'Premium clients find me.',
+  'My value is undeniable.',
+  'I attract elite rooms.',
+  'Revenue loves precision.',
+  'I am financially sovereign.',
+  'Wealth builds quietly.',
+  'I monetize brilliance.',
+  'My assets appreciate.',
+  'I multiply resources.',
+  'Money trusts my leadership.',
+  'I expand earning capacity.',
+  'I command higher returns.',
+  'Abundance backs my moves.',
+  'My brand creates wealth.',
+  'I receive luxury easily.',
+  'Cash flow is constant.',
+  'I prosper intentionally.',
+  'I execute at scale.',
+  'Success fits me well.',
+  'I finish what I start.',
+  'My focus creates results.',
+  'I move with certainty.',
+  'I win strategically.',
+  'I choose bold action.',
+  'Momentum favors me.',
+  'I outgrow old limits.',
+  'My vision materializes.',
+  'I operate in excellence.',
+  'Discipline builds destiny.',
+  'I think long-term.',
+  'I elevate every room.',
+  'Results respond to me.',
+  'I am solution-oriented.',
+  'My standards are high.',
+  'I lead with clarity.',
+  'Growth is inevitable.',
+  'I build lasting legacy.',
+  'My ideas compound.',
+  'I expand my territory.',
+  'Success feels normal.',
+  'I convert dreams to plans.',
+  'I execute like a CEO.',
+  'I embody my next level.',
+  'I think from abundance.',
+  'I act as my future self.',
+  'My habits reflect wealth.',
+  'I choose powerful thoughts.',
+  'I am internally upgraded.',
+  'I release outdated identities.',
+  'I operate from certainty.',
+  'I trust my evolution.',
+  'I outgrow small thinking.',
+  'I am emotionally regulated.',
+  'I respond, not react.',
+  'My energy is premium.',
+  'I move with composure.',
+  'I am the standard.',
+  'I invest in growth.',
+  'I embody discipline.',
+  'I am consistent daily.',
+  'I rewrite my story.',
+  'I choose expansion.',
+  'I upgrade my self-concept.',
+  'I align thoughts and action.',
+  'I am architect of reality.',
+  'I normalize greatness.',
+  'I own my narrative.',
+  'My cells are energized.',
+  'I nourish my body.',
+  'My mind is clear.',
+  'I prioritize restoration.',
+  'Strength grows within me.',
+  'I move with vitality.',
+  'My body heals efficiently.',
+  'I choose clean energy.',
+  'I protect my peace.',
+  'I rest without guilt.',
+  'I fuel my brilliance.',
+  'My nervous system is calm.',
+  'I radiate wellness.',
+  'My breath centers me.',
+  'I honor my rhythms.',
+  'I am physically resilient.',
+  'My focus is sharp.',
+  'I glow with health.',
+  'I sustain high performance.',
+  'My body supports my mission.',
+  'I build strength daily.',
+  'Wellness is my baseline.',
+  'I age powerfully.',
+  'I feel strong and aligned.',
+]
+
+const SAVED_AFFIRMATION_TITLE = 'Saved affirmation'
+
 export default function MyAffirmationsPage() {
   const router = useRouter()
   const [entries, setEntries] = useState<AffirmationsEntry[]>([])
@@ -85,6 +194,9 @@ export default function MyAffirmationsPage() {
   const [profile, setProfile] = useState<any>(null)
   const [etherNoticeCount, setEtherNoticeCount] = useState(0)
   const [etherNoticeLoaded, setEtherNoticeLoaded] = useState(false)
+  const [dailyAffirmation, setDailyAffirmation] = useState(DAILY_AFFIRMATIONS[0])
+  const [savingDaily, setSavingDaily] = useState(false)
+  const [savePulse, setSavePulse] = useState(false)
   const affirmationNavRef = useRef<HTMLDivElement | null>(null)
   const [etherPortalVisible, setEtherPortalVisible] = useState(false)
   const [treasureChipOpen, setTreasureChipOpen] = useState(false)
@@ -128,6 +240,35 @@ export default function MyAffirmationsPage() {
   useEffect(() => {
     loadEntries()
     loadMe()
+  }, [])
+
+  useEffect(() => {
+    function pickDaily(now: Date) {
+      const shifted = new Date(now.getTime() - 3 * 60 * 60 * 1000)
+      const key = shifted.toISOString().slice(0, 10)
+      let hash = 0
+      for (let i = 0; i < key.length; i += 1) {
+        hash = (hash * 31 + key.charCodeAt(i)) % 100000
+      }
+      const index = hash % DAILY_AFFIRMATIONS.length
+      return DAILY_AFFIRMATIONS[index]
+    }
+
+    const now = new Date()
+    setDailyAffirmation(pickDaily(now))
+
+    const next = new Date(now)
+    next.setHours(3, 0, 0, 0)
+    if (next <= now) {
+      next.setDate(next.getDate() + 1)
+    }
+    const timeoutId = window.setTimeout(() => {
+      setDailyAffirmation(pickDaily(new Date()))
+    }, next.getTime() - now.getTime())
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
   }, [])
 
   async function loadMe() {
@@ -202,6 +343,16 @@ export default function MyAffirmationsPage() {
     return [...entries].sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
   }, [entries])
 
+  const savedAffirmations = useMemo(
+    () => sortedEntries.filter((entry) => entry.title === SAVED_AFFIRMATION_TITLE),
+    [sortedEntries]
+  )
+
+  const affirmationsEntries = useMemo(
+    () => sortedEntries.filter((entry) => entry.title !== SAVED_AFFIRMATION_TITLE),
+    [sortedEntries]
+  )
+
   function resetDraft() {
     setDraftTitle('')
     setDraftDate('')
@@ -253,6 +404,30 @@ export default function MyAffirmationsPage() {
       setError(err?.response?.data?.detail ?? err?.message ?? 'Failed to save entry.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function saveDailyAffirmation() {
+    if (!dailyAffirmation || savingDaily) return
+    setSavingDaily(true)
+    setError('')
+    try {
+      const today = new Date()
+      const entryDate = today.toISOString().slice(0, 10)
+      await api.post('/affirmations', {
+        title: SAVED_AFFIRMATION_TITLE,
+        entry_date: entryDate,
+        content: dailyAffirmation,
+        image_url: null,
+      })
+      await refreshAfterSave()
+      toast('Affirmation saved.')
+      setSavePulse(true)
+      window.setTimeout(() => setSavePulse(false), 480)
+    } catch (err: any) {
+      setError(err?.response?.data?.detail ?? err?.message ?? 'Failed to save affirmation.')
+    } finally {
+      setSavingDaily(false)
     }
   }
 
@@ -492,11 +667,98 @@ export default function MyAffirmationsPage() {
               ← Back
             </button>
             <h1 style={{ marginTop: 16, fontFamily: 'var(--font-serif)', fontSize: 30 }}>My Affirmations</h1>
-            <p style={{ marginTop: 6, opacity: 0.75 }}>Capture your reflections, milestones, and daily wins.</p>
+            <p style={{ marginTop: 6, opacity: 0.75 }}>Capture and save the affirmations that shape your day.</p>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button type="button" onClick={openNewEntry} style={buttonStyle}>
-              New Entry
+          <div style={{ display: 'grid', gap: 12, minWidth: 240 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+              <button type="button" onClick={openNewEntry} style={buttonStyle}>
+                New Entry
+              </button>
+            </div>
+            <div
+              style={{
+                borderRadius: 16,
+                border: '1px solid rgba(95, 74, 62, 0.2)',
+                background: 'rgba(255, 255, 255, 0.75)',
+                padding: 12,
+                boxShadow: '0 12px 24px rgba(0,0,0,0.05)',
+              }}
+            >
+              <div style={{ fontWeight: 600, marginBottom: 8 }}>Saved affirmations</div>
+              {loading ? (
+                <div style={{ fontSize: 12, opacity: 0.7 }}>Loading…</div>
+              ) : savedAffirmations.length === 0 ? (
+                <div style={{ fontSize: 12, opacity: 0.7 }}>No saved affirmations yet.</div>
+              ) : (
+                <div style={{ display: 'grid', gap: 8 }}>
+                  {savedAffirmations.slice(0, 6).map((entry) => (
+                    <button
+                      key={entry.id}
+                      type="button"
+                      onClick={() => router.push(`/myaffirmations/${entry.id}`)}
+                      style={{
+                        textAlign: 'left',
+                        borderRadius: 12,
+                        padding: 10,
+                        border: '1px solid rgba(95, 74, 62, 0.2)',
+                        background: 'rgba(255, 255, 255, 0.85)',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 4 }}>{entry.entry_date}</div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#3b2b24' }}>
+                        {entry.content.length > 60 ? `${entry.content.slice(0, 60)}…` : entry.content}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ marginTop: 18, display: 'grid', justifyItems: 'center', gap: 10 }}>
+          <div
+            style={{
+              fontFamily: '"Playfair Display", "Cormorant Garamond", "Libre Baskerville", serif',
+              fontSize: 26,
+              fontWeight: 700,
+              color: 'rgba(122, 86, 72, 0.9)',
+              textAlign: 'center',
+              maxWidth: 520,
+              lineHeight: 1.4,
+              padding: '10px 16px',
+              borderRadius: 14,
+              background:
+                'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.7), rgba(255,255,255,0) 55%), radial-gradient(circle at 80% 30%, rgba(255,233,210,0.75), rgba(255,233,210,0) 60%), radial-gradient(circle at 40% 80%, rgba(255,255,255,0.6), rgba(255,255,255,0) 55%)',
+              textShadow: '0 0 6px rgba(255, 236, 215, 0.7), 0 0 10px rgba(255, 236, 215, 0.5)',
+            }}
+          >
+            {dailyAffirmation.split(' ').map((word, index) => (
+              <div key={`${word}-${index}`}>{word}</div>
+            ))}
+          </div>
+          <div className={savePulse ? 'align-heart-pulse' : undefined}>
+            <button
+              type="button"
+              onClick={saveDailyAffirmation}
+              disabled={savingDaily}
+              style={{
+                borderRadius: 999,
+                border: '1px solid rgba(130, 92, 78, 0.6)',
+                background: 'linear-gradient(135deg, rgba(210, 165, 145, 0.85), rgba(182, 121, 103, 0.95))',
+                padding: '8px 14px',
+                fontWeight: 700,
+                color: '#fffaf7',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                boxShadow: '0 8px 18px rgba(34, 20, 14, 0.25)',
+              }}
+            >
+              <span style={{ fontSize: 16 }}>🧰</span>
+              {savingDaily ? 'Saving…' : 'Save affirmation'}
             </button>
           </div>
         </div>
@@ -515,10 +777,10 @@ export default function MyAffirmationsPage() {
         >
           {loading ? (
             <div style={{ opacity: 0.7 }}>Loading entries…</div>
-          ) : sortedEntries.length === 0 ? (
+          ) : affirmationsEntries.length === 0 ? (
             <div style={{ opacity: 0.7 }}>No affirmation entries yet.</div>
           ) : (
-            sortedEntries.map((entry) => (
+            affirmationsEntries.map((entry) => (
               <button
                 key={entry.id}
                 type="button"
