@@ -996,13 +996,58 @@ export default function EtherProfilePage() {
                                         </div>
                                         <div style={{ fontSize: 13, overflowWrap: 'anywhere' }}>{comment.content}</div>
                                         <div style={{ marginTop: 6, display: 'flex', gap: 8, alignItems: 'center' }}>
-                                          <Button
-                                            variant="outline"
+                                          <button
+                                            type="button"
                                             onClick={() => alignComment(post.id, comment.id)}
                                             disabled={commentLoading[post.id]}
+                                            style={{
+                                              borderRadius: 999,
+                                              border: '1px solid rgba(140, 92, 78, 0.45)',
+                                              background: comment.aligned_by_me
+                                                ? 'rgba(182, 121, 103, 0.2)'
+                                                : 'transparent',
+                                              padding: '6px 12px',
+                                              cursor: commentLoading[post.id] ? 'not-allowed' : 'pointer',
+                                              fontSize: 12,
+                                              fontWeight: 600,
+                                              color: '#6f4a3a',
+                                              textShadow: comment.aligned_by_me
+                                                ? '0 0 10px rgba(182, 121, 103, 0.45)'
+                                                : 'none',
+                                              display: 'inline-flex',
+                                              alignItems: 'center',
+                                              gap: 6,
+                                              opacity: commentLoading[post.id] ? 0.6 : 1,
+                                            }}
                                           >
+                                            <span
+                                              style={{
+                                                marginRight: 6,
+                                                color: comment.aligned_by_me ? '#b67967' : 'inherit',
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                              }}
+                                            >
+                                              {comment.aligned_by_me ? (
+                                                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                                                  <path
+                                                    d="M12 20.4s-6.4-4-8.2-7.1C2.3 10.6 3.4 8.6 5.6 8.1c1.7-.4 3.2.4 4.1 1.5l.3.4.3-.4c.9-1.1 2.4-1.9 4.1-1.5 2.2.5 3.3 2.5 1.8 5.2-1.8 3.1-8.2 7.1-8.2 7.1z"
+                                                    fill="currentColor"
+                                                  />
+                                                </svg>
+                                              ) : (
+                                                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                                                  <path
+                                                    d="M12 20.4s-6.4-4-8.2-7.1C2.3 10.6 3.4 8.6 5.6 8.1c1.7-.4 3.2.4 4.1 1.5l.3.4.3-.4c.9-1.1 2.4-1.9 4.1-1.5 2.2.5 3.3 2.5 1.8 5.2-1.8 3.1-8.2 7.1-8.2 7.1z"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    strokeWidth="1.6"
+                                                  />
+                                                </svg>
+                                              )}
+                                            </span>
                                             {comment.aligned_by_me ? 'Aligned' : 'Align'} · {comment.align_count ?? 0}
-                                          </Button>
+                                          </button>
                                         </div>
                                       </div>
                                     ))}

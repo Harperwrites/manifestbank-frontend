@@ -4097,8 +4097,10 @@ export default function EtherPage() {
                           type="button"
                           onClick={() => like(post.id)}
                           style={{
-                            border: 'none',
-                            background: 'transparent',
+                            borderRadius: 999,
+                            border: '1px solid rgba(140, 92, 78, 0.45)',
+                            background: 'rgba(182, 121, 103, 0.2)',
+                            padding: '6px 12px',
                             cursor: 'pointer',
                             fontSize: 12,
                             fontWeight: 600,
@@ -4123,7 +4125,23 @@ export default function EtherPage() {
                           Aligned · {post.like_count}
                         </button>
                       ) : (
-                        <Button variant="outline" onClick={() => like(post.id)}>
+                        <button
+                          type="button"
+                          onClick={() => like(post.id)}
+                          style={{
+                            borderRadius: 999,
+                            border: '1px solid rgba(140, 92, 78, 0.45)',
+                            background: 'transparent',
+                            padding: '6px 12px',
+                            cursor: 'pointer',
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: '#6f4a3a',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6,
+                          }}
+                        >
                           <span
                             className={alignPulseId === post.id ? 'align-heart-pulse' : ''}
                             style={{ marginRight: 6, display: 'inline-flex', alignItems: 'center' }}
@@ -4138,7 +4156,7 @@ export default function EtherPage() {
                             </svg>
                           </span>
                           Align · {post.like_count}
-                        </Button>
+                        </button>
                       )}
                       <Button
                         variant="outline"
@@ -4261,22 +4279,23 @@ export default function EtherPage() {
                                     onClick={() => alignComment(post.id, comment.id)}
                                     disabled={commentLoading[post.id]}
                                     style={{
-                                      border: '1px solid',
-                                      borderColor: comment.aligned_by_me
-                                        ? 'transparent'
-                                        : 'rgba(95, 74, 62, 0.35)',
-                                      background: 'transparent',
-                                      color: 'var(--ink)',
                                       borderRadius: 999,
-                                      padding: '6px 14px',
+                                      border: '1px solid rgba(140, 92, 78, 0.45)',
+                                      background: comment.aligned_by_me
+                                        ? 'rgba(182, 121, 103, 0.2)'
+                                        : 'transparent',
+                                      color: '#6f4a3a',
+                                      padding: '6px 12px',
                                       fontSize: 12,
                                       fontWeight: 600,
-                                      letterSpacing: 0.2,
                                       cursor: commentLoading[post.id] ? 'not-allowed' : 'pointer',
                                       opacity: commentLoading[post.id] ? 0.6 : 1,
                                       textShadow: comment.aligned_by_me
-                                        ? '0 0 12px rgba(199, 140, 122, 0.55)'
+                                        ? '0 0 10px rgba(182, 121, 103, 0.45)'
                                         : 'none',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: 6,
                                     }}
                                   >
                                     <span
