@@ -45,12 +45,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <div style={{ fontFamily: 'var(--font-serif)', fontSize: 18 }}>
                 ManifestBank™
               </div>
-              <div style={{ marginTop: 8, display: 'flex', gap: 16, justifyContent: 'center' }}>
+              <div style={{ marginTop: 8, display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
                 <Link href="/terms" style={{ color: 'inherit', textDecoration: 'underline' }}>
                   Terms &amp; Conditions
                 </Link>
                 <Link href="/privacy" style={{ color: 'inherit', textDecoration: 'underline' }}>
                   Privacy Policy
+                </Link>
+                <Link href="/contact" style={{ color: 'inherit', textDecoration: 'underline' }}>
+                  Contact us
+                </Link>
+                <Link href="/careers" style={{ color: 'inherit', textDecoration: 'underline' }}>
+                  Careers
                 </Link>
               </div>
               <div style={{ marginTop: 10, fontSize: 12, opacity: 0.7 }}>

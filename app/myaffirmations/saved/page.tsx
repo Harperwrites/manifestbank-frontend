@@ -46,6 +46,17 @@ export default function SavedAffirmationsPage() {
     [entries]
   )
 
+  async function deleteEntry(entryId: number) {
+    try {
+      await api.delete(`/affirmations/${entryId}`)
+      const res = await api.get('/affirmations')
+      const list = Array.isArray(res.data) ? res.data : []
+      setEntries(list)
+    } catch (err: any) {
+      setError(err?.response?.data?.detail ?? err?.message ?? 'Failed to delete entry.')
+    }
+  }
+
   return (
     <main>
       <Navbar />
@@ -89,25 +100,54 @@ export default function SavedAffirmationsPage() {
             <div style={{ opacity: 0.7 }}>No saved affirmations yet.</div>
           ) : (
             savedAffirmations.map((entry) => (
-              <button
+              <div
                 key={entry.id}
-                type="button"
-                onClick={() => router.push(`/myaffirmations/${entry.id}`)}
                 style={{
                   textAlign: 'left',
                   borderRadius: 16,
                   padding: 16,
                   border: '1px solid rgba(95, 74, 62, 0.2)',
                   background: 'rgba(255, 255, 255, 0.85)',
-                  cursor: 'pointer',
                   boxShadow: '0 12px 24px rgba(0,0,0,0.05)',
+                  position: 'relative',
                 }}
               >
-                <div style={{ fontWeight: 600, marginBottom: 6 }}>{entry.entry_date}</div>
-                <div style={{ fontSize: 13, opacity: 0.85 }}>
-                  {entry.content.length > 140 ? `${entry.content.slice(0, 140)}…` : entry.content}
-                </div>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => router.push(`/myaffirmations/${entry.id}`)}
+                  style={{
+                    textAlign: 'left',
+                    background: 'transparent',
+                    border: 'none',
+                    padding: 0,
+                    cursor: 'pointer',
+                    width: '100%',
+                  }}
+                >
+                  <div style={{ fontWeight: 600, marginBottom: 6 }}>{entry.entry_date}</div>
+                  <div style={{ fontSize: 13, opacity: 0.85 }}>
+                    {entry.content.length > 140 ? `${entry.content.slice(0, 140)}…` : entry.content}
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => deleteEntry(entry.id)}
+                  style={{
+                    position: 'absolute',
+                    top: 10,
+                    right: 10,
+                    borderRadius: 999,
+                    border: '1px solid rgba(140, 92, 78, 0.4)',
+                    background: 'rgba(255, 255, 255, 0.9)',
+                    padding: '6px 10px',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Delete
+                </button>
+              </div>
             ))
           )}
         </div>

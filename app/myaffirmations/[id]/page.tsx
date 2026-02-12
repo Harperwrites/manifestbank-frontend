@@ -233,6 +233,16 @@ export default function AffirmationsEntryPage() {
     }
   }
 
+  async function deleteEntry(entryId: number) {
+    try {
+      await api.delete(`/affirmations/${entryId}`)
+      toast('Affirmation deleted.')
+      router.push('/myaffirmations')
+    } catch (err: any) {
+      setError(err?.response?.data?.detail ?? err?.message ?? 'Failed to delete entry.')
+    }
+  }
+
   useEffect(() => {
     const target = affirmationNavRef.current
     if (!target) return
@@ -377,6 +387,17 @@ export default function AffirmationsEntryPage() {
                   }}
                 >
                   {editing ? 'Cancel' : 'Edit'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => deleteEntry(entry.id)}
+                  style={{
+                    ...buttonStyle,
+                    borderColor: 'rgba(140, 92, 78, 0.45)',
+                    background: 'rgba(255,255,255,0.88)',
+                  }}
+                >
+                  Delete
                 </button>
                 {editing ? (
                   <button

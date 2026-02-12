@@ -412,6 +412,16 @@ export default function MyAffirmationsPage() {
     }
   }
 
+  async function deleteEntry(entryId: number) {
+    try {
+      await api.delete(`/affirmations/${entryId}`)
+      await refreshAfterSave()
+      toast('Affirmation deleted.')
+    } catch (err: any) {
+      setError(err?.response?.data?.detail ?? err?.message ?? 'Failed to delete entry.')
+    }
+  }
+
   async function saveDailyAffirmation() {
     if (!dailyAffirmation || savingDaily) return
     if (isDailySaved) {
@@ -831,8 +841,30 @@ export default function MyAffirmationsPage() {
                   background: 'rgba(255, 255, 255, 0.75)',
                   cursor: 'pointer',
                   boxShadow: '0 12px 24px rgba(0,0,0,0.05)',
+                  position: 'relative',
                 }}
               >
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    deleteEntry(entry.id)
+                  }}
+                  style={{
+                    position: 'absolute',
+                    top: 10,
+                    right: 10,
+                    borderRadius: 999,
+                    border: '1px solid rgba(140, 92, 78, 0.4)',
+                    background: 'rgba(255, 255, 255, 0.85)',
+                    padding: '6px 10px',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Delete
+                </button>
                 <div style={{ fontWeight: 600, marginBottom: 6 }}>{entry.title}</div>
                 <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 8 }}>{entry.entry_date}</div>
                 <div style={{ fontSize: 13, opacity: 0.8 }}>
