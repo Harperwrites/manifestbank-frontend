@@ -28,6 +28,10 @@ export default function SavedAffirmationsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
+  const confirmDeleteEntry = useMemo(
+    () => savedAffirmations.find((entry) => entry.id === confirmDeleteId) ?? null,
+    [savedAffirmations, confirmDeleteId]
+  )
 
   useEffect(() => {
     setLoading(true)
@@ -188,6 +192,23 @@ export default function SavedAffirmationsPage() {
             <div style={{ marginTop: 8, opacity: 0.85, color: '#3b2a22' }}>
               This will permanently remove the affirmation.
             </div>
+            {confirmDeleteEntry ? (
+              <div
+                style={{
+                  marginTop: 10,
+                  fontWeight: 600,
+                  color: '#4a2f26',
+                  background: 'rgba(255, 255, 255, 0.65)',
+                  border: '1px solid rgba(140, 92, 78, 0.35)',
+                  borderRadius: 12,
+                  padding: '8px 10px',
+                }}
+              >
+                {confirmDeleteEntry.content.length > 80
+                  ? `${confirmDeleteEntry.content.slice(0, 80)}…`
+                  : confirmDeleteEntry.content}
+              </div>
+            ) : null}
             <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
               <button
                 type="button"

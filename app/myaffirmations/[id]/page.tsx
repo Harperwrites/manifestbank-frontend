@@ -502,6 +502,19 @@ export default function AffirmationsEntryPage() {
             <div style={{ marginTop: 8, opacity: 0.85, color: '#3b2a22' }}>
               This will permanently remove the affirmation.
             </div>
+            <div
+              style={{
+                marginTop: 10,
+                fontWeight: 600,
+                color: '#4a2f26',
+                background: 'rgba(255, 255, 255, 0.65)',
+                border: '1px solid rgba(140, 92, 78, 0.35)',
+                borderRadius: 12,
+                padding: '8px 10px',
+              }}
+            >
+              {entry.title}
+            </div>
             <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
               <button
                 type="button"
