@@ -353,6 +353,13 @@ export default function MyAffirmationsPage() {
     [sortedEntries]
   )
 
+  const isDailySaved = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10)
+    return savedAffirmations.some(
+      (entry) => entry.entry_date === today && entry.content.trim() === dailyAffirmation.trim()
+    )
+  }, [savedAffirmations, dailyAffirmation])
+
   function resetDraft() {
     setDraftTitle('')
     setDraftDate('')
@@ -654,6 +661,75 @@ export default function MyAffirmationsPage() {
         </div>
       ) : null}
       <section style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 20px 80px' }}>
+        <div style={{ display: 'grid', justifyItems: 'center', gap: 10, marginBottom: 18 }}>
+          <div
+            style={{
+              fontFamily: '"Playfair Display", "Cormorant Garamond", "Libre Baskerville", serif',
+              fontSize: 26,
+              fontWeight: 700,
+              color: 'rgba(122, 86, 72, 0.9)',
+              textAlign: 'center',
+              maxWidth: 520,
+              lineHeight: 1.4,
+              padding: '10px 16px',
+              borderRadius: 14,
+              background:
+                'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.7), rgba(255,255,255,0) 55%), radial-gradient(circle at 80% 30%, rgba(255,233,210,0.75), rgba(255,233,210,0) 60%), radial-gradient(circle at 40% 80%, rgba(255,255,255,0.6), rgba(255,255,255,0) 55%)',
+              textShadow: '0 0 6px rgba(255, 236, 215, 0.7), 0 0 10px rgba(255, 236, 215, 0.5)',
+            }}
+          >
+            {dailyAffirmation.split(' ').map((word, index) => (
+              <div key={`${word}-${index}`}>{word}</div>
+            ))}
+          </div>
+          <div className={savePulse ? 'align-heart-pulse' : undefined}>
+            <button
+              type="button"
+              onClick={saveDailyAffirmation}
+              disabled={savingDaily}
+              style={{
+                borderRadius: 999,
+                border: '1px solid rgba(130, 92, 78, 0.6)',
+                background: 'linear-gradient(135deg, rgba(210, 165, 145, 0.85), rgba(182, 121, 103, 0.95))',
+                padding: '8px 14px',
+                fontWeight: 700,
+                color: '#fffaf7',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                boxShadow: '0 8px 18px rgba(34, 20, 14, 0.25)',
+              }}
+            >
+              <span
+                aria-hidden="true"
+                style={{
+                  width: 18,
+                  height: 18,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: isDailySaved ? '#fffaf7' : 'rgba(255, 255, 255, 0.9)',
+                  transition: 'transform 160ms ease',
+                }}
+              >
+                {isDailySaved ? (
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                    <path d="M4 9.5c0-1.38 1.12-2.5 2.5-2.5h11c1.38 0 2.5 1.12 2.5 2.5v7c0 2.49-2.01 4.5-4.5 4.5h-7A4.5 4.5 0 0 1 4 16.5v-7Zm2.5-4.5h11A4.5 4.5 0 0 1 22 9.5V10H2v-.5A4.5 4.5 0 0 1 6.5 5Zm3.5 7h4a1 1 0 0 0 0-2h-4a1 1 0 0 0 0 2Z" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6">
+                    <path d="M4 9.5c0-1.38 1.12-2.5 2.5-2.5h11c1.38 0 2.5 1.12 2.5 2.5v7c0 2.49-2.01 4.5-4.5 4.5h-7A4.5 4.5 0 0 1 4 16.5v-7Z" />
+                    <path d="M2 10V9.5A4.5 4.5 0 0 1 6.5 5h11A4.5 4.5 0 0 1 22 9.5V10" />
+                    <path d="M10 11h4" />
+                  </svg>
+                )}
+              </span>
+              {savingDaily ? 'Saving…' : 'Save affirmation'}
+            </button>
+          </div>
+        </div>
+
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <div>
             <button
@@ -714,52 +790,6 @@ export default function MyAffirmationsPage() {
                 </div>
               )}
             </div>
-          </div>
-        </div>
-
-        <div style={{ marginTop: 18, display: 'grid', justifyItems: 'center', gap: 10 }}>
-          <div
-            style={{
-              fontFamily: '"Playfair Display", "Cormorant Garamond", "Libre Baskerville", serif',
-              fontSize: 26,
-              fontWeight: 700,
-              color: 'rgba(122, 86, 72, 0.9)',
-              textAlign: 'center',
-              maxWidth: 520,
-              lineHeight: 1.4,
-              padding: '10px 16px',
-              borderRadius: 14,
-              background:
-                'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.7), rgba(255,255,255,0) 55%), radial-gradient(circle at 80% 30%, rgba(255,233,210,0.75), rgba(255,233,210,0) 60%), radial-gradient(circle at 40% 80%, rgba(255,255,255,0.6), rgba(255,255,255,0) 55%)',
-              textShadow: '0 0 6px rgba(255, 236, 215, 0.7), 0 0 10px rgba(255, 236, 215, 0.5)',
-            }}
-          >
-            {dailyAffirmation.split(' ').map((word, index) => (
-              <div key={`${word}-${index}`}>{word}</div>
-            ))}
-          </div>
-          <div className={savePulse ? 'align-heart-pulse' : undefined}>
-            <button
-              type="button"
-              onClick={saveDailyAffirmation}
-              disabled={savingDaily}
-              style={{
-                borderRadius: 999,
-                border: '1px solid rgba(130, 92, 78, 0.6)',
-                background: 'linear-gradient(135deg, rgba(210, 165, 145, 0.85), rgba(182, 121, 103, 0.95))',
-                padding: '8px 14px',
-                fontWeight: 700,
-                color: '#fffaf7',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                boxShadow: '0 8px 18px rgba(34, 20, 14, 0.25)',
-              }}
-            >
-              <span style={{ fontSize: 16 }}>🧰</span>
-              {savingDaily ? 'Saving…' : 'Save affirmation'}
-            </button>
           </div>
         </div>
 
