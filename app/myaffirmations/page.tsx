@@ -197,6 +197,7 @@ export default function MyAffirmationsPage() {
   const [dailyAffirmation, setDailyAffirmation] = useState(DAILY_AFFIRMATIONS[0])
   const [savingDaily, setSavingDaily] = useState(false)
   const [savePulse, setSavePulse] = useState(false)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
   const affirmationNavRef = useRef<HTMLDivElement | null>(null)
   const [etherPortalVisible, setEtherPortalVisible] = useState(false)
   const [treasureChipOpen, setTreasureChipOpen] = useState(false)
@@ -413,10 +414,6 @@ export default function MyAffirmationsPage() {
   }
 
   async function deleteEntry(entryId: number) {
-    if (typeof window !== 'undefined') {
-      const ok = window.confirm('Delete this affirmation? This cannot be undone.')
-      if (!ok) return
-    }
     try {
       await api.delete(`/affirmations/${entryId}`)
       await refreshAfterSave()
@@ -816,7 +813,19 @@ export default function MyAffirmationsPage() {
         </div>
 
         {error ? (
-          <div style={{ marginTop: 18, color: '#7a2e2e' }}>{error}</div>
+          <div
+            style={{
+              marginTop: 18,
+              color: '#7a2e2e',
+              background: 'rgba(255, 244, 236, 0.85)',
+              border: '1px solid rgba(140, 92, 78, 0.3)',
+              padding: '10px 12px',
+              borderRadius: 12,
+              fontWeight: 600,
+            }}
+          >
+            {error}
+          </div>
         ) : null}
 
         <div
@@ -860,7 +869,7 @@ export default function MyAffirmationsPage() {
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation()
-                    deleteEntry(entry.id)
+                    setConfirmDeleteId(entry.id)
                   }}
                   style={{
                     position: 'absolute',
@@ -902,6 +911,21 @@ export default function MyAffirmationsPage() {
                 Close
               </button>
             </div>
+            {error ? (
+              <div
+                style={{
+                  marginTop: 12,
+                  color: '#7a2e2e',
+                  background: 'rgba(255, 244, 236, 0.9)',
+                  border: '1px solid rgba(140, 92, 78, 0.3)',
+                  padding: '10px 12px',
+                  borderRadius: 12,
+                  fontWeight: 600,
+                }}
+              >
+                {error}
+              </div>
+            ) : null}
 
             <div style={{ marginTop: 16, display: 'grid', gap: 14 }}>
               <div>
@@ -989,6 +1013,59 @@ export default function MyAffirmationsPage() {
           </div>
         </div>
       )}
+
+      {confirmDeleteId !== null ? (
+        <div
+          style={overlayStyle}
+          onClick={() => {
+            setConfirmDeleteId(null)
+          }}
+        >
+          <div
+            style={{
+              ...modalStyle,
+              maxWidth: 480,
+              background: 'linear-gradient(160deg, rgba(217, 178, 161, 0.95), rgba(186, 140, 122, 0.97))',
+            }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div style={{ fontWeight: 700, fontSize: 18, color: '#3b2a22' }}>Delete affirmation?</div>
+            <div style={{ marginTop: 8, opacity: 0.85, color: '#3b2a22' }}>
+              This will permanently remove the affirmation.
+            </div>
+            <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteId(null)}
+                style={{
+                  ...buttonStyle,
+                  background: 'rgba(255,255,255,0.8)',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const targetId = confirmDeleteId
+                  setConfirmDeleteId(null)
+                  if (targetId !== null) {
+                    await deleteEntry(targetId)
+                  }
+                }}
+                style={{
+                  ...buttonStyle,
+                  border: '1px solid rgba(140, 92, 78, 0.6)',
+                  background: 'linear-gradient(135deg, rgba(182, 121, 103, 0.95), rgba(146, 94, 78, 0.95))',
+                  color: '#fffaf7',
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   )
 }

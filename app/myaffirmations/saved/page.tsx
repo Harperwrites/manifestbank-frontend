@@ -27,6 +27,7 @@ export default function SavedAffirmationsPage() {
   const [entries, setEntries] = useState<AffirmationsEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
 
   useEffect(() => {
     setLoading(true)
@@ -52,10 +53,6 @@ export default function SavedAffirmationsPage() {
   )
 
   async function deleteEntry(entryId: number) {
-    if (typeof window !== 'undefined') {
-      const ok = window.confirm('Delete this saved affirmation? This cannot be undone.')
-      if (!ok) return
-    }
     try {
       await api.delete(`/affirmations/${entryId}`)
       const res = await api.get('/affirmations')
@@ -141,7 +138,7 @@ export default function SavedAffirmationsPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => deleteEntry(entry.id)}
+                  onClick={() => setConfirmDeleteId(entry.id)}
                   style={{
                     position: 'absolute',
                     top: 10,
@@ -162,6 +159,75 @@ export default function SavedAffirmationsPage() {
           )}
         </div>
       </section>
+      {confirmDeleteId !== null ? (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 10, 8, 0.45)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+            padding: 16,
+          }}
+          onClick={() => setConfirmDeleteId(null)}
+        >
+          <div
+            style={{
+              width: 'min(480px, 92vw)',
+              background: 'linear-gradient(160deg, rgba(217, 178, 161, 0.95), rgba(186, 140, 122, 0.97))',
+              borderRadius: 20,
+              padding: 22,
+              boxShadow: '0 22px 55px rgba(56, 36, 25, 0.35)',
+              border: '1px solid rgba(95, 74, 62, 0.25)',
+            }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div style={{ fontWeight: 700, fontSize: 18, color: '#3b2a22' }}>Delete affirmation?</div>
+            <div style={{ marginTop: 8, opacity: 0.85, color: '#3b2a22' }}>
+              This will permanently remove the affirmation.
+            </div>
+            <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteId(null)}
+                style={{
+                  borderRadius: 999,
+                  border: '1px solid rgba(95, 74, 62, 0.35)',
+                  background: 'rgba(255, 255, 255, 0.8)',
+                  padding: '10px 16px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const targetId = confirmDeleteId
+                  setConfirmDeleteId(null)
+                  if (targetId !== null) {
+                    await deleteEntry(targetId)
+                  }
+                }}
+                style={{
+                  borderRadius: 999,
+                  border: '1px solid rgba(140, 92, 78, 0.6)',
+                  background: 'linear-gradient(135deg, rgba(182, 121, 103, 0.95), rgba(146, 94, 78, 0.95))',
+                  padding: '10px 16px',
+                  fontWeight: 600,
+                  color: '#fffaf7',
+                  cursor: 'pointer',
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   )
 }

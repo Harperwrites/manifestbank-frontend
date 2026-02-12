@@ -67,6 +67,7 @@ export default function AffirmationsEntryPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [editing, setEditing] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const [isVerified, setIsVerified] = useState(false)
   const [profile, setProfile] = useState<any>(null)
   const [etherNoticeCount, setEtherNoticeCount] = useState(0)
@@ -234,10 +235,6 @@ export default function AffirmationsEntryPage() {
   }
 
   async function deleteEntry(entryId: number) {
-    if (typeof window !== 'undefined') {
-      const ok = window.confirm('Delete this affirmation? This cannot be undone.')
-      if (!ok) return
-    }
     try {
       await api.delete(`/affirmations/${entryId}`)
       toast('Affirmation deleted.')
@@ -394,7 +391,7 @@ export default function AffirmationsEntryPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => deleteEntry(entry.id)}
+                  onClick={() => setConfirmDelete(true)}
                   style={{
                     ...buttonStyle,
                     borderColor: 'rgba(140, 92, 78, 0.45)',
@@ -476,6 +473,65 @@ export default function AffirmationsEntryPage() {
           </div>
         ) : null}
       </section>
+      {confirmDelete && entry ? (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 10, 8, 0.45)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+            padding: 16,
+          }}
+          onClick={() => setConfirmDelete(false)}
+        >
+          <div
+            style={{
+              width: 'min(480px, 92vw)',
+              background: 'linear-gradient(160deg, rgba(217, 178, 161, 0.95), rgba(186, 140, 122, 0.97))',
+              borderRadius: 20,
+              padding: 22,
+              boxShadow: '0 22px 55px rgba(56, 36, 25, 0.35)',
+              border: '1px solid rgba(95, 74, 62, 0.25)',
+            }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div style={{ fontWeight: 700, fontSize: 18, color: '#3b2a22' }}>Delete affirmation?</div>
+            <div style={{ marginTop: 8, opacity: 0.85, color: '#3b2a22' }}>
+              This will permanently remove the affirmation.
+            </div>
+            <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(false)}
+                style={{
+                  ...buttonStyle,
+                  background: 'rgba(255,255,255,0.8)',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  setConfirmDelete(false)
+                  await deleteEntry(entry.id)
+                }}
+                style={{
+                  ...buttonStyle,
+                  border: '1px solid rgba(140, 92, 78, 0.6)',
+                  background: 'linear-gradient(135deg, rgba(182, 121, 103, 0.95), rgba(146, 94, 78, 0.95))',
+                  color: '#fffaf7',
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   )
 }
