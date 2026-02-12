@@ -927,7 +927,11 @@ export default function EtherPage() {
   const [etherStickyOpen, setEtherStickyOpen] = useState(false)
   const etherStickyRef = useRef<HTMLDivElement | null>(null)
   const etherStickyMenuRef = useRef<HTMLDivElement | null>(null)
-  const [etherStickyMenuPos, setEtherStickyMenuPos] = useState<{ top: number }>({ top: 0 })
+  const [etherStickyMenuPos, setEtherStickyMenuPos] = useState<{ top: number; left: number; width: number }>({
+    top: 0,
+    left: 12,
+    width: 320,
+  })
   const [manifestAccounts, setManifestAccounts] = useState<any[]>([])
   const [manifestAccountsLoaded, setManifestAccountsLoaded] = useState(false)
   const [manifestAccountsLoading, setManifestAccountsLoading] = useState(false)
@@ -1088,8 +1092,11 @@ export default function EtherPage() {
     const updatePosition = () => {
       const rect = etherStickyRef.current?.getBoundingClientRect()
       if (!rect) return
+      const width = Math.min(360, window.innerWidth - 24)
+      const idealLeft = rect.left + rect.width / 2 - width / 2
+      const left = Math.min(Math.max(12, idealLeft), window.innerWidth - width - 12)
       const top = rect.bottom + 10
-      setEtherStickyMenuPos({ top })
+      setEtherStickyMenuPos({ top, left, width })
     }
     updatePosition()
     window.addEventListener('resize', updatePosition)
@@ -2252,10 +2259,8 @@ export default function EtherPage() {
                   style={{
                     position: 'fixed',
                     top: etherStickyMenuPos.top,
-                    left: 'max(12px, env(safe-area-inset-left))',
-                    right: 'max(12px, env(safe-area-inset-right))',
-                    transform: 'none',
-                    width: 'auto',
+                    left: etherStickyMenuPos.left,
+                    width: etherStickyMenuPos.width,
                     borderRadius: 16,
                     border: '1px solid rgba(140, 92, 78, 0.45)',
                     background: 'linear-gradient(180deg, rgba(252, 245, 239, 0.98), rgba(226, 199, 181, 0.96))',
