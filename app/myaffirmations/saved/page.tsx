@@ -204,9 +204,7 @@ export default function SavedAffirmationsPage() {
                   padding: '8px 10px',
                 }}
               >
-                {confirmDeleteEntry.content.length > 80
-                  ? `${confirmDeleteEntry.content.slice(0, 80)}…`
-                  : confirmDeleteEntry.content}
+                Saved affirmation – {confirmDeleteEntry.entry_date}
               </div>
             ) : null}
             <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
