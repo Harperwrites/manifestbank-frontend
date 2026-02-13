@@ -64,6 +64,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   Privacy Policy
                 </Link>
               </div>
+              <div style={{ marginTop: 6 }}>
+                <Link href="/faq" style={{ color: 'inherit', textDecoration: 'underline' }}>
+                  FAQ
+                </Link>
+              </div>
               <div style={{ marginTop: 10, fontSize: 12, opacity: 0.7 }}>
                 © 2026 ManifestBank™. All rights reserved.
               </div>
