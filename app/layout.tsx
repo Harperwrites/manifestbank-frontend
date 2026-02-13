@@ -46,17 +46,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 ManifestBank™
               </div>
               <div style={{ marginTop: 8, display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
-                <Link href="/terms" style={{ color: 'inherit', textDecoration: 'underline' }}>
-                  Terms &amp; Conditions
-                </Link>
-                <Link href="/privacy" style={{ color: 'inherit', textDecoration: 'underline' }}>
-                  Privacy Policy
+                <Link href="/about" style={{ color: 'inherit', textDecoration: 'underline' }}>
+                  About us
                 </Link>
                 <Link href="/contact" style={{ color: 'inherit', textDecoration: 'underline' }}>
                   Contact us
                 </Link>
                 <Link href="/careers" style={{ color: 'inherit', textDecoration: 'underline' }}>
                   Careers
+                </Link>
+              </div>
+              <div style={{ marginTop: 6, display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
+                <Link href="/terms" style={{ color: 'inherit', textDecoration: 'underline' }}>
+                  Terms &amp; Conditions
+                </Link>
+                <Link href="/privacy" style={{ color: 'inherit', textDecoration: 'underline' }}>
+                  Privacy Policy
                 </Link>
               </div>
               <div style={{ marginTop: 10, fontSize: 12, opacity: 0.7 }}>
