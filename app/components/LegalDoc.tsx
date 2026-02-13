@@ -48,11 +48,11 @@ export default function LegalDoc({ kind }: LegalDocProps) {
     <main style={{ maxWidth: 920, margin: '24px auto 60px', padding: '0 20px' }}>
       <section
         style={{
-          background: 'rgba(255, 255, 255, 0.92)',
+          background: 'rgba(248, 242, 235, 0.88)',
           borderRadius: 24,
-          border: '1px solid rgba(95, 74, 62, 0.2)',
+          border: '1px solid rgba(95, 74, 62, 0.18)',
           padding: '28px 26px',
-          boxShadow: '0 18px 40px rgba(0,0,0,0.12)',
+          boxShadow: '0 24px 60px rgba(0,0,0,0.15)',
           color: '#2b1b16',
         }}
       >
