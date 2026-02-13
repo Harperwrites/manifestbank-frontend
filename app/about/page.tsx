@@ -16,6 +16,13 @@ export default function AboutPage() {
           boxShadow: '0 24px 60px rgba(0,0,0,0.15)',
         }}
       >
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 18 }}>
+          <img
+            src="/ManifestBank%E2%84%A2%20Business%20overlays%20and%20docs.png"
+            alt="ManifestBank™"
+            style={{ maxWidth: '100%', height: 'auto', width: 520 }}
+          />
+        </div>
         <div style={{ fontFamily: 'var(--font-serif)', fontSize: 32, fontWeight: 600 }}>
           About Us
         </div>
