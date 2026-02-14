@@ -28,6 +28,7 @@ export default function SavedAffirmationsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
+  const [carouselIndex, setCarouselIndex] = useState(0)
 
   useEffect(() => {
     setLoading(true)
@@ -51,6 +52,7 @@ export default function SavedAffirmationsPage() {
         .sort((a, b) => (a.created_at < b.created_at ? 1 : -1)),
     [entries]
   )
+  const activeAffirmation = savedAffirmations[carouselIndex] ?? null
   const confirmDeleteEntry = useMemo(
     () => savedAffirmations.find((entry) => entry.id === confirmDeleteId) ?? null,
     [savedAffirmations, confirmDeleteId]
@@ -62,6 +64,7 @@ export default function SavedAffirmationsPage() {
       const res = await api.get('/affirmations')
       const list = Array.isArray(res.data) ? res.data : []
       setEntries(list)
+      setCarouselIndex((prev) => Math.max(0, Math.min(prev, list.length - 1)))
       toast('Affirmation deleted.')
     } catch (err: any) {
       setError(err?.response?.data?.detail ?? err?.message ?? 'Failed to delete entry.')
@@ -96,6 +99,97 @@ export default function SavedAffirmationsPage() {
         </div>
 
         {error ? <div style={{ marginTop: 18, color: '#7a2e2e' }}>{error}</div> : null}
+
+        {loading ? null : savedAffirmations.length > 0 ? (
+          <div
+            style={{
+              marginTop: 24,
+              borderRadius: 20,
+              padding: '20px 18px',
+              border: '1px solid rgba(140, 92, 78, 0.4)',
+              background: 'linear-gradient(160deg, rgba(182, 121, 103, 0.16), rgba(245, 236, 228, 0.9))',
+              boxShadow: '0 18px 38px rgba(0,0,0,0.12)',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12,
+                marginBottom: 12,
+              }}
+            >
+              <button
+                type="button"
+                onClick={() =>
+                  setCarouselIndex((prev) =>
+                    savedAffirmations.length ? (prev - 1 + savedAffirmations.length) % savedAffirmations.length : 0
+                  )
+                }
+                style={{
+                  borderRadius: 999,
+                  border: '1px solid rgba(140, 92, 78, 0.35)',
+                  background: 'rgba(255, 255, 255, 0.85)',
+                  padding: '8px 14px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                }}
+                aria-label="Previous affirmation"
+              >
+                ←
+              </button>
+              <div
+                style={{
+                  fontFamily: 'var(--font-serif)',
+                  fontSize: 18,
+                  fontWeight: 600,
+                  color: '#4a2f26',
+                  textAlign: 'center',
+                  flex: 1,
+                }}
+              >
+                Saved Affirmation
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  setCarouselIndex((prev) =>
+                    savedAffirmations.length ? (prev + 1) % savedAffirmations.length : 0
+                  )
+                }
+                style={{
+                  borderRadius: 999,
+                  border: '1px solid rgba(140, 92, 78, 0.35)',
+                  background: 'rgba(255, 255, 255, 0.85)',
+                  padding: '8px 14px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                }}
+                aria-label="Next affirmation"
+              >
+                →
+              </button>
+            </div>
+            {activeAffirmation ? (
+              <div
+                style={{
+                  textAlign: 'center',
+                  fontSize: 22,
+                  fontWeight: 600,
+                  color: '#4a2f26',
+                  lineHeight: 1.5,
+                  padding: '18px 10px 6px',
+                }}
+              >
+                {activeAffirmation.content}
+                <div style={{ marginTop: 10, fontSize: 13, opacity: 0.7 }}>
+                  {activeAffirmation.entry_date}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
         <div
           style={{
