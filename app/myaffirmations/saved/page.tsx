@@ -98,8 +98,6 @@ export default function SavedAffirmationsPage() {
           </div>
         </div>
 
-        {error ? <div style={{ marginTop: 18, color: '#7a2e2e' }}>{error}</div> : null}
-
         {loading ? null : savedAffirmations.length > 0 ? (
           <div
             style={{
@@ -211,6 +209,8 @@ export default function SavedAffirmationsPage() {
             ) : null}
           </div>
         ) : null}
+
+        {error ? <div style={{ marginTop: 18, color: '#7a2e2e' }}>{error}</div> : null}
 
         <div
           style={{
