@@ -1,7 +1,8 @@
 import LegalDoc from '@/app/components/LegalDoc'
 
 export const metadata = {
-  title: 'ManifestBank™ Privacy Policy',
+  title: 'Privacy Policy',
+  description: 'Review the ManifestBank™ Privacy Policy and how data is handled.',
 }
 
 export default function PrivacyPage() {

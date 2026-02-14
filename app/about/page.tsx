@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'ManifestBank™ About Us',
+  title: 'About Us',
+  description:
+    'Learn about ManifestBank™—a digital self-organization, reflection, and awareness platform focused on intentional living.',
 }
 
 export default function AboutPage() {

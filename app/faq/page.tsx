@@ -1,12 +1,118 @@
 import type { Metadata } from 'next'
+import Script from 'next/script'
 
 export const metadata: Metadata = {
-  title: 'ManifestBank™ FAQ',
+  title: 'FAQ',
+  description:
+    'Frequently asked questions about ManifestBank™, The Ether™, privacy, and platform use.',
 }
 
 export default function FaqPage() {
+  const faqJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: 'What is ManifestBank™?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text:
+            'ManifestBank™ is a digital self-organization and reflection platform. It helps users track goals, intentions, habits, and personal insights in a structured, intentional way. ManifestBank™ is designed to support awareness, clarity, and disciplined self-alignment. It does not manage or handle money.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'Is ManifestBank™ a bank or financial institution?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text:
+            'No. ManifestBank™ is not a bank, credit union, lender, broker, investment adviser, fiduciary, or payment processor. It does not hold, move, insure, transmit, or safeguard money or financial assets of any kind. The platform uses financial language symbolically to support reflection, organization, and intention-setting only.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'What is The Ether™?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text:
+            'The Ether™ is the communication and reflection layer within ManifestBank™. It allows users to exchange messages, reflections, and insights in a space designed for intentional interaction rather than distraction. The Ether™ supports private messaging and conscious dialogue based on user settings. It is not traditional social media.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'Does ManifestBank™ guarantee results?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text:
+            'No. ManifestBank™ does not guarantee financial, personal, or professional outcomes. Any insights or results gained from using the platform depend entirely on the user’s individual choices, consistency, and actions. The platform provides tools, not promises.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'Is ManifestBank™ financial, legal, or medical advice?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text:
+            'No. ManifestBank™ does not provide financial, investment, legal, medical, or psychological advice. Content within the platform is informational and reflective in nature. Users should consult licensed professionals for decisions requiring professional expertise.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'How is my data handled?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text:
+            'User data is handled in accordance with our Privacy Policy. We prioritize transparency, user autonomy, and ethical data practices. Data is collected only as necessary to operate and improve the platform, and users retain control over their content and settings. We do not sell user data.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'Are messages on The Ether™ private?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text:
+            'Privacy depends on how the user chooses to use the platform and the specific feature settings in use. Some messages may be ephemeral, while others may be stored to support platform functionality. Details are outlined clearly in the Privacy Policy. Users are responsible for the content they share.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'Who is ManifestBank™ for?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text:
+            'ManifestBank™ is for individuals who want to live and build with greater intention. It serves creators, professionals, builders, and everyday users who value clarity, responsibility, and self-awareness and who prefer structured reflection over reactive systems.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'Is ManifestBank™ free to use?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text:
+            'ManifestBank™ may offer free and paid features depending on platform updates and offerings. Any pricing, subscriptions, or feature access will be clearly disclosed within the platform prior to purchase.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'How can I stay updated on new features or opportunities?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text:
+            'Platform updates, feature releases, and opportunities are shared directly within ManifestBank™ and through official communication channels. We grow deliberately and release features in alignment with the platform’s mission and values.',
+        },
+      },
+    ],
+  }
+
   return (
     <main style={{ maxWidth: 980, margin: '24px auto', padding: '0 18px 40px' }}>
+      <Script
+        id="manifestbank-faq"
+        type="application/ld+json"
+        strategy="afterInteractive"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
       <section
         style={{
           background: 'rgba(248, 242, 235, 0.88)',

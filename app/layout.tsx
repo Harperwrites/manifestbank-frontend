@@ -1,14 +1,43 @@
 import type { Metadata } from 'next'
+import Script from 'next/script'
 import Link from 'next/link'
 import './globals.css'
 import { AuthProvider } from './providers'
 import PwaRegister from './components/PwaRegister'
 
 export const metadata: Metadata = {
-  title: 'ManifestBank™',
-  description: 'ManifestBank™ App',
+  metadataBase: new URL('https://manifestbank.app'),
+  title: {
+    default: 'ManifestBank™',
+    template: '%s | ManifestBank™',
+  },
+  description:
+    'ManifestBank™ is a digital self-organization, reflection, and awareness platform designed to help users clarify intentions and align identity with conscious action.',
   manifest: '/manifestBank-v2.json?v=20260117b',
   themeColor: '#b67967',
+  openGraph: {
+    title: 'ManifestBank™',
+    description:
+      'ManifestBank™ is a digital self-organization, reflection, and awareness platform designed to help users clarify intentions and align identity with conscious action.',
+    url: 'https://manifestbank.app',
+    siteName: 'ManifestBank™',
+    type: 'website',
+    images: [
+      {
+        url: '/ManifestBank%20Square%20App%20Logo.png?v=20260118a',
+        width: 512,
+        height: 512,
+        alt: 'ManifestBank™',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'ManifestBank™',
+    description:
+      'ManifestBank™ is a digital self-organization, reflection, and awareness platform designed to help users clarify intentions and align identity with conscious action.',
+    images: ['/ManifestBank%20Square%20App%20Logo.png?v=20260118a'],
+  },
   icons: {
     icon: '/ManifestBank%20Square%20App%20Logo.png?v=20260118a',
     apple: '/ManifestBank%20Square%20App%20Logo.png?v=20260118a',
@@ -30,6 +59,33 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <AuthProvider>
+          <Script
+            id="manifestbank-org"
+            type="application/ld+json"
+            strategy="afterInteractive"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                '@context': 'https://schema.org',
+                '@type': 'Organization',
+                name: 'ManifestBank™',
+                url: 'https://manifestbank.app',
+                logo: 'https://manifestbank.app/ManifestBank%20Square%20App%20Logo.png?v=20260118a',
+              }),
+            }}
+          />
+          <Script
+            id="manifestbank-website"
+            type="application/ld+json"
+            strategy="afterInteractive"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                '@context': 'https://schema.org',
+                '@type': 'WebSite',
+                name: 'ManifestBank™',
+                url: 'https://manifestbank.app',
+              }),
+            }}
+          />
           {children}
           <footer
             style={{

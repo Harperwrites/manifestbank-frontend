@@ -1,7 +1,9 @@
 import LegalDoc from '@/app/components/LegalDoc'
 
 export const metadata = {
-  title: 'ManifestBank™ Terms & Conditions',
+  title: 'Terms & Conditions',
+  description:
+    'Read the ManifestBank™ Terms & Conditions that govern access and use of the platform.',
 }
 
 export default function TermsPage() {
