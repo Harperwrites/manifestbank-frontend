@@ -288,7 +288,7 @@ export default function NotificationsPage() {
                       <div key={note.id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                         <div style={{ fontSize: 12 }}>{note.actor_display_name ?? 'Member'}</div>
                         <div style={{ marginLeft: 'auto', fontSize: 11, opacity: 0.6 }}>
-                          {new Date(note.created_at).toLocaleString()}
+                          {new Date(note.created_at).toLocaleDateString('en-US')}
                         </div>
                       </div>
                     ))}
@@ -531,7 +531,7 @@ export default function NotificationsPage() {
                   ×
                 </button>
                 <div style={{ marginLeft: 'auto', fontSize: 11, opacity: 0.6 }}>
-                  {new Date(note.created_at).toLocaleString()}
+                  {new Date(note.created_at).toLocaleDateString('en-US')}
                 </div>
               </div>
             ))

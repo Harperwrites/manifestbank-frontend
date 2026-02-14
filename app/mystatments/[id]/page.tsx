@@ -228,7 +228,7 @@ export default function AccountStatementPage() {
               <div style={{ marginTop: 6, opacity: 0.7 }}>Month: {selectedMonth}</div>
               {asOf ? (
                 <div style={{ marginTop: 4, fontSize: 12, opacity: 0.65 }}>
-                  *As of {new Date(asOf).toLocaleString()}
+                  *As of {new Date(asOf).toLocaleDateString('en-US')}
                 </div>
               ) : null}
             </div>

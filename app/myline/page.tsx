@@ -999,7 +999,7 @@ export default function MyLinePage() {
                           <div style={{ opacity: 0.7 }}>{note.message}</div>
                         </div>
                         <div style={{ marginLeft: 'auto', fontSize: 11, opacity: 0.6 }}>
-                          {new Date(note.created_at).toLocaleString()}
+                          {new Date(note.created_at).toLocaleDateString('en-US')}
                         </div>
                       </div>
                     ))}
@@ -1811,7 +1811,7 @@ export default function MyLinePage() {
                       textOverflow: 'ellipsis',
                     }}
                   >
-                    {preview.created_at ? new Date(preview.created_at).toLocaleString() : ''}
+                    {preview.created_at ? new Date(preview.created_at).toLocaleDateString('en-US') : ''}
                   </div>
                 </button>
               ))

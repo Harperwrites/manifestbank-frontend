@@ -860,7 +860,7 @@ export default function MyLineThreadPage() {
                           {conversationProfile?.display_name ?? conversationDisplayName}
                         </button>
                       ) : null}
-                      <span>{new Date(message.created_at).toLocaleString()}</span>
+                      <span>{new Date(message.created_at).toLocaleDateString('en-US')}</span>
                     </div>
                   </div>
                 )

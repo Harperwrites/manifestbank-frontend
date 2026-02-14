@@ -309,7 +309,7 @@ export default function LedgerPanel({
 
               <div style={{ fontSize: 12, opacity: 0.75, marginTop: 6 }}>
                 {formatEntryType(e.entry_type)} • {formatStatusLabel(e.status)} •{' '}
-                {new Date(e.created_at).toLocaleString()}
+                {new Date(e.created_at).toLocaleDateString('en-US')}
               </div>
 
               {e.memo ? <div style={{ fontSize: 12, opacity: 0.85, marginTop: 6 }}>{e.memo}</div> : null}
@@ -481,7 +481,7 @@ export default function LedgerPanel({
               <DetailRow label="Amount" value={formatCurrency(selectedEntry.amount, selectedEntry.currency)} />
               <DetailRow label="Reference" value={selectedEntry.reference || '—'} />
               <DetailRow label="Memo" value={selectedEntry.memo || '—'} />
-              <DetailRow label="Date / Time" value={new Date(selectedEntry.created_at).toLocaleString()} />
+              <DetailRow label="Date / Time" value={new Date(selectedEntry.created_at).toLocaleDateString('en-US')} />
               <DetailRow label="Status" value={formatStatusLabel(selectedEntry.status)} />
               <DetailRow label="Entry ID" value={`#${selectedEntry.id}`} />
               <DetailRow

@@ -395,7 +395,7 @@ export default function DashboardPage() {
           memo: depositMemo || 'Scheduled deposit via dashboard',
           scheduled_for: new Date(depositWhen).toISOString(),
         })
-        const whenText = new Date(depositWhen).toLocaleString()
+        const whenText = new Date(depositWhen).toLocaleDateString('en-US')
         addNote(`Deposit scheduled for ${whenText}.`)
         toast(`Deposit scheduled for ${whenText}.`)
         await loadPendingDeposits(Number(depositAccountId))
@@ -473,7 +473,7 @@ export default function DashboardPage() {
           memo: expenseMemo || 'Scheduled withdrawal via dashboard',
           scheduled_for: new Date(expenseWhen).toISOString(),
         })
-        const whenText = new Date(expenseWhen).toLocaleString()
+        const whenText = new Date(expenseWhen).toLocaleDateString('en-US')
         addNote(`Withdrawal scheduled for ${whenText}.`)
         toast(`Withdrawal scheduled for ${whenText}.`)
       } else {
@@ -2004,7 +2004,7 @@ export default function DashboardPage() {
                           {moneyFormatter.format(Number(entry.amount ?? 0))}
                         </div>
                         <div style={{ fontSize: 12, opacity: 0.7 }}>
-                          {entry.scheduled_for ? new Date(entry.scheduled_for).toLocaleString() : 'Scheduled'}
+                          {entry.scheduled_for ? new Date(entry.scheduled_for).toLocaleDateString('en-US') : 'Scheduled'}
                         </div>
                       </div>
                     </div>
@@ -2055,7 +2055,7 @@ export default function DashboardPage() {
                   >
                     <div style={{ fontWeight: 600 }}>{item.label}</div>
                     <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>
-                      {item.time ? new Date(item.time).toLocaleString() : '—'} • {item.meta}
+                      {item.time ? new Date(item.time).toLocaleDateString('en-US') : '—'} • {item.meta}
                     </div>
                   </div>
                 ))}
@@ -2167,7 +2167,7 @@ export default function DashboardPage() {
             <div style={{ marginTop: 14, display: 'grid', gap: 10 }}>
               <div style={{ fontWeight: 600 }}>{selectedActivity.label}</div>
               <div style={{ fontSize: 12, opacity: 0.7 }}>
-                {selectedActivity.time ? new Date(selectedActivity.time).toLocaleString() : '—'}
+                {selectedActivity.time ? new Date(selectedActivity.time).toLocaleDateString('en-US') : '—'}
               </div>
               <div style={{ display: 'grid', gap: 8 }}>
                 <BalanceRow label="Account" value={selectedActivity.accountName} />
@@ -2339,7 +2339,7 @@ export default function DashboardPage() {
                             {moneyFormatter.format(Number(entry.amount ?? 0))}
                           </div>
                           <div style={{ fontSize: 12, opacity: 0.7 }}>
-                            {entry.scheduled_for ? new Date(entry.scheduled_for).toLocaleString() : 'Scheduled'}
+                            {entry.scheduled_for ? new Date(entry.scheduled_for).toLocaleDateString('en-US') : 'Scheduled'}
                           </div>
                         </div>
                       </div>
@@ -2405,7 +2405,7 @@ export default function DashboardPage() {
               </div>
               <div style={{ fontSize: 12, opacity: 0.7 }}>
                 {pendingDetail.scheduled_for
-                  ? new Date(pendingDetail.scheduled_for).toLocaleString()
+                  ? new Date(pendingDetail.scheduled_for).toLocaleDateString('en-US')
                   : 'Scheduled'}
               </div>
               <div style={{ display: 'grid', gap: 8 }}>

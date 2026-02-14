@@ -2403,7 +2403,7 @@ export default function EtherPage() {
                               textOverflow: 'ellipsis',
                             }}
                           >
-                            {new Date(note.created_at).toLocaleString()}
+                            {new Date(note.created_at).toLocaleDateString('en-US')}
                           </div>
                         </div>
                       ))}
@@ -3213,7 +3213,7 @@ export default function EtherPage() {
                               </button>
                             ) : null}
                             <div style={{ marginLeft: 'auto', fontSize: 11, opacity: 0.6 }}>
-                              {new Date(note.created_at).toLocaleString()}
+                              {new Date(note.created_at).toLocaleDateString('en-US')}
                             </div>
                           </div>
                         ))}
@@ -4006,7 +4006,7 @@ export default function EtherPage() {
                         <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: 0.3 }}>
                           {post.kind.toUpperCase()}
                         </div>
-                        <div style={{ fontSize: 12, opacity: 0.7 }}>{new Date(post.created_at).toLocaleString()}</div>
+                        <div style={{ fontSize: 12, opacity: 0.7 }}>{new Date(post.created_at).toLocaleDateString('en-US')}</div>
                         {toProfileId(profile?.id ?? null) === post.author_profile_id || role === 'admin' ? (
                           <div style={{ position: 'relative' }}>
                             <button
@@ -4265,7 +4265,7 @@ export default function EtherPage() {
                                     </div>
                                   </button>
                                   <div style={{ fontSize: 12, opacity: 0.7 }}>
-                                    {new Date(comment.created_at).toLocaleString()}
+                                    {new Date(comment.created_at).toLocaleDateString('en-US')}
                                   </div>
                                 </div>
                                 <div style={{ fontSize: 13, overflowWrap: 'anywhere' }}>{comment.content}</div>

@@ -824,7 +824,7 @@ export default function EtherProfilePage() {
                                 <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: 0.3 }}>
                                   {post.kind.toUpperCase()}
                                 </div>
-                                <div style={{ fontSize: 12, opacity: 0.7 }}>{new Date(post.created_at).toLocaleString()}</div>
+                                <div style={{ fontSize: 12, opacity: 0.7 }}>{new Date(post.created_at).toLocaleDateString('en-US')}</div>
                               </div>
                             </div>
                             <div style={{ marginTop: 6, fontSize: 13, overflowWrap: 'anywhere' }}>
@@ -991,7 +991,7 @@ export default function EtherProfilePage() {
                                             </div>
                                           </button>
                                           <div style={{ fontSize: 12, opacity: 0.7 }}>
-                                            {new Date(comment.created_at).toLocaleString()}
+                                            {new Date(comment.created_at).toLocaleDateString('en-US')}
                                           </div>
                                         </div>
                                         <div style={{ fontSize: 13, overflowWrap: 'anywhere' }}>{comment.content}</div>

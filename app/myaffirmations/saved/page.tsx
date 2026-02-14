@@ -91,10 +91,6 @@ export default function SavedAffirmationsPage() {
             >
               ← Back
             </button>
-            <h1 style={{ marginTop: 16, fontFamily: 'var(--font-serif)', fontSize: 30 }}>
-              Saved Affirmations
-            </h1>
-            <p style={{ marginTop: 6, opacity: 0.75 }}>Your saved daily affirmations in one place.</p>
           </div>
         </div>
 
@@ -209,6 +205,11 @@ export default function SavedAffirmationsPage() {
             ) : null}
           </div>
         ) : null}
+
+        <h1 style={{ marginTop: 16, fontFamily: 'var(--font-serif)', fontSize: 30 }}>
+          Saved Affirmations
+        </h1>
+        <p style={{ marginTop: 6, opacity: 0.75 }}>Your saved daily affirmations in one place.</p>
 
         {error ? <div style={{ marginTop: 18, color: '#7a2e2e' }}>{error}</div> : null}
 
