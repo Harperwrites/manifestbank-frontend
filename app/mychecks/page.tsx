@@ -348,9 +348,13 @@ export default function MyChecksPage() {
     const directionLabel = direction === 'incoming' ? 'credit' : 'debit'
     const entryType = direction === 'incoming' ? 'deposit' : 'withdrawal'
     const reference = checkNumber ? `check-${checkNumber}` : 'check'
-    const affirmationPick = pickCheckAffirmation()
-    setAffirmation(affirmationPick.text)
-    setAffirmationAngle(affirmationPick.angle)
+    const affirmationPick = affirmation
+      ? { text: affirmation, angle: affirmationAngle }
+      : pickCheckAffirmation()
+    if (!affirmation) {
+      setAffirmation(affirmationPick.text)
+      setAffirmationAngle(affirmationPick.angle)
+    }
     const detail = {
       from: fromDisplay,
       to: toDisplay,
