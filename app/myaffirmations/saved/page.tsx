@@ -101,7 +101,16 @@ export default function SavedAffirmationsPage() {
         {error ? <div style={{ marginTop: 18, color: '#7a2e2e' }}>{error}</div> : null}
 
         {loading ? null : savedAffirmations.length > 0 ? (
-          <div style={{ marginTop: 24 }}>
+          <div
+            style={{
+              marginTop: 24,
+              padding: 14,
+              borderRadius: 22,
+              border: '1px solid rgba(140, 92, 78, 0.35)',
+              background: 'linear-gradient(135deg, rgba(182, 121, 103, 0.22), rgba(245, 236, 228, 0.95))',
+              boxShadow: '0 18px 40px rgba(0,0,0,0.12)',
+            }}
+          >
             <div
               style={{
                 display: 'flex',
@@ -163,7 +172,17 @@ export default function SavedAffirmationsPage() {
               </button>
             </div>
             {activeAffirmation ? (
-              <div style={{ display: 'grid', justifyItems: 'center', gap: 10 }}>
+              <div
+                style={{
+                  display: 'grid',
+                  justifyItems: 'center',
+                  gap: 10,
+                  padding: '12px 10px',
+                  borderRadius: 18,
+                  border: '1px solid rgba(95, 74, 62, 0.18)',
+                  background: 'rgba(255, 255, 255, 0.92)',
+                }}
+              >
                 <div
                   style={{
                     fontFamily: '"Playfair Display", "Cormorant Garamond", "Libre Baskerville", serif',
