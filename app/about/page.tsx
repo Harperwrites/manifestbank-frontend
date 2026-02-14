@@ -4,6 +4,9 @@ export const metadata: Metadata = {
   title: 'About Us',
   description:
     'Learn about ManifestBank™—a digital self-organization, reflection, and awareness platform focused on intentional living.',
+  alternates: {
+    canonical: '/about',
+  },
 }
 
 export default function AboutPage() {

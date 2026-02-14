@@ -5,6 +5,9 @@ export const metadata: Metadata = {
   title: 'FAQ',
   description:
     'Frequently asked questions about ManifestBank™, The Ether™, privacy, and platform use.',
+  alternates: {
+    canonical: '/faq',
+  },
 }
 
 export default function FaqPage() {

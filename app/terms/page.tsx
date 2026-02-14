@@ -4,6 +4,9 @@ export const metadata = {
   title: 'Terms & Conditions',
   description:
     'Read the ManifestBank™ Terms & Conditions that govern access and use of the platform.',
+  alternates: {
+    canonical: '/terms',
+  },
 }
 
 export default function TermsPage() {

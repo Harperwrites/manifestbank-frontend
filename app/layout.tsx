@@ -38,6 +38,9 @@ export const metadata: Metadata = {
       'ManifestBank™ is a digital self-organization, reflection, and awareness platform designed to help users clarify intentions and align identity with conscious action.',
     images: ['/ManifestBank%20Square%20App%20Logo.png?v=20260118a'],
   },
+  alternates: {
+    canonical: '/',
+  },
   icons: {
     icon: '/ManifestBank%20Square%20App%20Logo.png?v=20260118a',
     apple: '/ManifestBank%20Square%20App%20Logo.png?v=20260118a',
