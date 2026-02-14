@@ -109,6 +109,9 @@ export default function SavedAffirmationsPage() {
               border: '1px solid rgba(140, 92, 78, 0.35)',
               background: 'linear-gradient(135deg, rgba(182, 121, 103, 0.22), rgba(245, 236, 228, 0.95))',
               boxShadow: '0 18px 40px rgba(0,0,0,0.12)',
+              width: 'min(520px, 92vw)',
+              marginLeft: 'auto',
+              marginRight: 'auto',
             }}
           >
             <div
