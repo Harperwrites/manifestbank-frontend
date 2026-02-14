@@ -101,16 +101,7 @@ export default function SavedAffirmationsPage() {
         {error ? <div style={{ marginTop: 18, color: '#7a2e2e' }}>{error}</div> : null}
 
         {loading ? null : savedAffirmations.length > 0 ? (
-          <div
-            style={{
-              marginTop: 24,
-              borderRadius: 20,
-              padding: '20px 18px',
-              border: '1px solid rgba(140, 92, 78, 0.4)',
-              background: 'linear-gradient(160deg, rgba(182, 121, 103, 0.16), rgba(245, 236, 228, 0.9))',
-              boxShadow: '0 18px 38px rgba(0,0,0,0.12)',
-            }}
-          >
+          <div style={{ marginTop: 24 }}>
             <div
               style={{
                 display: 'flex',
@@ -172,20 +163,28 @@ export default function SavedAffirmationsPage() {
               </button>
             </div>
             {activeAffirmation ? (
-              <div
-                style={{
-                  textAlign: 'center',
-                  fontSize: 22,
-                  fontWeight: 600,
-                  color: '#4a2f26',
-                  lineHeight: 1.5,
-                  padding: '18px 10px 6px',
-                }}
-              >
-                {activeAffirmation.content}
-                <div style={{ marginTop: 10, fontSize: 13, opacity: 0.7 }}>
-                  {activeAffirmation.entry_date}
+              <div style={{ display: 'grid', justifyItems: 'center', gap: 10 }}>
+                <div
+                  style={{
+                    fontFamily: '"Playfair Display", "Cormorant Garamond", "Libre Baskerville", serif',
+                    fontSize: 26,
+                    fontWeight: 700,
+                    color: 'rgba(122, 86, 72, 0.9)',
+                    textAlign: 'center',
+                    maxWidth: 520,
+                    lineHeight: 1.4,
+                    padding: '10px 16px',
+                    borderRadius: 14,
+                    background:
+                      'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.7), rgba(255,255,255,0) 55%), radial-gradient(circle at 80% 30%, rgba(255,233,210,0.75), rgba(255,233,210,0) 60%), radial-gradient(circle at 40% 80%, rgba(255,255,255,0.6), rgba(255,255,255,0) 55%)',
+                    textShadow: '0 0 6px rgba(255, 236, 215, 0.7), 0 0 10px rgba(255, 236, 215, 0.5)',
+                  }}
+                >
+                  {activeAffirmation.content.split(' ').map((word, index) => (
+                    <div key={`${word}-${index}`}>{word}</div>
+                  ))}
                 </div>
+                <div style={{ fontSize: 13, opacity: 0.7 }}>{activeAffirmation.entry_date}</div>
               </div>
             ) : null}
           </div>
