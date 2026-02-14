@@ -101,7 +101,7 @@ export default function SavedAffirmationsPage() {
         {loading ? null : savedAffirmations.length > 0 ? (
           <div
             style={{
-              marginTop: 24,
+              marginTop: 18,
               padding: 14,
               borderRadius: 22,
               border: '1px solid rgba(140, 92, 78, 0.35)',
