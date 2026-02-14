@@ -62,6 +62,13 @@ type JournalEntry = {
   updated_at: string
 }
 
+function formatEntryDate(value?: string | null) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value ?? ''
+  return date.toLocaleDateString('en-US')
+}
+
 export default function MyJournalPage() {
   const router = useRouter()
   const [entries, setEntries] = useState<JournalEntry[]>([])
@@ -420,7 +427,9 @@ export default function MyJournalPage() {
                 }}
               >
                 <div style={{ fontWeight: 600, marginBottom: 6 }}>{entry.title}</div>
-                <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 8 }}>{entry.entry_date}</div>
+                <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 8 }}>
+                  {formatEntryDate(entry.entry_date)}
+                </div>
                 <div style={{ fontSize: 13, opacity: 0.8 }}>
                   {entry.content.length > 120 ? `${entry.content.slice(0, 120)}…` : entry.content}
                 </div>

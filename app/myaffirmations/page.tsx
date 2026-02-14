@@ -901,7 +901,9 @@ export default function MyAffirmationsPage() {
                   Delete
                 </button>
                 <div style={{ fontWeight: 600, marginBottom: 6 }}>{entry.title}</div>
-                <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 8 }}>{entry.entry_date}</div>
+                <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 8 }}>
+                  {formatEntryDate(entry.entry_date)}
+                </div>
                 <div style={{ fontSize: 13, opacity: 0.8 }}>
                   {entry.content.length > 120 ? `${entry.content.slice(0, 120)}…` : entry.content}
                 </div>
