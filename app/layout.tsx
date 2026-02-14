@@ -58,6 +58,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           rel="stylesheet"
         />
         <meta name="theme-color" content="#b67967" />
+        <meta
+          name="google-site-verification"
+          content="3Hy_gzBFWnWxPd4WgTZwn0qUl1oRzN_blbZS-jCH0Bs"
+        />
         <link rel="apple-touch-icon" href="/ManifestBank%20Square%20App%20Logo.png?v=20260118a" />
       </head>
       <body>
