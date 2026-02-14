@@ -18,7 +18,7 @@ export default function FaqPage() {
       >
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: -78 }}>
           <img
-            src="/ManifestBank%E2%84%A2%20Business%20overlays%20and%20docs.png"
+            src="/manifestbank-business-overlays-and-docs.png"
             alt="ManifestBank™"
             style={{ maxWidth: '100%', height: 'auto', width: 520 }}
           />
