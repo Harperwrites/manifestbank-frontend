@@ -48,6 +48,20 @@ type EtherNotification = {
   message?: string | null
 }
 
+function formatMessageTimestamp(value?: string | null) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const now = new Date()
+  if (date.toDateString() === now.toDateString()) {
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  }
+  const yesterday = new Date(now)
+  yesterday.setDate(now.getDate() - 1)
+  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday'
+  return date.toLocaleDateString('en-US')
+}
+
 type SyncRequest = {
   id: number
   requester_profile_id: number
@@ -860,7 +874,7 @@ export default function MyLineThreadPage() {
                           {conversationProfile?.display_name ?? conversationDisplayName}
                         </button>
                       ) : null}
-                      <span>{new Date(message.created_at).toLocaleDateString('en-US')}</span>
+                      <span>{formatMessageTimestamp(message.created_at)}</span>
                     </div>
                   </div>
                 )

@@ -30,6 +30,20 @@ type EtherThread = {
   created_at?: string
 }
 
+function formatMessageTimestamp(value?: string | null) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const now = new Date()
+  if (date.toDateString() === now.toDateString()) {
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  }
+  const yesterday = new Date(now)
+  yesterday.setDate(now.getDate() - 1)
+  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday'
+  return date.toLocaleDateString('en-US')
+}
+
 type EtherMessage = {
   id: number
   sender_profile_id: number
@@ -999,7 +1013,7 @@ export default function MyLinePage() {
                           <div style={{ opacity: 0.7 }}>{note.message}</div>
                         </div>
                         <div style={{ marginLeft: 'auto', fontSize: 11, opacity: 0.6 }}>
-                          {new Date(note.created_at).toLocaleDateString('en-US')}
+                          {formatMessageTimestamp(note.created_at)}
                         </div>
                       </div>
                     ))}
@@ -1811,7 +1825,7 @@ export default function MyLinePage() {
                       textOverflow: 'ellipsis',
                     }}
                   >
-                    {preview.created_at ? new Date(preview.created_at).toLocaleDateString('en-US') : ''}
+                    {preview.created_at ? formatMessageTimestamp(preview.created_at) : ''}
                   </div>
                 </button>
               ))

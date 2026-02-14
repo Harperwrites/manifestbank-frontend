@@ -21,6 +21,20 @@ type EtherNotification = {
   message?: string | null
 }
 
+function formatMessageTimestamp(value?: string | null) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const now = new Date()
+  if (date.toDateString() === now.toDateString()) {
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  }
+  const yesterday = new Date(now)
+  yesterday.setDate(now.getDate() - 1)
+  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday'
+  return date.toLocaleDateString('en-US')
+}
+
 type SyncRequest = {
   id: number
   requester_profile_id: number
@@ -288,7 +302,7 @@ export default function NotificationsPage() {
                       <div key={note.id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                         <div style={{ fontSize: 12 }}>{note.actor_display_name ?? 'Member'}</div>
                         <div style={{ marginLeft: 'auto', fontSize: 11, opacity: 0.6 }}>
-                          {new Date(note.created_at).toLocaleDateString('en-US')}
+                          {formatMessageTimestamp(note.created_at)}
                         </div>
                       </div>
                     ))}
@@ -531,7 +545,7 @@ export default function NotificationsPage() {
                   ×
                 </button>
                 <div style={{ marginLeft: 'auto', fontSize: 11, opacity: 0.6 }}>
-                  {new Date(note.created_at).toLocaleDateString('en-US')}
+                  {formatMessageTimestamp(note.created_at)}
                 </div>
               </div>
             ))

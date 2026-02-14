@@ -45,6 +45,20 @@ type EtherComment = {
   aligned_by_me?: boolean
 }
 
+function formatMessageTimestamp(value?: string | null) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const now = new Date()
+  if (date.toDateString() === now.toDateString()) {
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  }
+  const yesterday = new Date(now)
+  yesterday.setDate(now.getDate() - 1)
+  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday'
+  return date.toLocaleDateString('en-US')
+}
+
 type EtherNotification = {
   id: number
   recipient_profile_id: number
@@ -2403,7 +2417,7 @@ export default function EtherPage() {
                               textOverflow: 'ellipsis',
                             }}
                           >
-                            {new Date(note.created_at).toLocaleDateString('en-US')}
+                            {formatMessageTimestamp(note.created_at)}
                           </div>
                         </div>
                       ))}
@@ -3213,7 +3227,7 @@ export default function EtherPage() {
                               </button>
                             ) : null}
                             <div style={{ marginLeft: 'auto', fontSize: 11, opacity: 0.6 }}>
-                              {new Date(note.created_at).toLocaleDateString('en-US')}
+                              {formatMessageTimestamp(note.created_at)}
                             </div>
                           </div>
                         ))}
@@ -4006,7 +4020,7 @@ export default function EtherPage() {
                         <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: 0.3 }}>
                           {post.kind.toUpperCase()}
                         </div>
-                        <div style={{ fontSize: 12, opacity: 0.7 }}>{new Date(post.created_at).toLocaleDateString('en-US')}</div>
+                        <div style={{ fontSize: 12, opacity: 0.7 }}>{formatMessageTimestamp(post.created_at)}</div>
                         {toProfileId(profile?.id ?? null) === post.author_profile_id || role === 'admin' ? (
                           <div style={{ position: 'relative' }}>
                             <button
@@ -4265,7 +4279,7 @@ export default function EtherPage() {
                                     </div>
                                   </button>
                                   <div style={{ fontSize: 12, opacity: 0.7 }}>
-                                    {new Date(comment.created_at).toLocaleDateString('en-US')}
+                                    {formatMessageTimestamp(comment.created_at)}
                                   </div>
                                 </div>
                                 <div style={{ fontSize: 13, overflowWrap: 'anywhere' }}>{comment.content}</div>

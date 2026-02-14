@@ -43,6 +43,20 @@ type EtherComment = {
   aligned_by_me?: boolean
 }
 
+function formatMessageTimestamp(value?: string | null) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const now = new Date()
+  if (date.toDateString() === now.toDateString()) {
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  }
+  const yesterday = new Date(now)
+  yesterday.setDate(now.getDate() - 1)
+  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday'
+  return date.toLocaleDateString('en-US')
+}
+
 const IMAGE_FALLBACK =
   'data:image/svg+xml;utf8,' +
   encodeURIComponent(
@@ -824,7 +838,7 @@ export default function EtherProfilePage() {
                                 <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: 0.3 }}>
                                   {post.kind.toUpperCase()}
                                 </div>
-                                <div style={{ fontSize: 12, opacity: 0.7 }}>{new Date(post.created_at).toLocaleDateString('en-US')}</div>
+                                <div style={{ fontSize: 12, opacity: 0.7 }}>{formatMessageTimestamp(post.created_at)}</div>
                               </div>
                             </div>
                             <div style={{ marginTop: 6, fontSize: 13, overflowWrap: 'anywhere' }}>
@@ -991,7 +1005,7 @@ export default function EtherProfilePage() {
                                             </div>
                                           </button>
                                           <div style={{ fontSize: 12, opacity: 0.7 }}>
-                                            {new Date(comment.created_at).toLocaleDateString('en-US')}
+                                            {formatMessageTimestamp(comment.created_at)}
                                           </div>
                                         </div>
                                         <div style={{ fontSize: 13, overflowWrap: 'anywhere' }}>{comment.content}</div>

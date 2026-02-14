@@ -67,6 +67,13 @@ type AffirmationsEntry = {
   updated_at: string
 }
 
+function formatEntryDate(value?: string | null) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value ?? ''
+  return date.toLocaleDateString('en-US')
+}
+
 const DAILY_AFFIRMATIONS = [
   'Wealth is my standard.',
   'Money respects me.',
@@ -805,7 +812,9 @@ export default function MyAffirmationsPage() {
                         background: 'rgba(255, 255, 255, 0.85)',
                       }}
                     >
-                      <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 4 }}>{entry.entry_date}</div>
+                      <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 4 }}>
+                        {formatEntryDate(entry.entry_date)}
+                      </div>
                       <div style={{ fontSize: 13, fontWeight: 600, color: '#3b2b24' }}>
                         {entry.content.length > 60 ? `${entry.content.slice(0, 60)}…` : entry.content}
                       </div>

@@ -20,6 +20,13 @@ type AffirmationsEntry = {
   updated_at: string
 }
 
+function formatEntryDate(value?: string | null) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value ?? ''
+  return date.toLocaleDateString('en-US')
+}
+
 const SAVED_AFFIRMATION_TITLE = 'Saved affirmation'
 
 export default function SavedAffirmationsPage() {
@@ -200,7 +207,9 @@ export default function SavedAffirmationsPage() {
                     <div key={`${word}-${index}`}>{word}</div>
                   ))}
                 </div>
-                <div style={{ fontSize: 13, opacity: 0.7 }}>{activeAffirmation.entry_date}</div>
+                <div style={{ fontSize: 13, opacity: 0.7 }}>
+                  {formatEntryDate(activeAffirmation.entry_date)}
+                </div>
               </div>
             ) : null}
           </div>
@@ -251,7 +260,9 @@ export default function SavedAffirmationsPage() {
                     width: '100%',
                   }}
                 >
-                  <div style={{ fontWeight: 600, marginBottom: 6 }}>{entry.entry_date}</div>
+                  <div style={{ fontWeight: 600, marginBottom: 6 }}>
+                    {formatEntryDate(entry.entry_date)}
+                  </div>
                   <div style={{ fontSize: 13, opacity: 0.85 }}>
                     {entry.content.length > 140 ? `${entry.content.slice(0, 140)}…` : entry.content}
                   </div>
