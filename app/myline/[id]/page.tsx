@@ -156,11 +156,9 @@ export default function MyLineThreadPage() {
     setLoading(true)
     setNotice('')
     try {
-      const [threadsRes, messagesRes, noteRes, syncRes] = await Promise.allSettled([
+      const [threadsRes, messagesRes] = await Promise.allSettled([
         api.get('/ether/threads'),
         api.get(`/ether/threads/${threadId}/messages`),
-        api.get('/ether/notifications'),
-        api.get('/ether/sync/requests'),
       ])
       if (threadsRes.status === 'fulfilled') {
         const list = Array.isArray(threadsRes.value.data) ? (threadsRes.value.data as EtherThread[]) : []
@@ -172,15 +170,24 @@ export default function MyLineThreadPage() {
         const last = list[list.length - 1]
         markThreadRead(threadId, last?.created_at)
       }
-      if (noteRes.status === 'fulfilled') setNotifications(noteRes.value.data)
-      if (syncRes.status === 'fulfilled') setSyncRequests(syncRes.value.data)
-      if ([threadsRes, messagesRes, noteRes, syncRes].some((res) => res.status === 'rejected')) {
+      if ([threadsRes, messagesRes].some((res) => res.status === 'rejected')) {
         setNotice('Some data failed to load. Try refresh.')
       }
     } catch (e: any) {
       setNotice(e?.response?.data?.detail ?? e?.message ?? 'Failed to load thread')
     } finally {
       setLoading(false)
+    }
+
+    try {
+      const [noteRes, syncRes] = await Promise.allSettled([
+        api.get('/ether/notifications'),
+        api.get('/ether/sync/requests'),
+      ])
+      if (noteRes.status === 'fulfilled') setNotifications(noteRes.value.data)
+      if (syncRes.status === 'fulfilled') setSyncRequests(syncRes.value.data)
+    } catch {
+      // background refresh only
     }
   }
 
@@ -825,11 +832,11 @@ export default function MyLineThreadPage() {
                       style={{
                         padding: '12px 16px',
                         borderRadius: 18,
-                        border: '1px solid rgba(255,255,255,0.25)',
+                        border: '1px solid rgba(140, 92, 78, 0.3)',
                         background: isMe
-                          ? 'linear-gradient(135deg, rgba(182, 121, 103, 0.25), rgba(255,255,255,0.9))'
-                          : 'rgba(255,255,255,0.88)',
-                        color: '#2d1f1a',
+                          ? 'linear-gradient(160deg, rgba(182, 121, 103, 0.35), rgba(255, 255, 255, 0.95))'
+                          : 'linear-gradient(160deg, #f7efe9, #efe4dd)',
+                        color: '#3a241c',
                         maxWidth: 'min(640px, 90%)',
                         boxShadow: '0 12px 24px rgba(12, 10, 12, 0.2)',
                         transition: 'box-shadow 160ms ease',
@@ -841,7 +848,7 @@ export default function MyLineThreadPage() {
                         event.currentTarget.style.boxShadow = '0 12px 24px rgba(12, 10, 12, 0.2)'
                       }}
                     >
-                      <div style={{ fontSize: 14, lineHeight: 1.5 }}>{message.content}</div>
+                      <div style={{ fontSize: 15, lineHeight: 1.55 }}>{message.content}</div>
                     </div>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 11, opacity: 0.7 }}>
                       {!isMe && conversationProfileId ? (
