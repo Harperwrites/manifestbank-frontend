@@ -144,6 +144,10 @@ a {
     left: 0 !important;
     max-width: calc(100vw - 32px);
     width: max-content;
+    background: #ffffff !important;
+    opacity: 1 !important;
+    backdrop-filter: none !important;
+    z-index: 9999 !important;
   }
 
   .ether-navbar {

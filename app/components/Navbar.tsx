@@ -132,7 +132,7 @@ export default function Navbar({
           top: sticky ? 0 : 'auto',
           left: sticky ? 0 : 'auto',
           right: sticky ? 0 : 'auto',
-          zIndex: sticky ? 200 : 'auto',
+          zIndex: sticky ? 5000 : 'auto',
           padding: '16px 24px',
           borderBottom: '1px solid var(--border)',
           background: 'rgba(255, 255, 255, 0.8)',
