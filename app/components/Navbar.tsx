@@ -34,6 +34,8 @@ export default function Navbar({
   const [accountsMsg, setAccountsMsg] = useState('')
   const [treasureOpen, setTreasureOpen] = useState(false)
   const treasureRef = useRef<HTMLDivElement | null>(null)
+  const treasureMenuRef = useRef<HTMLDivElement | null>(null)
+  const [treasureMenuRect, setTreasureMenuRect] = useState<DOMRect | null>(null)
 
   useEffect(() => {
     setPortalReady(true)
@@ -42,7 +44,11 @@ export default function Navbar({
   useEffect(() => {
     function handleClick(event: MouseEvent) {
       const target = event.target as Node
-      if (treasureRef.current && !treasureRef.current.contains(target)) {
+      if (
+        treasureRef.current &&
+        !treasureRef.current.contains(target) &&
+        (!treasureMenuRef.current || !treasureMenuRef.current.contains(target))
+      ) {
         setTreasureOpen(false)
       }
     }
@@ -273,7 +279,15 @@ export default function Navbar({
         <div ref={treasureRef} style={{ position: 'relative' }}>
           <button
             type="button"
-            onClick={() => setTreasureOpen((open) => !open)}
+            onClick={() =>
+              setTreasureOpen((open) => {
+                const next = !open
+                if (next && treasureRef.current) {
+                  setTreasureMenuRect(treasureRef.current.getBoundingClientRect())
+                }
+                return next
+              })
+            }
             style={{
               padding: 0,
               border: 'none',
@@ -292,63 +306,75 @@ export default function Navbar({
             My Treasure Chest
             <span style={{ fontSize: 12, opacity: 0.7 }}>▾</span>
           </button>
-          {treasureOpen ? (
-            <div
-              className="treasure-menu"
-              style={{
-                position: 'absolute',
-                top: '100%',
-                left: 0,
-                marginTop: 8,
-                minWidth: 200,
-                borderRadius: 12,
-                border: '1px solid rgba(95, 74, 62, 0.2)',
-                background: '#ffffff',
-                opacity: 1,
-                backdropFilter: 'none',
-                backgroundImage: 'none',
-                boxShadow: '0 16px 40px rgba(0, 0, 0, 0.12)',
-                padding: 10,
-                display: 'grid',
-                gap: 8,
-                zIndex: 3000,
-              }}
-              role="menu"
-            >
-              <Link
-                href="/myjournal"
-                style={{ textDecoration: 'none', fontWeight: 600, color: 'rgba(95, 74, 62, 0.9)' }}
-                role="menuitem"
-                onClick={() => setTreasureOpen(false)}
-              >
-                My Journal
-              </Link>
-              <Link
-                href="/myaffirmations"
-                style={{ textDecoration: 'none', fontWeight: 600, color: 'rgba(95, 74, 62, 0.9)' }}
-                role="menuitem"
-                onClick={() => setTreasureOpen(false)}
-              >
-                My Affirmations
-              </Link>
-              <Link
-                href="/mystatments"
-                style={{ textDecoration: 'none', fontWeight: 600, color: 'rgba(95, 74, 62, 0.9)' }}
-                role="menuitem"
-                onClick={() => setTreasureOpen(false)}
-              >
-                My Statements
-              </Link>
-              <Link
-                href="/mychecks"
-                style={{ textDecoration: 'none', fontWeight: 600, color: 'rgba(95, 74, 62, 0.9)' }}
-                role="menuitem"
-                onClick={() => setTreasureOpen(false)}
-              >
-                My Checks
-              </Link>
-            </div>
-          ) : null}
+          {treasureOpen && portalReady
+            ? (() => {
+                const rect = treasureMenuRect
+                const width = Math.min(240, typeof window !== 'undefined' ? window.innerWidth - 24 : 240)
+                const left = rect
+                  ? Math.min(Math.max(12, rect.left), (typeof window !== 'undefined' ? window.innerWidth : 0) - width - 12)
+                  : 12
+                const top = rect?.bottom ? rect.bottom + 8 : 72
+                return createPortal(
+                  <div
+                    ref={treasureMenuRef}
+                    className="treasure-menu"
+                    style={{
+                      position: 'fixed',
+                      top,
+                      left,
+                      width,
+                      maxWidth: 'calc(100vw - 24px)',
+                      borderRadius: 12,
+                      border: '1px solid rgba(95, 74, 62, 0.2)',
+                      background: '#ffffff',
+                      opacity: 1,
+                      backdropFilter: 'none',
+                      backgroundImage: 'none',
+                      boxShadow: '0 16px 40px rgba(0, 0, 0, 0.16)',
+                      padding: 10,
+                      display: 'grid',
+                      gap: 8,
+                      zIndex: 99999,
+                    }}
+                    role="menu"
+                  >
+                    <Link
+                      href="/myjournal"
+                      style={{ textDecoration: 'none', fontWeight: 600, color: 'rgba(95, 74, 62, 0.9)' }}
+                      role="menuitem"
+                      onClick={() => setTreasureOpen(false)}
+                    >
+                      My Journal
+                    </Link>
+                    <Link
+                      href="/myaffirmations"
+                      style={{ textDecoration: 'none', fontWeight: 600, color: 'rgba(95, 74, 62, 0.9)' }}
+                      role="menuitem"
+                      onClick={() => setTreasureOpen(false)}
+                    >
+                      My Affirmations
+                    </Link>
+                    <Link
+                      href="/mystatments"
+                      style={{ textDecoration: 'none', fontWeight: 600, color: 'rgba(95, 74, 62, 0.9)' }}
+                      role="menuitem"
+                      onClick={() => setTreasureOpen(false)}
+                    >
+                      My Statements
+                    </Link>
+                    <Link
+                      href="/mychecks"
+                      style={{ textDecoration: 'none', fontWeight: 600, color: 'rgba(95, 74, 62, 0.9)' }}
+                      role="menuitem"
+                      onClick={() => setTreasureOpen(false)}
+                    >
+                      My Checks
+                    </Link>
+                  </div>,
+                  document.body
+                )
+              })()
+            : null}
         </div>
         {isLoading ? (
           <span style={{ opacity: 0.75 }}>Loading…</span>
