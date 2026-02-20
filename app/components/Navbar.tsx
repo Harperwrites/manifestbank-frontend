@@ -298,17 +298,20 @@ export default function Navbar({
               style={{
                 position: 'absolute',
                 top: '100%',
-                right: 0,
+                left: 0,
                 marginTop: 8,
                 minWidth: 200,
                 borderRadius: 12,
                 border: '1px solid rgba(95, 74, 62, 0.2)',
                 background: '#ffffff',
+                opacity: 1,
+                backdropFilter: 'none',
+                backgroundImage: 'none',
                 boxShadow: '0 16px 40px rgba(0, 0, 0, 0.12)',
                 padding: 10,
                 display: 'grid',
                 gap: 8,
-                zIndex: 1000,
+                zIndex: 3000,
               }}
               role="menu"
             >
