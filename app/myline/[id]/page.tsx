@@ -151,7 +151,38 @@ export default function MyLineThreadPage() {
     setProfile((prev) => (prev ? { ...prev, avatar_url: res.data.url } : prev))
   }
 
-  async function loadThread() {
+  async function loadThreadFast() {
+    if (!Number.isFinite(threadId)) return
+    setLoading(true)
+    setNotice('')
+    try {
+      const messagesRes = await api.get(`/ether/threads/${threadId}/messages`)
+      const list = Array.isArray(messagesRes.data) ? (messagesRes.data as EtherMessage[]) : []
+      setMessages(list)
+      const last = list[list.length - 1]
+      markThreadRead(threadId, last?.created_at)
+    } catch (e: any) {
+      setNotice(e?.response?.data?.detail ?? e?.message ?? 'Failed to load thread')
+    } finally {
+      setLoading(false)
+    }
+    // Threads list can load after render to speed up the initial paint.
+    api
+      .get('/ether/threads')
+      .then((threadsRes) => {
+        const threadList = Array.isArray(threadsRes.data) ? (threadsRes.data as EtherThread[]) : []
+        setThread(threadList.find((item) => item.id === threadId) ?? null)
+      })
+      .catch(() => {})
+  }
+
+  useEffect(() => {
+    loadProfile().catch(() => {})
+    loadThreadFast().catch(() => {})
+  }, [threadId])
+
+  // legacy function retained for manual refresh button
+  async function loadThreadFull() {
     if (!Number.isFinite(threadId)) return
     setLoading(true)
     setNotice('')
@@ -160,15 +191,15 @@ export default function MyLineThreadPage() {
         api.get('/ether/threads'),
         api.get(`/ether/threads/${threadId}/messages`),
       ])
-      if (threadsRes.status === 'fulfilled') {
-        const list = Array.isArray(threadsRes.value.data) ? (threadsRes.value.data as EtherThread[]) : []
-        setThread(list.find((item) => item.id === threadId) ?? null)
-      }
       if (messagesRes.status === 'fulfilled') {
         const list = Array.isArray(messagesRes.value.data) ? (messagesRes.value.data as EtherMessage[]) : []
         setMessages(list)
         const last = list[list.length - 1]
         markThreadRead(threadId, last?.created_at)
+      }
+      if (threadsRes.status === 'fulfilled') {
+        const list = Array.isArray(threadsRes.value.data) ? (threadsRes.value.data as EtherThread[]) : []
+        setThread(list.find((item) => item.id === threadId) ?? null)
       }
       if ([threadsRes, messagesRes].some((res) => res.status === 'rejected')) {
         setNotice('Some data failed to load. Try refresh.')
@@ -178,23 +209,7 @@ export default function MyLineThreadPage() {
     } finally {
       setLoading(false)
     }
-
-    try {
-      const [noteRes, syncRes] = await Promise.allSettled([
-        api.get('/ether/notifications'),
-        api.get('/ether/sync/requests'),
-      ])
-      if (noteRes.status === 'fulfilled') setNotifications(noteRes.value.data)
-      if (syncRes.status === 'fulfilled') setSyncRequests(syncRes.value.data)
-    } catch {
-      // background refresh only
-    }
   }
-
-  useEffect(() => {
-    loadProfile().catch(() => {})
-    loadThread().catch(() => {})
-  }, [threadId])
 
   useEffect(() => {
     if (!threadId) return
@@ -512,7 +527,7 @@ export default function MyLineThreadPage() {
     try {
       await api.post(`/ether/threads/${threadId}/messages`, { content: trimmed })
       setDraft('')
-      await loadThread()
+      await loadThreadFast()
     } catch (e: any) {
       setNotice(e?.response?.data?.detail ?? e?.message ?? 'Message failed')
     } finally {
@@ -794,7 +809,7 @@ export default function MyLineThreadPage() {
             </div>
             <button
               type="button"
-              onClick={() => loadThread()}
+              onClick={() => loadThreadFull()}
               style={{
                 padding: '8px 12px',
                 borderRadius: 999,
@@ -833,10 +848,9 @@ export default function MyLineThreadPage() {
                         padding: '12px 16px',
                         borderRadius: 18,
                         border: '1px solid rgba(140, 92, 78, 0.3)',
-                        background: isMe
-                          ? 'linear-gradient(160deg, rgba(182, 121, 103, 0.35), rgba(255, 255, 255, 0.95))'
-                          : 'linear-gradient(160deg, #f7efe9, #efe4dd)',
-                        color: '#3a241c',
+                        background:
+                          'linear-gradient(135deg, rgba(199, 140, 122, 0.96), rgba(220, 193, 179, 0.98)), radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.7), transparent 52%), radial-gradient(circle at 78% 10%, rgba(255, 255, 255, 0.45), transparent 58%), linear-gradient(25deg, rgba(80, 58, 48, 0.35) 0%, rgba(255, 255, 255, 0.12) 22%, rgba(80, 58, 48, 0.32) 40%, rgba(255, 255, 255, 0.1) 58%, rgba(80, 58, 48, 0.28) 100%), linear-gradient(115deg, rgba(90, 66, 54, 0.32) 0%, rgba(255, 255, 255, 0.1) 20%, rgba(90, 66, 54, 0.3) 42%, rgba(255, 255, 255, 0.1) 60%, rgba(90, 66, 54, 0.26) 100%), linear-gradient(160deg, rgba(66, 47, 38, 0.28) 0%, rgba(255, 255, 255, 0.08) 25%, rgba(66, 47, 38, 0.26) 48%, rgba(255, 255, 255, 0.08) 70%, rgba(66, 47, 38, 0.22) 100%)',
+                        color: '#2b1a14',
                         maxWidth: 'min(640px, 90%)',
                         boxShadow: '0 12px 24px rgba(12, 10, 12, 0.2)',
                         transition: 'box-shadow 160ms ease',

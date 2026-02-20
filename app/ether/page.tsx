@@ -1905,8 +1905,10 @@ export default function EtherPage() {
     async function loadPreviews() {
       setMyLineLoading(true)
       try {
+        const existing = new Map(myLinePreviews.map((preview) => [preview.thread_id, preview]))
+        const threadsToLoad = threads.slice(0, Math.min(6, threads.length))
         const results = await Promise.all(
-          threads.map(async (thread) => {
+          threadsToLoad.map(async (thread) => {
             try {
               const messagesRes = await api.get(`/ether/threads/${thread.id}/messages`)
               const list = Array.isArray(messagesRes.data) ? (messagesRes.data as EtherMessage[]) : []
@@ -1983,7 +1985,7 @@ export default function EtherPage() {
                 unread,
               } satisfies MyLinePreview
             } catch {
-              return {
+              return existing.get(thread.id) ?? {
                 thread_id: thread.id,
                 counterpart_profile_id: null,
                 counterpart_display_name: `Thread #${thread.id}`,
