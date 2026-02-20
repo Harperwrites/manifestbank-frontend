@@ -162,7 +162,7 @@ export default function AuthPage() {
             display: 'inline-flex',
             width: '100%',
             alignItems: 'center',
-            justifyContent: 'flex-start',
+            justifyContent: 'center',
             padding: '10px 16px',
             borderRadius: 999,
             border: '1px solid #dadce0',
@@ -171,10 +171,10 @@ export default function AuthPage() {
             textDecoration: 'none',
             fontWeight: 600,
             marginBottom: 12,
-            gap: 8,
+            gap: 10,
             boxShadow: '0 1px 2px rgba(60, 64, 67, 0.08)',
             fontFamily: 'var(--font-sans)',
-            position: 'relative',
+            textAlign: 'center',
           }}
         >
           <svg
@@ -201,16 +201,7 @@ export default function AuthPage() {
               d="M24 48c6.5 0 12-2.1 16-5.8l-7.4-5.8c-2.1 1.4-4.9 2.3-8.6 2.3-6.7 0-12.5-3.7-15.1-9.2l-7.4 5.8C6.5 42.6 14.6 48 24 48z"
             />
           </svg>
-          <span
-            style={{
-              position: 'absolute',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              pointerEvents: 'none',
-            }}
-          >
-            Continue with Google
-          </span>
+          <span>Continue with Google</span>
         </a>
 
         <form onSubmit={submit} style={{ display: 'grid', gap: 12 }}>

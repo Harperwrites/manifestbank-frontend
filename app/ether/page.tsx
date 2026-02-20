@@ -3948,10 +3948,18 @@ export default function EtherPage() {
                       borderRadius: 14,
                       border: '1px solid rgba(95, 74, 62, 0.2)',
                       background: 'rgba(255, 255, 255, 0.7)',
-                      overflow: 'hidden',
+                      overflow: 'visible',
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        gap: 12,
+                        flexWrap: 'wrap',
+                        alignItems: 'center',
+                      }}
+                    >
                       <button
                         type="button"
                         onClick={() => router.push(`/ether/profile/${post.author_profile_id}`)}
@@ -3965,6 +3973,8 @@ export default function EtherPage() {
                           background: 'transparent',
                           cursor: 'pointer',
                           padding: 0,
+                          flex: 1,
+                          minWidth: 0,
                         }}
                       >
                         <div
@@ -4004,6 +4014,10 @@ export default function EtherPage() {
                           style={{
                             fontWeight: 600,
                             fontSize: 12,
+                            maxWidth: '100%',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
                             textDecorationLine:
                               hoveredPostAuthorId === post.author_profile_id ? 'underline' : 'none',
                             textDecorationColor: 'rgba(182, 121, 103, 0.7)',
@@ -4016,7 +4030,17 @@ export default function EtherPage() {
                           {post.author_display_name ?? 'Member'}
                         </div>
                       </button>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 10,
+                          flexWrap: 'wrap',
+                          rowGap: 6,
+                          justifyContent: 'flex-end',
+                          flexShrink: 0,
+                        }}
+                      >
                         <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: 0.3 }}>
                           {post.kind.toUpperCase()}
                         </div>

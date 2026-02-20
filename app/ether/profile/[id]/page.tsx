@@ -797,11 +797,19 @@ export default function EtherProfilePage() {
                               borderRadius: 14,
                               border: '1px solid rgba(95, 74, 62, 0.2)',
                               background: 'rgba(255, 255, 255, 0.7)',
-                              overflow: 'hidden',
+                              overflow: 'visible',
                             }}
                           >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                gap: 12,
+                                flexWrap: 'wrap',
+                                alignItems: 'center',
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
                                 <div
                                   style={{
                                     width: 22,
@@ -830,11 +838,30 @@ export default function EtherProfilePage() {
                                     (post.author_display_name ?? 'M').slice(0, 1).toUpperCase()
                                   )}
                                 </div>
-                                <div style={{ fontWeight: 600, fontSize: 12 }}>
+                                <div
+                                  style={{
+                                    fontWeight: 600,
+                                    fontSize: 12,
+                                    maxWidth: '100%',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                  }}
+                                >
                                   {post.author_display_name ?? 'Member'}
                                 </div>
                               </div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 10,
+                                  flexWrap: 'wrap',
+                                  rowGap: 6,
+                                  justifyContent: 'flex-end',
+                                  flexShrink: 0,
+                                }}
+                              >
                                 <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: 0.3 }}>
                                   {post.kind.toUpperCase()}
                                 </div>
