@@ -462,7 +462,7 @@ export default function MyChecksPage() {
   }
 
   return (
-    <main>
+    <main className="mb-page-offset">
       <Navbar />
       <PremiumPaywall open={paywallOpen} onClose={() => setPaywallOpen(false)} reason={paywallReason} />
       <div style={{ padding: '28px 24px 60px', maxWidth: 980, margin: '0 auto' }}>

@@ -58,6 +58,16 @@ a {
   animation: fadeUp 0.7s ease both;
 }
 
+.mb-page-offset {
+  padding-top: 96px;
+}
+
+@media (min-width: 768px) {
+  .mb-page-offset {
+    padding-top: 32px;
+  }
+}
+
 .fade-delay-1 {
   animation-delay: 0.08s;
 }

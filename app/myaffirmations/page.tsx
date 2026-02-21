@@ -539,7 +539,7 @@ export default function MyAffirmationsPage() {
   }, [treasureChipOpen])
 
   return (
-    <main style={{ minHeight: '100vh', background: 'var(--page-bg)' }}>
+    <main className="mb-page-offset" style={{ minHeight: '100vh', background: 'var(--page-bg)' }}>
       <PremiumPaywall
         open={paywallOpen}
         onClose={() => setPaywallOpen(false)}

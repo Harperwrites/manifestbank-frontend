@@ -289,7 +289,7 @@ export default function MyJournalPage() {
   }, [])
 
   return (
-    <main style={{ minHeight: '100vh', background: 'var(--page-bg)' }}>
+    <main className="mb-page-offset" style={{ minHeight: '100vh', background: 'var(--page-bg)' }}>
       <div ref={journalNavRef}>
         <Navbar showAccountsDropdown />
       </div>

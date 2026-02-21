@@ -183,7 +183,7 @@ export default function MyStatementsPage() {
   }
 
   return (
-    <main style={{ minHeight: '100vh', background: 'var(--page-bg)' }}>
+    <main className="mb-page-offset" style={{ minHeight: '100vh', background: 'var(--page-bg)' }}>
       <PremiumPaywall
         open={paywallOpen}
         onClose={() => setPaywallOpen(false)}
@@ -250,34 +250,65 @@ export default function MyStatementsPage() {
         {!isPremium ? (
           <div
             style={{
-              marginTop: 16,
-              padding: 18,
-              borderRadius: 18,
-              border: '1px solid rgba(95, 74, 62, 0.25)',
-              background: 'rgba(255,255,255,0.92)',
-              maxWidth: 620,
+              position: 'fixed',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 20,
+              background: 'rgba(18, 12, 10, 0.45)',
+              zIndex: 7000,
             }}
           >
-            <div style={{ fontWeight: 700, fontSize: 16 }}>Statements Locked</div>
-            <div style={{ marginTop: 8, opacity: 0.8 }}>
-              Statements are available on {PREMIUM_TIER_NAME}. Upgrade to unlock full statement access.
-            </div>
-            <button
-              type="button"
-              onClick={() => setPaywallOpen(true)}
+            <div
               style={{
-                marginTop: 12,
-                padding: '10px 16px',
-                borderRadius: 999,
-                border: 'none',
-                background: 'linear-gradient(135deg, #b67967, #c6927c)',
-                color: '#fff',
-                fontWeight: 700,
-                cursor: 'pointer',
+                width: 'min(560px, 92vw)',
+                padding: 20,
+                borderRadius: 20,
+                border: '1px solid rgba(95, 74, 62, 0.28)',
+                background:
+                  'linear-gradient(160deg, rgba(217, 178, 161, 0.95), rgba(198, 159, 143, 0.98))',
+                boxShadow: '0 20px 50px rgba(20, 12, 8, 0.35)',
+                textAlign: 'center',
               }}
             >
-              Upgrade to Manifest Signature
-            </button>
+              <div style={{ fontWeight: 700, fontSize: 18 }}>Statements Locked</div>
+              <div style={{ marginTop: 8, opacity: 0.85 }}>
+                Statements are available on {PREMIUM_TIER_NAME}. Upgrade to unlock full statement access.
+              </div>
+              <div style={{ marginTop: 14, display: 'grid', gap: 10, justifyItems: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => setPaywallOpen(true)}
+                  style={{
+                    padding: '10px 16px',
+                    borderRadius: 999,
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #b67967, #c6927c)',
+                    color: '#fff',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Upgrade to Manifest Signature
+                </button>
+                <button
+                  type="button"
+                  onClick={() => history.back()}
+                  style={{
+                    padding: '10px 16px',
+                    borderRadius: 999,
+                    border: '1px solid rgba(95, 74, 62, 0.35)',
+                    background: 'rgba(255,255,255,0.8)',
+                    color: '#3b2b24',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Back
+                </button>
+              </div>
+            </div>
           </div>
         ) : null}
 

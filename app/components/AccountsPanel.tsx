@@ -155,6 +155,8 @@ export default function AccountsPanel({
         setPaywallOpen(true)
       } else if (e?.message === 'Network Error') {
         setCreateError('❌ Network Error: backend not reachable. Make sure the API is running.')
+        setPaywallReason('Upgrade to ManifestBank™ Signature to unlock unlimited accounts.')
+        setPaywallOpen(true)
       } else {
         setCreateError(`❌ Create failed: ${errMsg(e)}`)
       }
