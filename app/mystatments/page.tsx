@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Navbar from '@/app/components/Navbar'
 import { api } from '@/lib/api'
 import { useAuth } from '@/app/providers'
@@ -90,6 +90,7 @@ function formatMoney(value: number) {
 
 export default function MyStatementsPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { me } = useAuth()
   const [months] = useState(() => buildMonthOptions(12))
   const [selectedMonth, setSelectedMonth] = useState(months[0]?.value ?? '')
@@ -102,6 +103,12 @@ export default function MyStatementsPage() {
   const [paywallOpen, setPaywallOpen] = useState(false)
   const printRef = useRef<HTMLDivElement | null>(null)
   const isPremium = Boolean(me?.is_premium || me?.role === 'admin')
+
+  useEffect(() => {
+    if (searchParams.get('paywall') === '1') {
+      setPaywallOpen(true)
+    }
+  }, [searchParams])
 
   useEffect(() => {
     async function loadStatements() {
