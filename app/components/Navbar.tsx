@@ -278,13 +278,17 @@ export default function Navbar({
       </div>
 
       <div className="mb-navbar-right" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-        {!isLoading && !isPremium ? (
-          <button
-            type="button"
-            onClick={() => router.push('/mystatments')}
-            style={{
-              padding: '8px 14px',
-              borderRadius: 999,
+          {!isLoading && !isPremium ? (
+            <button
+              type="button"
+              onClick={() =>
+                window.dispatchEvent(
+                  new CustomEvent('paywall:open', { detail: { reason: 'Upgrade to ManifestBank™ Signature.' } })
+                )
+              }
+              style={{
+                padding: '8px 14px',
+                borderRadius: 999,
               border: 'none',
               background: 'linear-gradient(135deg, #b67967, #c6927c)',
               color: '#fff',

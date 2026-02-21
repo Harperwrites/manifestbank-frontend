@@ -395,7 +395,11 @@ function EtherNavbar({
           {!isLoading && !isPremium ? (
             <button
               type="button"
-              onClick={() => router.push('/mystatments')}
+              onClick={() =>
+                window.dispatchEvent(
+                  new CustomEvent('paywall:open', { detail: { reason: 'Upgrade to ManifestBank™ Signature.' } })
+                )
+              }
               style={{
                 padding: '8px 14px',
                 borderRadius: 999,

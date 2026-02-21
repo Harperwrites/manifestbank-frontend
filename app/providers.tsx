@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { api } from '@/lib/api'
+import PremiumPaywall from '@/app/components/PremiumPaywall'
 
 export type Me = {
   id: number
@@ -45,6 +46,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [legalChecked, setLegalChecked] = useState(false)
   const [legalSubmitting, setLegalSubmitting] = useState(false)
   const [legalError, setLegalError] = useState('')
+  const [devPaywallOpen, setDevPaywallOpen] = useState(false)
+  const [devPaywallReason, setDevPaywallReason] = useState('')
 
   function getStoredToken() {
     if (typeof window === 'undefined') return null
@@ -161,6 +164,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     window.addEventListener('auth:logged_out', handleToastEvent)
     return () => window.removeEventListener('auth:logged_out', handleToastEvent)
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    function handlePaywallOpen(event: Event) {
+      const detail = (event as CustomEvent<{ reason?: string }>).detail
+      setDevPaywallReason(detail?.reason ?? 'Upgrade to ManifestBank™ Signature.')
+      setDevPaywallOpen(true)
+    }
+    window.addEventListener('paywall:open', handlePaywallOpen)
+    return () => window.removeEventListener('paywall:open', handlePaywallOpen)
   }, [])
 
   useEffect(() => {
@@ -281,6 +295,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={value}>
+      <PremiumPaywall
+        open={devPaywallOpen}
+        onClose={() => setDevPaywallOpen(false)}
+        reason={devPaywallReason}
+      />
       {children}
       {legalRequired ? (
         <div

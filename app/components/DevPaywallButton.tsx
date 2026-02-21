@@ -1,14 +1,15 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-
 export default function DevPaywallButton() {
   if (process.env.NODE_ENV === 'production') return null
-  const router = useRouter()
   return (
     <button
       type="button"
-      onClick={() => router.push('/mystatments?paywall=1')}
+      onClick={() =>
+        window.dispatchEvent(
+          new CustomEvent('paywall:open', { detail: { reason: 'Dev-only paywall trigger.' } })
+        )
+      }
       style={{
         position: 'fixed',
         right: 16,
