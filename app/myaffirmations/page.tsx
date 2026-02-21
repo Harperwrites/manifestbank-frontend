@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Navbar from '@/app/components/Navbar'
 import { api } from '@/lib/api'
+import { useAuth } from '@/app/providers'
+import PremiumPaywall from '@/app/components/PremiumPaywall'
+import { PREMIUM_TIER_NAME } from '@/app/lib/premium'
 
 function toast(message: string) {
   if (typeof window === 'undefined') return
@@ -185,6 +188,7 @@ const SAVED_AFFIRMATION_TITLE = 'Saved affirmation'
 
 export default function MyAffirmationsPage() {
   const router = useRouter()
+  const { me } = useAuth()
   const [entries, setEntries] = useState<AffirmationsEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -205,6 +209,8 @@ export default function MyAffirmationsPage() {
   const [savingDaily, setSavingDaily] = useState(false)
   const [savePulse, setSavePulse] = useState(false)
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
+  const [paywallOpen, setPaywallOpen] = useState(false)
+  const [paywallReason, setPaywallReason] = useState<string | null>(null)
   const affirmationNavRef = useRef<HTMLDivElement | null>(null)
   const [etherPortalVisible, setEtherPortalVisible] = useState(false)
   const [treasureChipOpen, setTreasureChipOpen] = useState(false)
@@ -360,6 +366,7 @@ export default function MyAffirmationsPage() {
     () => sortedEntries.filter((entry) => entry.title !== SAVED_AFFIRMATION_TITLE),
     [sortedEntries]
   )
+  const isPremium = Boolean(me?.is_premium || me?.role === 'admin')
   const confirmDeleteEntry = useMemo(
     () => affirmationsEntries.find((entry) => entry.id === confirmDeleteId) ?? null,
     [affirmationsEntries, confirmDeleteId]
@@ -404,6 +411,11 @@ export default function MyAffirmationsPage() {
       setError('Please fill in title, date, and entry text.')
       return
     }
+    if (!isPremium && affirmationsEntries.length >= 10) {
+      setPaywallReason(`Free tier allows 10 affirmation entries. Upgrade to ${PREMIUM_TIER_NAME} for unlimited entries.`)
+      setPaywallOpen(true)
+      return
+    }
     setSaving(true)
     setError('')
     try {
@@ -436,6 +448,11 @@ export default function MyAffirmationsPage() {
 
   async function saveDailyAffirmation() {
     if (!dailyAffirmation || savingDaily) return
+    if (!isPremium) {
+      setPaywallReason(`Saved affirmations are available on ${PREMIUM_TIER_NAME}. Upgrade to save affirmations.`)
+      setPaywallOpen(true)
+      return
+    }
     if (isDailySaved) {
       toast('Affirmation already saved.')
       return
@@ -523,6 +540,11 @@ export default function MyAffirmationsPage() {
 
   return (
     <main style={{ minHeight: '100vh', background: 'var(--page-bg)' }}>
+      <PremiumPaywall
+        open={paywallOpen}
+        onClose={() => setPaywallOpen(false)}
+        reason={paywallReason ?? undefined}
+      />
       <div ref={affirmationNavRef}>
         <Navbar showAccountsDropdown />
       </div>

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createPortal } from 'react-dom'
 import { api } from '../../lib/api'
 import { Card, Button } from './ui'
+import PremiumPaywall from './PremiumPaywall'
 
 type LedgerEntry = {
   id: number
@@ -85,8 +86,15 @@ export default function LedgerPanel({
   const [scheduleRef, setScheduleRef] = useState('')
   const [scheduleDirection, setScheduleDirection] = useState<'credit' | 'debit'>('credit')
   const [scheduleWhen, setScheduleWhen] = useState('')
+  const [paywallOpen, setPaywallOpen] = useState(false)
+  const [paywallReason, setPaywallReason] = useState('')
   const canPost = isVerified !== false
   const router = useRouter()
+
+  function openPaywall(reason?: string) {
+    setPaywallReason(reason ?? 'Upgrade to unlock unlimited transactions.')
+    setPaywallOpen(true)
+  }
 
   async function load() {
     setLoading(true)
@@ -129,7 +137,11 @@ export default function LedgerPanel({
       })
       await load()
     } catch (e: any) {
-      setMsg(`❌ Post failed: ${errMsg(e)}`)
+      if (e?.response?.status === 402) {
+        openPaywall(e?.response?.data?.detail)
+      } else {
+        setMsg(`❌ Post failed: ${errMsg(e)}`)
+      }
     } finally {
       setPosting(false)
     }
@@ -169,7 +181,11 @@ export default function LedgerPanel({
       setMsg('✅ Deposit posted.')
       setShowDeposit(false)
     } catch (e: any) {
-      setMsg(`❌ Deposit failed: ${errMsg(e)}`)
+      if (e?.response?.status === 402) {
+        openPaywall(e?.response?.data?.detail)
+      } else {
+        setMsg(`❌ Deposit failed: ${errMsg(e)}`)
+      }
     } finally {
       setPosting(false)
     }
@@ -212,7 +228,11 @@ export default function LedgerPanel({
       await load()
       setMsg('✅ Scheduled movement saved.')
     } catch (e: any) {
-      setMsg(`❌ Schedule failed: ${errMsg(e)}`)
+      if (e?.response?.status === 402) {
+        openPaywall(e?.response?.data?.detail)
+      } else {
+        setMsg(`❌ Schedule failed: ${errMsg(e)}`)
+      }
     } finally {
       setPosting(false)
     }
@@ -240,7 +260,9 @@ export default function LedgerPanel({
   const runningBalances = computeRunningBalances(entries, balance?.balance)
 
   return (
-    <Card title="Account Activity" subtitle="Private account flow">
+    <>
+      <PremiumPaywall open={paywallOpen} onClose={() => setPaywallOpen(false)} reason={paywallReason} />
+      <Card title="Account Activity" subtitle="Private account flow">
       {msg ? <div style={{ fontSize: 13, opacity: 0.9, marginBottom: 10 }}>{msg}</div> : null}
 
       {!canPost ? (
@@ -678,7 +700,8 @@ export default function LedgerPanel({
             document.body
           )
         : null}
-    </Card>
+      </Card>
+    </>
   )
 }
 

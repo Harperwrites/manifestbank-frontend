@@ -6,6 +6,7 @@ import type { Dispatch, SetStateAction } from 'react'
 import { api } from '../../lib/api'
 import { Card, Button } from './ui'
 import LedgerPanel from './LedgerPanel'
+import PremiumPaywall from './PremiumPaywall'
 
 type Account = {
   id: number
@@ -68,6 +69,8 @@ export default function AccountsPanel({
   const [wealthTargetMode, setWealthTargetMode] = useState<'preset' | 'custom'>('preset')
   const [wealthTargetCustom, setWealthTargetCustom] = useState('')
   const [wealthTargetNoticeAt, setWealthTargetNoticeAt] = useState<number | null>(null)
+  const [paywallOpen, setPaywallOpen] = useState(false)
+  const [paywallReason, setPaywallReason] = useState('')
 
   const wealthTargetOptions = [
     { label: 'Set target', value: '' },
@@ -147,7 +150,12 @@ export default function AccountsPanel({
       setNewParentId('')
       setShowCreate(false)
     } catch (e: any) {
-      setCreateError(`❌ Create failed: ${errMsg(e)}`)
+      if (e?.response?.status === 402) {
+        setPaywallReason(e?.response?.data?.detail ?? 'Upgrade to create more accounts.')
+        setPaywallOpen(true)
+      } else {
+        setCreateError(`❌ Create failed: ${errMsg(e)}`)
+      }
     } finally {
       setCreating(false)
     }
@@ -222,7 +230,9 @@ export default function AccountsPanel({
   const canEdit = isVerified !== false
 
   return (
-    <Card
+    <>
+      <PremiumPaywall open={paywallOpen} onClose={() => setPaywallOpen(false)} reason={paywallReason} />
+      <Card
       title="Your Accounts"
       subtitle="Personal • Trust • Entity"
       right={
@@ -237,7 +247,7 @@ export default function AccountsPanel({
           Create account
         </Button>
       }
-    >
+      >
 
       {!canEdit ? (
         <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 10 }}>
@@ -577,7 +587,8 @@ export default function AccountsPanel({
           </div>
         </div>
       ) : null}
-    </Card>
+      </Card>
+    </>
   )
 }
 

@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Navbar from '@/app/components/Navbar'
 import { api } from '@/lib/api'
+import { useAuth } from '@/app/providers'
+import PremiumPaywall from '@/app/components/PremiumPaywall'
+import { PREMIUM_TIER_NAME } from '@/app/lib/premium'
 
 export const runtime = 'edge'
 
@@ -85,6 +88,7 @@ function formatMoney(value: number) {
 
 export default function AccountStatementPage() {
   const params = useParams()
+  const { me } = useAuth()
   const accountId = typeof params?.id === 'string' ? params.id : Array.isArray(params?.id) ? params.id[0] : ''
   const [months] = useState(() => buildMonthOptions(12))
   const [selectedMonth, setSelectedMonth] = useState(months[0]?.value ?? '')
@@ -94,6 +98,8 @@ export default function AccountStatementPage() {
   const [asOf, setAsOf] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState('')
+  const [paywallOpen, setPaywallOpen] = useState(false)
+  const isPremium = Boolean(me?.is_premium || me?.role === 'admin')
 
   useEffect(() => {
     async function loadAccount() {
@@ -111,6 +117,10 @@ export default function AccountStatementPage() {
   useEffect(() => {
     async function loadStatements() {
       if (!selectedMonth || !accountId) return
+      if (me && !isPremium) {
+        setPaywallOpen(true)
+        return
+      }
       setLoading(true)
       setMsg('')
       try {
@@ -125,7 +135,11 @@ export default function AccountStatementPage() {
         setEntries(nextEntries)
         setAsOf(typeof data.as_of === 'string' ? data.as_of : null)
       } catch (e: any) {
-        setMsg(e?.response?.data?.detail ?? e?.message ?? 'Statements unavailable. Showing sample layout.')
+        const detail = e?.response?.data?.detail ?? e?.message ?? 'Statements unavailable.'
+        if (e?.response?.status === 402) {
+          setPaywallOpen(true)
+        }
+        setMsg(detail)
         setSummary(buildFallbackSummary())
         setEntries(buildFallbackEntries())
         setAsOf(null)
@@ -134,7 +148,7 @@ export default function AccountStatementPage() {
       }
     }
     loadStatements()
-  }, [selectedMonth, accountId])
+  }, [selectedMonth, accountId, me, isPremium])
 
   const totalRowCount = useMemo(() => entries.length, [entries])
 
@@ -145,6 +159,11 @@ export default function AccountStatementPage() {
 
   return (
     <main style={{ minHeight: '100vh', background: 'var(--page-bg)' }}>
+      <PremiumPaywall
+        open={paywallOpen}
+        onClose={() => setPaywallOpen(false)}
+        reason={`Statements are available on ${PREMIUM_TIER_NAME}.`}
+      />
       <div className="no-print">
         <Navbar showAccountsDropdown />
       </div>

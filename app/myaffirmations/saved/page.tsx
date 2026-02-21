@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/app/components/Navbar'
 import { api } from '@/lib/api'
+import { useAuth } from '@/app/providers'
+import PremiumPaywall from '@/app/components/PremiumPaywall'
+import { PREMIUM_TIER_NAME } from '@/app/lib/premium'
 
 function toast(message: string) {
   if (typeof window === 'undefined') return
@@ -31,13 +34,21 @@ const SAVED_AFFIRMATION_TITLE = 'Saved affirmation'
 
 export default function SavedAffirmationsPage() {
   const router = useRouter()
+  const { me } = useAuth()
   const [entries, setEntries] = useState<AffirmationsEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
   const [carouselIndex, setCarouselIndex] = useState(0)
+  const [paywallOpen, setPaywallOpen] = useState(false)
+  const isPremium = Boolean(me?.is_premium || me?.role === 'admin')
 
   useEffect(() => {
+    if (me && !isPremium) {
+      setPaywallOpen(true)
+      setLoading(false)
+      return
+    }
     setLoading(true)
     setError('')
     api
@@ -50,7 +61,7 @@ export default function SavedAffirmationsPage() {
         setError(err?.response?.data?.detail ?? err?.message ?? 'Failed to load affirmations.')
       })
       .finally(() => setLoading(false))
-  }, [])
+  }, [me, isPremium])
 
   const savedAffirmations = useMemo(
     () =>
@@ -80,6 +91,11 @@ export default function SavedAffirmationsPage() {
 
   return (
     <main>
+      <PremiumPaywall
+        open={paywallOpen}
+        onClose={() => setPaywallOpen(false)}
+        reason={`Saved affirmations are available on ${PREMIUM_TIER_NAME}.`}
+      />
       <Navbar />
       <section style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 20px 80px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/app/components/Navbar'
 import { api } from '@/lib/api'
+import PremiumPaywall from '@/app/components/PremiumPaywall'
 
 type Account = {
   id: number
@@ -180,6 +181,8 @@ export default function MyChecksPage() {
   const [isSigning, setIsSigning] = useState(false)
   const [signatureOpen, setSignatureOpen] = useState(false)
   const [signatureConfirmed, setSignatureConfirmed] = useState(false)
+  const [paywallOpen, setPaywallOpen] = useState(false)
+  const [paywallReason, setPaywallReason] = useState('')
   const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const signatureLastPoint = useRef<{ x: number; y: number } | null>(null)
 
@@ -402,7 +405,12 @@ export default function MyChecksPage() {
         window.dispatchEvent(new Event('accounts:refresh'))
       }
     } catch (e: any) {
-      setError(e?.response?.data?.detail ?? e?.message ?? 'Unable to post check.')
+      if (e?.response?.status === 402) {
+        setPaywallReason(e?.response?.data?.detail ?? 'Upgrade to post unlimited checks.')
+        setPaywallOpen(true)
+      } else {
+        setError(e?.response?.data?.detail ?? e?.message ?? 'Unable to post check.')
+      }
     } finally {
       setSaving(false)
     }
@@ -456,6 +464,7 @@ export default function MyChecksPage() {
   return (
     <main>
       <Navbar />
+      <PremiumPaywall open={paywallOpen} onClose={() => setPaywallOpen(false)} reason={paywallReason} />
       <div style={{ padding: '28px 24px 60px', maxWidth: 980, margin: '0 auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
           <div>

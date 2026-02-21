@@ -12,6 +12,7 @@ export type Me = {
   welcome_bonus_claimed?: boolean | null
   email_verified?: boolean | null
   wealth_target_usd?: number | null
+  is_premium?: boolean | null
 }
 
 type AuthContextValue = {

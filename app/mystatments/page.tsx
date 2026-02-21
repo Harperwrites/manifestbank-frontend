@@ -4,6 +4,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/app/components/Navbar'
 import { api } from '@/lib/api'
+import { useAuth } from '@/app/providers'
+import PremiumPaywall from '@/app/components/PremiumPaywall'
+import { PREMIUM_TIER_NAME } from '@/app/lib/premium'
 
 const STATEMENT_MONTHS = [
   'January',
@@ -87,6 +90,7 @@ function formatMoney(value: number) {
 
 export default function MyStatementsPage() {
   const router = useRouter()
+  const { me } = useAuth()
   const [months] = useState(() => buildMonthOptions(12))
   const [selectedMonth, setSelectedMonth] = useState(months[0]?.value ?? '')
   const [summary, setSummary] = useState<StatementSummary>(buildFallbackSummary())
@@ -95,11 +99,17 @@ export default function MyStatementsPage() {
   const [asOf, setAsOf] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState('')
+  const [paywallOpen, setPaywallOpen] = useState(false)
   const printRef = useRef<HTMLDivElement | null>(null)
+  const isPremium = Boolean(me?.is_premium || me?.role === 'admin')
 
   useEffect(() => {
     async function loadStatements() {
       if (!selectedMonth) return
+      if (me && !isPremium) {
+        setPaywallOpen(true)
+        return
+      }
       setLoading(true)
       setMsg('')
       try {
@@ -111,7 +121,11 @@ export default function MyStatementsPage() {
         setEntries(nextEntries)
         setAsOf(typeof data.as_of === 'string' ? data.as_of : null)
       } catch (e: any) {
-        setMsg(e?.response?.data?.detail ?? e?.message ?? 'Statements unavailable. Showing sample layout.')
+        const detail = e?.response?.data?.detail ?? e?.message ?? 'Statements unavailable.'
+        if (e?.response?.status === 402) {
+          setPaywallOpen(true)
+        }
+        setMsg(detail)
         setSummary(buildFallbackSummary())
         setEntries(buildFallbackEntries())
         setAsOf(null)
@@ -120,7 +134,7 @@ export default function MyStatementsPage() {
       }
     }
     loadStatements()
-  }, [selectedMonth])
+  }, [selectedMonth, me, isPremium])
 
   useEffect(() => {
     async function loadAccounts() {
@@ -159,6 +173,11 @@ export default function MyStatementsPage() {
 
   return (
     <main style={{ minHeight: '100vh', background: 'var(--page-bg)' }}>
+      <PremiumPaywall
+        open={paywallOpen}
+        onClose={() => setPaywallOpen(false)}
+        reason={`Statements are available on ${PREMIUM_TIER_NAME}.`}
+      />
       <div className="no-print">
         <Navbar showAccountsDropdown />
       </div>
@@ -216,6 +235,40 @@ export default function MyStatementsPage() {
             Print Statement
           </button>
         </div>
+
+        {!isPremium ? (
+          <div
+            style={{
+              marginTop: 16,
+              padding: 18,
+              borderRadius: 18,
+              border: '1px solid rgba(95, 74, 62, 0.25)',
+              background: 'rgba(255,255,255,0.92)',
+              maxWidth: 620,
+            }}
+          >
+            <div style={{ fontWeight: 700, fontSize: 16 }}>Statements Locked</div>
+            <div style={{ marginTop: 8, opacity: 0.8 }}>
+              Statements are available on {PREMIUM_TIER_NAME}. Upgrade to unlock full statement access.
+            </div>
+            <button
+              type="button"
+              onClick={() => setPaywallOpen(true)}
+              style={{
+                marginTop: 12,
+                padding: '10px 16px',
+                borderRadius: 999,
+                border: 'none',
+                background: 'linear-gradient(135deg, #b67967, #c6927c)',
+                color: '#fff',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              Upgrade to Manifest Signature
+            </button>
+          </div>
+        ) : null}
 
         {msg ? (
           <div className="no-print" style={{ marginTop: 12, fontSize: 12, opacity: 0.75 }}>
