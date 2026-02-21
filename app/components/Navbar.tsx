@@ -7,6 +7,7 @@ import { createPortal } from 'react-dom'
 import { useAuth } from '@/app/providers'
 import InstallAppButton from '@/app/components/InstallAppButton'
 import { api } from '@/lib/api'
+import { PREMIUM_CTA } from '@/app/lib/premium'
 
 type AccountItem = {
   id: number
@@ -36,6 +37,7 @@ export default function Navbar({
   const treasureRef = useRef<HTMLDivElement | null>(null)
   const treasureMenuRef = useRef<HTMLDivElement | null>(null)
   const [treasureMenuRect, setTreasureMenuRect] = useState<DOMRect | null>(null)
+  const isPremium = Boolean(me?.is_premium)
 
   useEffect(() => {
     setPortalReady(true)
@@ -276,6 +278,23 @@ export default function Navbar({
       </div>
 
       <div className="mb-navbar-right" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        {!isLoading && !isPremium ? (
+          <button
+            type="button"
+            onClick={() => router.push('/mystatments')}
+            style={{
+              padding: '8px 14px',
+              borderRadius: 999,
+              border: 'none',
+              background: 'linear-gradient(135deg, #b67967, #c6927c)',
+              color: '#fff',
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            {PREMIUM_CTA}
+          </button>
+        ) : null}
         <div ref={treasureRef} style={{ position: 'relative' }}>
           <button
             type="button"

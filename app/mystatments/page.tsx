@@ -168,6 +168,10 @@ export default function MyStatementsPage() {
 
   function handlePrint() {
     if (typeof window === 'undefined') return
+    if (!isPremium) {
+      setPaywallOpen(true)
+      return
+    }
     window.print()
   }
 

@@ -8,6 +8,7 @@ import { useAuth } from '@/app/providers'
 import InstallAppButton from '@/app/components/InstallAppButton'
 import { Button } from '@/app/components/ui'
 import { api } from '@/lib/api'
+import { PREMIUM_CTA } from '@/app/lib/premium'
 
 type Profile = {
   id: number
@@ -54,6 +55,7 @@ function EtherNavbar({
   const [settingsBioNotice, setSettingsBioNotice] = useState('')
   const [settingsLinksNotice, setSettingsLinksNotice] = useState('')
   const [settingsUsernameNotice, setSettingsUsernameNotice] = useState('')
+  const isPremium = Boolean(me?.is_premium)
 
   function pushToast(message: string) {
     if (typeof window === 'undefined') return
@@ -390,6 +392,23 @@ function EtherNavbar({
             flexWrap: 'wrap',
           }}
         >
+          {!isLoading && !isPremium ? (
+            <button
+              type="button"
+              onClick={() => router.push('/mystatments')}
+              style={{
+                padding: '8px 14px',
+                borderRadius: 999,
+                border: 'none',
+                background: 'linear-gradient(135deg, #b67967, #c6927c)',
+                color: '#fff',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              {PREMIUM_CTA}
+            </button>
+          ) : null}
           <div
             ref={settingsRef}
             style={{

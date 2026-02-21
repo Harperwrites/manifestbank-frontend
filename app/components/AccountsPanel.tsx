@@ -153,6 +153,8 @@ export default function AccountsPanel({
       if (e?.response?.status === 402) {
         setPaywallReason(e?.response?.data?.detail ?? 'Upgrade to create more accounts.')
         setPaywallOpen(true)
+      } else if (e?.message === 'Network Error') {
+        setCreateError('❌ Network Error: backend not reachable. Make sure the API is running.')
       } else {
         setCreateError(`❌ Create failed: ${errMsg(e)}`)
       }
