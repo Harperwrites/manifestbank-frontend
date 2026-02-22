@@ -1,5 +1,6 @@
 'use client'
 
+import { createPortal } from 'react-dom'
 import { PREMIUM_TIER_NAME, PREMIUM_CTA, PREMIUM_ANNUAL_NOTE, PREMIUM_ANNUAL_PRICE, PREMIUM_MONTHLY_PRICE } from '@/app/lib/premium'
 
 export default function PremiumPaywall({
@@ -12,7 +13,8 @@ export default function PremiumPaywall({
   reason?: string
 }) {
   if (!open) return null
-  return (
+  if (typeof document === 'undefined') return null
+  return createPortal(
     <div
       onClick={onClose}
       style={{
@@ -22,7 +24,7 @@ export default function PremiumPaywall({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 9999,
+        zIndex: 2147483646,
         padding: 20,
       }}
     >
@@ -99,5 +101,7 @@ export default function PremiumPaywall({
         </div>
       </div>
     </div>
+    ,
+    document.body
   )
 }

@@ -154,8 +154,8 @@ export default function AccountsPanel({
         setPaywallReason(e?.response?.data?.detail ?? 'Upgrade to create more accounts.')
         setPaywallOpen(true)
       } else if (e?.message === 'Network Error') {
-        setCreateError('❌ Network Error: backend not reachable. Make sure the API is running.')
-        setPaywallReason('Upgrade to ManifestBank™ Signature to unlock unlimited accounts.')
+        setCreateError('❌ Only 1 Account allowed. Upgrade to ManifestBank™ Signature for unlimited account creation.')
+        setPaywallReason('Only 1 Account allowed. Upgrade to ManifestBank™ Signature for unlimited account creation.')
         setPaywallOpen(true)
       } else {
         setCreateError(`❌ Create failed: ${errMsg(e)}`)
