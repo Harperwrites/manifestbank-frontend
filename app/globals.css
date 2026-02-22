@@ -59,7 +59,7 @@ a {
 }
 
 .mb-page-offset {
-  padding-top: 96px;
+  padding-top: calc(140px + env(safe-area-inset-top));
 }
 
 @media (min-width: 768px) {
@@ -94,7 +94,7 @@ a {
 }
 
 .mb-navbar-spacer {
-  height: 92px;
+  height: calc(120px + env(safe-area-inset-top));
 }
 
 .ether-portal-chip {
@@ -141,7 +141,7 @@ a {
   }
 
   .mb-navbar-spacer {
-    height: 128px;
+    height: calc(160px + env(safe-area-inset-top));
   }
 
   .ether-portal-chip {
