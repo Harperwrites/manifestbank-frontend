@@ -102,6 +102,7 @@ export default function DashboardPage() {
   const { logout } = useAuth()
   const [me, setMe] = useState<any>(null)
   const [health, setHealth] = useState<any>(null)
+  const [healthState, setHealthState] = useState<'idle' | 'checking' | 'ok' | 'error'>('idle')
   const [summary, setSummary] = useState<any>(null)
   const [log, setLog] = useState<string>('Operations journal ready.')
   const [accounts, setAccounts] = useState<Account[]>([])
@@ -226,8 +227,17 @@ export default function DashboardPage() {
   }
 
   async function checkHealth() {
-    const res = await run('GET /health', async () => (await api.get('/health')).data)
-    setHealth(res)
+    setHealthState('checking')
+    try {
+      const res = await run('GET /health', async () => (await api.get('/health')).data)
+      setHealth(res)
+      setHealthState('ok')
+      return res
+    } catch {
+      setHealth(null)
+      setHealthState('error')
+      return null
+    }
   }
 
   async function checkMe() {
@@ -869,7 +879,9 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    checkHealth()
+    if (isAdmin) {
+      checkHealth()
+    }
     checkMe().catch(() => {})
     const warmTimer = window.setTimeout(() => {
       setWarmingUp(true)
@@ -879,7 +891,7 @@ export default function DashboardPage() {
     }, 600)
     // eslint-disable-next-line react-hooks/exhaustive-deps
     return () => window.clearTimeout(warmTimer)
-  }, [])
+  }, [isAdmin])
 
   function syncWealthTarget() {
     const saved = window.localStorage.getItem(targetStorageKey)
@@ -1013,6 +1025,14 @@ export default function DashboardPage() {
   const role = me?.role ?? 'guest'
   const isAdmin = role === 'admin'
   const uptime = health?.status ?? '—'
+  const healthBadge =
+    healthState === 'checking'
+      ? 'Connecting…'
+      : healthState === 'ok'
+        ? 'API online'
+        : healthState === 'error'
+          ? 'API offline'
+          : 'API status'
 
   const alerts: AlertItem[] = useMemo(
     () => [
@@ -2071,7 +2091,30 @@ export default function DashboardPage() {
 
         {isAdmin ? (
           <section style={{ marginTop: 24 }}>
-            <Card title="Operations Desk" tone="deep" right={<Pill>Live API</Pill>}>
+            <Card
+              title="Operations Desk"
+              tone="deep"
+              right={
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Pill>{healthBadge}</Pill>
+                  <button
+                    type="button"
+                    onClick={checkHealth}
+                    style={{
+                      border: 'none',
+                      background: 'none',
+                      color: 'inherit',
+                      fontSize: 12,
+                      opacity: 0.8,
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                    }}
+                  >
+                    Retry
+                  </button>
+                </div>
+              }
+            >
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                 <Button variant="outline" onClick={checkHealth}>
                   Test /health
