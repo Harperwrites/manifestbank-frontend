@@ -879,7 +879,8 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    if (isAdmin) {
+    const isAdminLocal = me?.role === 'admin'
+    if (isAdminLocal) {
       checkHealth()
     }
     checkMe().catch(() => {})
@@ -891,7 +892,7 @@ export default function DashboardPage() {
     }, 600)
     // eslint-disable-next-line react-hooks/exhaustive-deps
     return () => window.clearTimeout(warmTimer)
-  }, [isAdmin])
+  }, [me?.role])
 
   function syncWealthTarget() {
     const saved = window.localStorage.getItem(targetStorageKey)

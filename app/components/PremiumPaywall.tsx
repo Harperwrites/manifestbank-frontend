@@ -1,6 +1,8 @@
 'use client'
 
+import { useState } from 'react'
 import { createPortal } from 'react-dom'
+import { api } from '@/lib/api'
 import { PREMIUM_TIER_NAME, PREMIUM_CTA, PREMIUM_ANNUAL_NOTE, PREMIUM_ANNUAL_PRICE, PREMIUM_MONTHLY_PRICE } from '@/app/lib/premium'
 
 export default function PremiumPaywall({
@@ -12,6 +14,28 @@ export default function PremiumPaywall({
   onClose: () => void
   reason?: string
 }) {
+  const [loadingPlan, setLoadingPlan] = useState<'annual' | 'monthly' | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  async function startCheckout(plan: 'annual' | 'monthly') {
+    try {
+      setError(null)
+      setLoadingPlan(plan)
+      const res = await api.post('/billing/checkout-session', { plan })
+      const url = res.data?.url
+      if (url) {
+        window.location.href = url
+        return
+      }
+      setError('Could not start checkout. Please try again.')
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail ?? err?.message ?? 'Could not start checkout.'
+      setError(detail)
+    } finally {
+      setLoadingPlan(null)
+    }
+  }
+
   if (!open) return null
   if (typeof document === 'undefined') return null
   return createPortal(
@@ -67,6 +91,25 @@ export default function PremiumPaywall({
             <div style={{ fontWeight: 700 }}>Annual</div>
             <div style={{ fontSize: 18, fontWeight: 700 }}>{PREMIUM_ANNUAL_PRICE}</div>
             <div style={{ fontSize: 12, opacity: 0.75 }}>$6/mo equivalent</div>
+            <button
+              type="button"
+              onClick={() => startCheckout('annual')}
+              disabled={loadingPlan !== null}
+              style={{
+                marginTop: 10,
+                padding: '10px 16px',
+                borderRadius: 999,
+                border: 'none',
+                background: 'linear-gradient(135deg, #b67967, #c6927c)',
+                color: '#fff',
+                fontWeight: 700,
+                cursor: 'pointer',
+                width: '100%',
+                boxShadow: '0 10px 22px rgba(12, 10, 12, 0.2)',
+              }}
+            >
+              {loadingPlan === 'annual' ? 'Starting…' : PREMIUM_CTA}
+            </button>
           </div>
           <div
             style={{
@@ -78,23 +121,26 @@ export default function PremiumPaywall({
           >
             <div style={{ fontWeight: 700 }}>Monthly</div>
             <div style={{ fontSize: 18, fontWeight: 700 }}>{PREMIUM_MONTHLY_PRICE}</div>
+            <button
+              type="button"
+              onClick={() => startCheckout('monthly')}
+              disabled={loadingPlan !== null}
+              style={{
+                marginTop: 10,
+                padding: '10px 16px',
+                borderRadius: 999,
+                border: '1px solid rgba(95, 74, 62, 0.25)',
+                background: 'rgba(255,255,255,0.9)',
+                color: '#4a2f25',
+                fontWeight: 700,
+                cursor: 'pointer',
+                width: '100%',
+              }}
+            >
+              {loadingPlan === 'monthly' ? 'Starting…' : 'Choose Monthly'}
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              padding: '12px 18px',
-              borderRadius: 999,
-              border: 'none',
-              background: 'linear-gradient(135deg, #b67967, #c6927c)',
-              color: '#fff',
-              fontWeight: 700,
-              cursor: 'pointer',
-              boxShadow: '0 12px 24px rgba(12, 10, 12, 0.25)',
-            }}
-          >
-            {PREMIUM_CTA}
-          </button>
+          {error ? <div style={{ fontSize: 12, color: '#7a2f2f' }}>❌ {error}</div> : null}
           <div style={{ fontSize: 11, opacity: 0.7 }}>
             Paid tier unlocks unlimited transactions, checks, affirmations, and statements.
           </div>
