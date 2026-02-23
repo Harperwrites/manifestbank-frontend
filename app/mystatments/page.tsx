@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Navbar from '@/app/components/Navbar'
 import { api } from '@/lib/api'
@@ -88,7 +88,7 @@ function formatMoney(value: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value)
 }
 
-export default function MyStatementsPage() {
+function MyStatementsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { me } = useAuth()
@@ -492,5 +492,13 @@ export default function MyStatementsPage() {
         </div>
       </div>
     </main>
+  )
+}
+
+export default function MyStatementsPage() {
+  return (
+    <Suspense fallback={<main className="mb-page-offset" style={{ minHeight: '100vh' }} />}>
+      <MyStatementsContent />
+    </Suspense>
   )
 }
