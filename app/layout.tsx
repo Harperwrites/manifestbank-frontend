@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   },
   description:
     'ManifestBank™ is a digital self-organization, reflection, and awareness platform designed to help users clarify intentions and align identity with conscious action.',
-  manifest: '/manifestBank-v2.json?v=20260117b',
+  manifest: '/manifestbank-v2.json?v=20260117b',
   themeColor: '#b67967',
   openGraph: {
     title: 'ManifestBank™',
@@ -43,7 +43,10 @@ export const metadata: Metadata = {
     canonical: '/',
   },
   icons: {
-    icon: '/ManifestBank%20Square%20App%20Logo.png?v=20260118a',
+    icon: [
+      { url: '/manifestbank-icon-192.png?v=20260117b', sizes: '192x192', type: 'image/png' },
+      { url: '/ManifestBank%20Square%20App%20Logo.png?v=20260118a', type: 'image/png' },
+    ],
     apple: '/ManifestBank%20Square%20App%20Logo.png?v=20260118a',
   },
 }
@@ -63,6 +66,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           name="google-site-verification"
           content="3Hy_gzBFWnWxPd4WgTZwn0qUl1oRzN_blbZS-jCH0Bs"
         />
+        <link rel="icon" href="/manifestbank-icon-192.png?v=20260117b" />
         <link rel="apple-touch-icon" href="/ManifestBank%20Square%20App%20Logo.png?v=20260118a" />
       </head>
       <body>
