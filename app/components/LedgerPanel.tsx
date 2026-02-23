@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom'
 import { api } from '../../lib/api'
 import { Card, Button } from './ui'
 import PremiumPaywall from './PremiumPaywall'
+import { useAuth } from '@/app/providers'
 
 type LedgerEntry = {
   id: number
@@ -90,6 +91,8 @@ export default function LedgerPanel({
   const [paywallReason, setPaywallReason] = useState('')
   const canPost = isVerified !== false
   const router = useRouter()
+  const { me } = useAuth()
+  const isPremium = Boolean(me?.is_premium || me?.role === 'admin')
 
   function openPaywall(reason?: string) {
     setPaywallReason(reason ?? 'Upgrade to unlock unlimited transactions.')
@@ -269,6 +272,11 @@ export default function LedgerPanel({
       {!canPost ? (
         <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 8 }}>
           Verify your email to post deposits, withdrawals, or schedules.
+        </div>
+      ) : null}
+      {!isPremium ? (
+        <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 8 }}>
+          Free tier: 2 deposits + 2 expenses per 7 days.
         </div>
       ) : null}
 
