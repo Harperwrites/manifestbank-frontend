@@ -17,6 +17,8 @@ type Me = {
   id: number
   username?: string | null
   email?: string | null
+  is_premium?: boolean | null
+  role?: string | null
 }
 
 const recipientPresets = [
@@ -183,6 +185,7 @@ export default function MyChecksPage() {
   const [signatureConfirmed, setSignatureConfirmed] = useState(false)
   const [paywallOpen, setPaywallOpen] = useState(false)
   const [paywallReason, setPaywallReason] = useState('')
+  const isPremium = Boolean(me?.is_premium || me?.role === 'admin')
   const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const signatureLastPoint = useRef<{ x: number; y: number } | null>(null)
 
@@ -509,6 +512,19 @@ export default function MyChecksPage() {
             }}
           >
             <div style={{ fontWeight: 700, fontSize: 16 }}>Check Details</div>
+            {!isPremium ? (
+              <div
+                style={{
+                  fontSize: 12,
+                  marginTop: 8,
+                  fontWeight: 600,
+                  color: '#7a4b3e',
+                  textShadow: '0 0 8px rgba(182, 121, 103, 0.55), 0 0 16px rgba(182, 121, 103, 0.35)',
+                }}
+              >
+                Free tier: 1 check per 7 days.
+              </div>
+            ) : null}
             <div style={{ marginTop: 14, display: 'grid', gap: 12 }}>
               <label style={{ display: 'grid', gap: 6 }}>
                 <span style={{ fontSize: 12, opacity: 0.7 }}>Direction</span>
