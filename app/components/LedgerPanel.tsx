@@ -123,17 +123,18 @@ export default function LedgerPanel({
     setPosting(true)
     setMsg('')
     try {
+      const entryType = direction === 'credit' ? 'deposit' : 'withdrawal'
       await api.post('/ledger/entries', {
         account_id: accountId,
         direction,
         amount,
         currency: 'USD',
-        entry_type: 'manual',
+        entry_type: entryType,
         status: 'posted',
         reference: 'dashboard',
         idempotency_key: `${accountId}:${direction}:${amount}:${Date.now()}`,
-        memo: `Manual ${direction} via dashboard`,
-        meta: { source: 'dashboard' },
+        memo: `${entryType} via dashboard`,
+        meta: { source: 'dashboard', quick_action: true },
       })
       await load()
     } catch (e: any) {
