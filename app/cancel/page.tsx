@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { Button, Card } from '@/app/components/ui'
-import { Navbar } from '@/app/components/ui/Navbar'
+import Navbar from '@/app/components/Navbar'
 
 export default function CancelPage() {
   const router = useRouter()
