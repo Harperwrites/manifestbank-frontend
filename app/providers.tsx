@@ -66,8 +66,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       api.defaults.headers.common.Authorization = `Bearer ${token}`
       const res = await api.get('/auth/me')
       setMe(res.data)
-    } catch {
+    } catch (err: any) {
+      const status = err?.response?.status
+      // If the backend is temporarily failing, keep the token and show a friendly message.
+      if (status && status >= 500) {
+        setToast('We’re updating your membership — please retry in a moment.')
+        setToastPersistent(false)
+        return
+      }
       localStorage.removeItem('access_token')
+      sessionStorage.removeItem('access_token')
       delete api.defaults.headers.common.Authorization
       setMe(null)
     }
