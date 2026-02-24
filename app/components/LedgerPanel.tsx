@@ -275,7 +275,15 @@ export default function LedgerPanel({
         </div>
       ) : null}
       {!isPremium ? (
-        <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 8 }}>
+        <div
+          style={{
+            fontSize: 12,
+            marginBottom: 8,
+            fontWeight: 600,
+            color: '#7a4b3e',
+            textShadow: '0 0 8px rgba(182, 121, 103, 0.55), 0 0 16px rgba(182, 121, 103, 0.35)',
+          }}
+        >
           Free tier: 2 deposits + 2 expenses per 7 days.
         </div>
       ) : null}
