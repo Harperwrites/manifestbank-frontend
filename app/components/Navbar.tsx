@@ -37,7 +37,9 @@ export default function Navbar({
   const treasureRef = useRef<HTMLDivElement | null>(null)
   const treasureMenuRef = useRef<HTMLDivElement | null>(null)
   const [treasureMenuRect, setTreasureMenuRect] = useState<DOMRect | null>(null)
-  const isPremium = Boolean(me?.is_premium)
+  const isPremium = Boolean(me?.is_premium || me?.role === 'admin')
+  const [portalLoading, setPortalLoading] = useState(false)
+  const [portalError, setPortalError] = useState('')
 
   useEffect(() => {
     setPortalReady(true)
@@ -131,8 +133,44 @@ export default function Navbar({
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num)
   }
 
+  async function openPortal() {
+    if (portalLoading) return
+    setPortalLoading(true)
+    setPortalError('')
+    try {
+      const res = await api.post('/billing/portal-session')
+      const url = res.data?.url
+      if (url) {
+        window.location.href = url
+      } else {
+        setPortalError('Unable to open billing portal.')
+      }
+    } catch (err: any) {
+      setPortalError(err?.response?.data?.detail ?? err?.message ?? 'Unable to open billing portal.')
+    } finally {
+      setPortalLoading(false)
+    }
+  }
+
   return (
     <>
+      <style>{`
+        @keyframes signatureGlow {
+          0% { box-shadow: 0 0 12px rgba(198, 146, 124, 0.5), 0 0 24px rgba(182, 121, 103, 0.35); }
+          50% { box-shadow: 0 0 22px rgba(214, 165, 143, 0.9), 0 0 44px rgba(182, 121, 103, 0.6); }
+          100% { box-shadow: 0 0 12px rgba(198, 146, 124, 0.5), 0 0 24px rgba(182, 121, 103, 0.35); }
+        }
+        @keyframes signatureShimmer {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        .signature-member-btn {
+          background: linear-gradient(120deg, #b67967, #e2b9a3, #b67967);
+          background-size: 200% 200%;
+          animation: signatureGlow 2.8s ease-in-out infinite, signatureShimmer 3.6s ease-in-out infinite;
+        }
+      `}</style>
       <div
         className="mb-navbar"
         style={{
@@ -278,17 +316,35 @@ export default function Navbar({
       </div>
 
       <div className="mb-navbar-right" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          {!isLoading && !isPremium ? (
-            <button
-              type="button"
-              onClick={() =>
-                window.dispatchEvent(
-                  new CustomEvent('paywall:open', { detail: { reason: 'Upgrade to ManifestBank™ Signature.' } })
-                )
-              }
-              style={{
-                padding: '8px 14px',
-                borderRadius: 999,
+        {!isLoading && isPremium ? (
+          <button
+            type="button"
+            onClick={openPortal}
+            className="signature-member-btn"
+            style={{
+              padding: '8px 14px',
+              borderRadius: 999,
+              border: 'none',
+              color: '#fff',
+              fontWeight: 700,
+              cursor: 'pointer',
+              textShadow: '0 0 12px rgba(255, 255, 255, 0.55)',
+            }}
+          >
+            {portalLoading ? 'Opening…' : 'ManifestBank™ Signature Member'}
+          </button>
+        ) : null}
+        {!isLoading && !isPremium ? (
+          <button
+            type="button"
+            onClick={() =>
+              window.dispatchEvent(
+                new CustomEvent('paywall:open', { detail: { reason: 'Upgrade to ManifestBank™ Signature.' } })
+              )
+            }
+            style={{
+              padding: '8px 14px',
+              borderRadius: 999,
               border: 'none',
               background: 'linear-gradient(135deg, #b67967, #c6927c)',
               color: '#fff',
@@ -298,6 +354,9 @@ export default function Navbar({
           >
             {PREMIUM_CTA}
           </button>
+        ) : null}
+        {portalError ? (
+          <div style={{ fontSize: 12, color: '#7a2e2e' }}>{portalError}</div>
         ) : null}
         <div ref={treasureRef} style={{ position: 'relative' }}>
           <button

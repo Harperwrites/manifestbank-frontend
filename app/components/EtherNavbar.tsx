@@ -55,7 +55,9 @@ function EtherNavbar({
   const [settingsBioNotice, setSettingsBioNotice] = useState('')
   const [settingsLinksNotice, setSettingsLinksNotice] = useState('')
   const [settingsUsernameNotice, setSettingsUsernameNotice] = useState('')
-  const isPremium = Boolean(me?.is_premium)
+  const isPremium = Boolean(me?.is_premium || me?.role === 'admin')
+  const [portalLoading, setPortalLoading] = useState(false)
+  const [portalError, setPortalError] = useState('')
 
   function pushToast(message: string) {
     if (typeof window === 'undefined') return
@@ -97,6 +99,25 @@ function EtherNavbar({
   useEffect(() => {
     setPortalReady(true)
   }, [])
+
+  async function openPortal() {
+    if (portalLoading) return
+    setPortalLoading(true)
+    setPortalError('')
+    try {
+      const res = await api.post('/billing/portal-session')
+      const url = res.data?.url
+      if (url) {
+        window.location.href = url
+      } else {
+        setPortalError('Unable to open billing portal.')
+      }
+    } catch (err: any) {
+      setPortalError(err?.response?.data?.detail ?? err?.message ?? 'Unable to open billing portal.')
+    } finally {
+      setPortalLoading(false)
+    }
+  }
 
   useEffect(() => {
     if (!settingsOpen && !profileEditOpen) {
@@ -246,6 +267,23 @@ function EtherNavbar({
         zIndex: 600,
       }}
     >
+      <style>{`
+        @keyframes signatureGlow {
+          0% { box-shadow: 0 0 12px rgba(198, 146, 124, 0.5), 0 0 24px rgba(182, 121, 103, 0.35); }
+          50% { box-shadow: 0 0 22px rgba(214, 165, 143, 0.9), 0 0 44px rgba(182, 121, 103, 0.6); }
+          100% { box-shadow: 0 0 12px rgba(198, 146, 124, 0.5), 0 0 24px rgba(182, 121, 103, 0.35); }
+        }
+        @keyframes signatureShimmer {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        .signature-member-btn {
+          background: linear-gradient(120deg, #b67967, #e2b9a3, #b67967);
+          background-size: 200% 200%;
+          animation: signatureGlow 2.8s ease-in-out infinite, signatureShimmer 3.6s ease-in-out infinite;
+        }
+      `}</style>
       <div
         style={{
           flex: '1 1 220px',
@@ -392,6 +430,24 @@ function EtherNavbar({
             flexWrap: 'wrap',
           }}
         >
+          {!isLoading && isPremium ? (
+            <button
+              type="button"
+              onClick={openPortal}
+              className="signature-member-btn"
+              style={{
+                padding: '8px 14px',
+                borderRadius: 999,
+                border: 'none',
+                color: '#fff',
+                fontWeight: 700,
+                cursor: 'pointer',
+                textShadow: '0 0 12px rgba(255, 255, 255, 0.55)',
+              }}
+            >
+              {portalLoading ? 'Opening…' : 'ManifestBank™ Signature Member'}
+            </button>
+          ) : null}
           {!isLoading && !isPremium ? (
             <button
               type="button"
@@ -413,6 +469,7 @@ function EtherNavbar({
               {PREMIUM_CTA}
             </button>
           ) : null}
+          {portalError ? <div style={{ fontSize: 12, color: '#7a2e2e' }}>{portalError}</div> : null}
           <div
             ref={settingsRef}
             style={{
