@@ -156,8 +156,7 @@ function normalizeMoneyInput(value: string) {
 function pickCheckAffirmation() {
   if (checkAffirmations.length === 0) return { text: '', angle: 0 }
   const text = checkAffirmations[Math.floor(Math.random() * checkAffirmations.length)]
-  const angle = Math.random() < 0.5 ? -2 : 2
-  return { text, angle }
+  return { text, angle: 0 }
 }
 
 export default function MyChecksPage() {
@@ -227,7 +226,7 @@ export default function MyChecksPage() {
     if (checkDate) {
       ctx.fillText(`Date: ${checkDate}`, 30, 78)
     }
-    ctx.fillText(`PAY TO THE ORDER OF ${toDisplay}`, 30, 120)
+    ctx.fillText(`PAY TO THE ORDER OF :  ${toDisplay}`, 30, 120)
     if (memo) {
       ctx.fillText(`Memo: ${memo}`, 30, 150)
     }
@@ -246,9 +245,7 @@ export default function MyChecksPage() {
       const boxH = 36
       ctx.save()
       ctx.translate(boxX + boxW / 2, boxY + boxH / 2)
-      const rotateAngle = ((payload?.angle ?? 0) * Math.PI) / 180
-      ctx.rotate(rotateAngle)
-      ctx.font = 'italic 18px "Allura", "Great Vibes", "Dancing Script", cursive'
+      ctx.font = '600 18px "Playfair Display", "Cormorant Garamond", "Libre Baskerville", serif'
       ctx.fillStyle = 'rgba(122, 86, 72, 0.85)'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
@@ -802,8 +799,8 @@ export default function MyChecksPage() {
                   <div>{checkDate || '—'}</div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                  <div style={{ fontWeight: 600 }}>PAY TO THE ORDER OF:</div>
-                  <div>{toDisplay}</div>
+                  <div style={{ fontWeight: 600 }}>PAY TO THE ORDER OF :</div>
+                  <div style={{ paddingLeft: 6 }}>{toDisplay}</div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
                   <div style={{ fontWeight: 600 }}>Memo:</div>
@@ -958,7 +955,6 @@ export default function MyChecksPage() {
                     fontSize: 22,
                     fontWeight: 700,
                     color: 'rgba(122, 86, 72, 0.85)',
-                    transform: `rotate(${affirmationAngle}deg)`,
                     lineHeight: 1.3,
                     wordBreak: 'break-word',
                     pointerEvents: 'none',
