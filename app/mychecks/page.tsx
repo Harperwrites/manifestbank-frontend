@@ -799,7 +799,7 @@ export default function MyChecksPage() {
                   <div>{checkDate || '—'}</div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                  <div style={{ fontWeight: 600 }}>PAY TO THE ORDER OF :</div>
+                  <div style={{ fontWeight: 600 }}>PAY TO THE ORDER OF:</div>
                   <div style={{ paddingLeft: 6 }}>{toDisplay}</div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
