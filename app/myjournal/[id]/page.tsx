@@ -77,27 +77,19 @@ export default function JournalEntryPage() {
   async function countUnreadThreads(profileId: number | null) {
     if (!profileId) return 0
     try {
-      const threadsRes = await api.get('/ether/threads')
-      const threads = Array.isArray(threadsRes.data) ? threadsRes.data : []
-      if (!threads.length) return 0
-      const results = await Promise.allSettled(
-        threads.map(async (thread: any) => {
-          try {
-            const messagesRes = await api.get(`/ether/threads/${thread.id}/messages`)
-            const list = Array.isArray(messagesRes.data) ? messagesRes.data : []
-            const last = list[list.length - 1]
-            if (!last) return 0
-            const readAt = getThreadReadAt(thread.id)
-            const isUnread =
-              last.sender_profile_id !== profileId &&
-              (!readAt || new Date(last.created_at).getTime() > new Date(readAt).getTime())
-            return isUnread ? 1 : 0
-          } catch {
-            return 0
-          }
-        })
-      )
-      return results.reduce((sum, res) => (res.status === 'fulfilled' ? sum + res.value : sum), 0)
+      const previewsRes = await api.get('/ether/threads/previews')
+      const previews = Array.isArray(previewsRes.data) ? previewsRes.data : []
+      if (!previews.length) return 0
+      return previews.reduce((sum: number, preview: any) => {
+        const lastAt = preview.last_message_at
+        const senderId = preview.last_sender_profile_id
+        if (!lastAt) return sum
+        const readAt = getThreadReadAt(preview.id)
+        const isUnread =
+          senderId !== profileId &&
+          (!readAt || new Date(lastAt).getTime() > new Date(readAt).getTime())
+        return sum + (isUnread ? 1 : 0)
+      }, 0)
     } catch {
       return 0
     }
@@ -106,6 +98,7 @@ export default function JournalEntryPage() {
   const [draftTitle, setDraftTitle] = useState('')
   const [draftDate, setDraftDate] = useState('')
   const [draftContent, setDraftContent] = useState('')
+  const [promptText, setPromptText] = useState<string | null>(null)
   const [draftImageUrl, setDraftImageUrl] = useState('')
   const [draftImageFile, setDraftImageFile] = useState<File | null>(null)
 
@@ -179,9 +172,16 @@ export default function JournalEntryPage() {
       .get(`/journal/${id}`)
       .then((res) => {
         setEntry(res.data)
+        const content = String(res.data?.content ?? '')
+        const firstLine = content.split('\n')[0]
+        if (firstLine.startsWith('Prompt:')) {
+          setPromptText(firstLine.replace('Prompt:', '').trim())
+        } else {
+          setPromptText(null)
+        }
         setDraftTitle(res.data?.title ?? '')
         setDraftDate(res.data?.entry_date ?? '')
-        setDraftContent(res.data?.content ?? '')
+        setDraftContent(content)
         setDraftImageUrl(res.data?.image_url ?? '')
       })
       .catch((err) => {
@@ -392,6 +392,20 @@ export default function JournalEntryPage() {
 
             {editing ? (
               <div style={{ marginTop: 20, display: 'grid', gap: 14 }}>
+                {promptText ? (
+                  <div
+                    style={{
+                      borderRadius: 14,
+                      border: '1px solid rgba(130, 92, 78, 0.35)',
+                      padding: '10px 12px',
+                      background: 'rgba(255,255,255,0.85)',
+                      fontSize: 13,
+                    }}
+                  >
+                    <div style={{ fontWeight: 700, marginBottom: 6 }}>Prompt</div>
+                    <div style={{ opacity: 0.8 }}>{promptText}</div>
+                  </div>
+                ) : null}
                 <div>
                   <div style={fieldLabelStyle}>Entry Title</div>
                   <input

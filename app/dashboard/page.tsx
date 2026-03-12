@@ -138,6 +138,7 @@ export default function DashboardPage() {
   const [activityLoading, setActivityLoading] = useState(false)
   const [showWelcome, setShowWelcome] = useState(false)
   const [claimingWelcome, setClaimingWelcome] = useState(false)
+  const [loginCreditToast, setLoginCreditToast] = useState(false)
   const [welcomeError, setWelcomeError] = useState('')
   const [showUsernamePrompt, setShowUsernamePrompt] = useState(false)
   const [usernameDraft, setUsernameDraft] = useState('')
@@ -188,27 +189,19 @@ export default function DashboardPage() {
   async function countUnreadThreads(profileId: number | null) {
     if (!profileId) return 0
     try {
-      const threadsRes = await api.get('/ether/threads')
-      const threads = Array.isArray(threadsRes.data) ? threadsRes.data : []
-      if (!threads.length) return 0
-      const results = await Promise.allSettled(
-        threads.map(async (thread: any) => {
-          try {
-            const messagesRes = await api.get(`/ether/threads/${thread.id}/messages`)
-            const list = Array.isArray(messagesRes.data) ? messagesRes.data : []
-            const last = list[list.length - 1]
-            if (!last) return 0
-            const readAt = getThreadReadAt(thread.id)
-            const isUnread =
-              last.sender_profile_id !== profileId &&
-              (!readAt || new Date(last.created_at).getTime() > new Date(readAt).getTime())
-            return isUnread ? 1 : 0
-          } catch {
-            return 0
-          }
-        })
-      )
-      return results.reduce((sum, res) => (res.status === 'fulfilled' ? sum + res.value : sum), 0)
+      const previewsRes = await api.get('/ether/threads/previews')
+      const previews = Array.isArray(previewsRes.data) ? previewsRes.data : []
+      if (!previews.length) return 0
+      return previews.reduce((sum: number, preview: any) => {
+        const lastAt = preview.last_message_at
+        const senderId = preview.last_sender_profile_id
+        if (!lastAt) return sum
+        const readAt = getThreadReadAt(preview.id)
+        const isUnread =
+          senderId !== profileId &&
+          (!readAt || new Date(lastAt).getTime() > new Date(readAt).getTime())
+        return sum + (isUnread ? 1 : 0)
+      }, 0)
     } catch {
       return 0
     }
@@ -879,6 +872,24 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
+    if (typeof window === 'undefined') return
+    const flag = window.localStorage.getItem('mb_login_credit_toast')
+    if (flag) {
+      setLoginCreditToast(true)
+      window.localStorage.removeItem('mb_login_credit_toast')
+      return
+    }
+    ;(async () => {
+      try {
+        const res = await api.post('/credit/daily-login')
+        if (res.data?.awarded) setLoginCreditToast(true)
+      } catch {
+        // ignore
+      }
+    })()
+  }, [])
+
+  useEffect(() => {
     const isAdminLocal = me?.role === 'admin'
     if (isAdminLocal) {
       checkHealth()
@@ -1063,6 +1074,61 @@ export default function DashboardPage() {
       <div ref={dashboardNavRef}>
         <Navbar sticky={false} />
       </div>
+      {loginCreditToast ? (
+        <div
+          style={{
+            position: 'fixed',
+            top: 88,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 99999,
+            background: 'rgba(255,255,255,0.98)',
+            border: '1px solid rgba(120, 170, 130, 0.5)',
+            borderRadius: 14,
+            padding: '10px 16px',
+            boxShadow: '0 16px 30px rgba(34, 20, 14, 0.16)',
+            color: '#2f4a32',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            maxWidth: 'min(90vw, 520px)',
+          }}
+        >
+          <span
+            style={{
+              width: 20,
+              height: 20,
+              borderRadius: '50%',
+              background: 'rgba(78, 167, 112, 0.15)',
+              border: '1px solid rgba(78, 167, 112, 0.6)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 12,
+              color: '#2d7a48',
+              fontWeight: 700,
+            }}
+          >
+            ✓
+          </span>
+          <span style={{ fontWeight: 700 }}>Login credit recieved</span>
+          <button
+            type="button"
+            onClick={() => setLoginCreditToast(false)}
+            style={{
+              marginLeft: 'auto',
+              border: 'none',
+              background: 'transparent',
+              cursor: 'pointer',
+              fontSize: 16,
+              opacity: 0.7,
+            }}
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </div>
+      ) : null}
       {isVerified && etherPortalVisible ? (
         <div
           className="ether-portal-chip"
@@ -1215,6 +1281,22 @@ export default function DashboardPage() {
                   onClick={() => setTreasureChipOpen(false)}
                 >
                   My Checks
+                </Link>
+                <Link
+                  href="/mycredit"
+                  style={{ textDecoration: 'none', fontWeight: 600, color: '#4a2f26' }}
+                  role="menuitem"
+                  onClick={() => setTreasureChipOpen(false)}
+                >
+                  My Credit
+                </Link>
+                <Link
+                  href="/myteller"
+                  style={{ textDecoration: 'none', fontWeight: 600, color: '#4a2f26' }}
+                  role="menuitem"
+                  onClick={() => setTreasureChipOpen(false)}
+                >
+                  My Teller
                 </Link>
               </div>
             ) : null}

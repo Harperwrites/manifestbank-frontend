@@ -402,12 +402,20 @@ export default function MyLinePage() {
     let canceled = false
     async function buildPreviews() {
       try {
+        const previewsRes = await api.get('/ether/threads/previews')
+        const previews = Array.isArray(previewsRes.data) ? previewsRes.data : []
+        const previewMap = new Map(previews.map((preview: any) => [preview.id, preview]))
         const results = await Promise.all(
           threads.map(async (thread) => {
             try {
-              const messagesRes = await api.get(`/ether/threads/${thread.id}/messages`)
-              const list = Array.isArray(messagesRes.data) ? (messagesRes.data as EtherMessage[]) : []
-              const last = list[list.length - 1]
+              const preview = previewMap.get(thread.id)
+              const last = preview
+                ? {
+                    content: preview.last_message_content,
+                    created_at: preview.last_message_at,
+                    sender_profile_id: preview.last_sender_profile_id,
+                  }
+                : null
               const profileId = toProfileId(profile?.id ?? null)
               const userId = toProfileId(me?.id)
               const storedTarget = getStoredThreadTarget(thread.id, profileId)
@@ -418,7 +426,7 @@ export default function MyLinePage() {
                       null
                     : thread.participants[0] ?? null)
                 : null
-              const otherMessage = profileId ? list.find((message) => message.sender_profile_id !== profileId) : null
+              const otherMessage = profileId && last?.sender_profile_id !== profileId ? last : null
               const otherMessageProfileId =
                 profileId && otherMessage?.sender_profile_id && otherMessage.sender_profile_id !== profileId
                   ? otherMessage.sender_profile_id

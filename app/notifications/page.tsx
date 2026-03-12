@@ -119,30 +119,16 @@ export default function NotificationsPage() {
     async function loadMyLine() {
       try {
         setMyLineLoading(true)
-        const threadsRes = await api.get('/ether/threads')
-        const threads = Array.isArray(threadsRes.data) ? threadsRes.data : []
-        const results = await Promise.all(
-          threads.map(async (thread: any) => {
-            try {
-              const messagesRes = await api.get(`/ether/threads/${thread.id}/messages`)
-              const list = Array.isArray(messagesRes.data) ? messagesRes.data : []
-              const last = list[list.length - 1]
-              return {
-                thread_id: thread.id,
-                message: last?.content ?? null,
-                created_at: last?.created_at ?? null,
-                unread: false,
-              } satisfies MyLinePreview
-            } catch {
-              return {
-                thread_id: thread.id,
-                message: null,
-                created_at: null,
-                unread: false,
-              } satisfies MyLinePreview
-            }
-          })
-        )
+        const previewsRes = await api.get('/ether/threads/previews')
+        const previews = Array.isArray(previewsRes.data) ? previewsRes.data : []
+        const results = previews.map((preview: any) => {
+          return {
+            thread_id: preview.id,
+            message: preview.last_message_content ?? null,
+            created_at: preview.last_message_at ?? null,
+            unread: false,
+          } satisfies MyLinePreview
+        })
         if (canceled) return
         setMyLinePreviews(results)
       } finally {
