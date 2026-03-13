@@ -930,8 +930,9 @@ export default function MyLineThreadPage() {
                       <span>{formatMessageTimestamp(message.created_at)}</span>
                     </div>
                   </div>
-                )
-              })
+                  )
+                })}
+              </>
             )}
             <div ref={bottomRef} />
           </div>
