@@ -5,7 +5,6 @@ import './globals.css'
 import { AuthProvider } from './providers'
 import PwaRegister from './components/PwaRegister'
 import DevPaywallButton from './components/DevPaywallButton'
-import MyTellerWidget from './components/MyTellerWidget'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://manifestbank.app'),
@@ -100,7 +99,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             }}
           />
           {children}
-          <MyTellerWidget />
           <DevPaywallButton />
           <footer
             style={{
