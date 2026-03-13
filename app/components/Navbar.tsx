@@ -152,6 +152,8 @@ export default function Navbar({
     }
   }
 
+  // Keep the treasure menu anchored to the open position without reflow wiggle.
+
   return (
     <>
       <style>{`
@@ -164,6 +166,12 @@ export default function Navbar({
           0% { background-position: 0% 50%; }
           50% { background-position: 100% 50%; }
           100% { background-position: 0% 50%; }
+        }
+        @keyframes mb-glisten {
+          0% { transform: translateX(-140%) rotate(25deg); opacity: 0; }
+          30% { opacity: 0.9; }
+          60% { opacity: 0.35; }
+          100% { transform: translateX(260%) rotate(25deg); opacity: 0; }
         }
         .signature-member-btn {
           background: linear-gradient(120deg, #b67967, #e2b9a3, #b67967);
@@ -178,7 +186,7 @@ export default function Navbar({
           top: sticky ? 0 : 'auto',
           left: sticky ? 0 : 'auto',
           right: sticky ? 0 : 'auto',
-          zIndex: sticky ? 5000 : 'auto',
+          zIndex: sticky ? 5000 : 5000,
           padding: '16px 24px',
           borderBottom: '1px solid var(--border)',
           background: 'rgba(255, 255, 255, 0.8)',
@@ -334,27 +342,43 @@ export default function Navbar({
             {portalLoading ? 'Opening…' : 'ManifestBank™ Signature Member'}
           </button>
         ) : null}
-        {!isLoading && !isPremium ? (
-          <button
-            type="button"
-            onClick={() =>
-              window.dispatchEvent(
-                new CustomEvent('paywall:open', { detail: { reason: 'Upgrade to ManifestBank™ Signature.' } })
-              )
-            }
-            style={{
-              padding: '8px 14px',
-              borderRadius: 999,
-              border: 'none',
-              background: 'linear-gradient(135deg, #b67967, #c6927c)',
-              color: '#fff',
-              fontWeight: 700,
-              cursor: 'pointer',
-            }}
-          >
-            {PREMIUM_CTA}
-          </button>
-        ) : null}
+          {!isLoading && !isPremium ? (
+            <button
+              type="button"
+              onClick={() =>
+                window.dispatchEvent(
+                  new CustomEvent('paywall:open', { detail: { reason: 'Upgrade to ManifestBank™ Signature.' } })
+                )
+              }
+              style={{
+                padding: '8px 14px',
+                borderRadius: 999,
+                border: 'none',
+                background: 'linear-gradient(135deg, #b67967, #c6927c)',
+                color: '#fff',
+                fontWeight: 700,
+                cursor: 'pointer',
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+            >
+              <span
+                aria-hidden
+                style={{
+                  position: 'absolute',
+                  top: '-40%',
+                  left: '-30%',
+                  width: '60%',
+                  height: '180%',
+                  transform: 'rotate(25deg)',
+                  background:
+                    'linear-gradient(120deg, rgba(255,255,255,0), rgba(255,255,255,0.55), rgba(255,255,255,0))',
+                  animation: 'mb-glisten 2.8s ease-in-out infinite',
+                }}
+              />
+              <span style={{ position: 'relative', zIndex: 1 }}>{PREMIUM_CTA}</span>
+            </button>
+          ) : null}
         {portalError ? (
           <div style={{ fontSize: 12, color: '#7a2e2e' }}>{portalError}</div>
         ) : null}
@@ -388,75 +412,111 @@ export default function Navbar({
             My Treasure Chest
             <span style={{ fontSize: 12, opacity: 0.7 }}>▾</span>
           </button>
-          {treasureOpen && portalReady
-            ? (() => {
-                const rect = treasureMenuRect
-                const width = Math.min(240, typeof window !== 'undefined' ? window.innerWidth - 24 : 240)
-                const left = rect
-                  ? Math.min(Math.max(12, rect.left), (typeof window !== 'undefined' ? window.innerWidth : 0) - width - 12)
-                  : 12
-                const top = rect?.bottom ? rect.bottom + 8 : 72
-                return createPortal(
-                  <div
-                    ref={treasureMenuRef}
-                    className="treasure-menu"
-                    style={{
-                      position: 'fixed',
-                      top,
-                      left,
-                      width,
-                      maxWidth: 'calc(100vw - 24px)',
-                      borderRadius: 12,
-                      border: '1px solid rgba(95, 74, 62, 0.2)',
-                      background: '#ffffff',
-                      opacity: 1,
-                      backdropFilter: 'none',
-                      backgroundImage: 'none',
-                      boxShadow: '0 16px 40px rgba(0, 0, 0, 0.16)',
-                      padding: 10,
-                      display: 'grid',
-                      gap: 8,
-                      zIndex: 99999,
-                    }}
-                    role="menu"
-                  >
-                    <Link
-                      href="/myjournal"
-                      style={{ textDecoration: 'none', fontWeight: 600, color: 'rgba(95, 74, 62, 0.9)' }}
-                      role="menuitem"
-                      onClick={() => setTreasureOpen(false)}
-                    >
-                      My Journal
-                    </Link>
-                    <Link
-                      href="/myaffirmations"
-                      style={{ textDecoration: 'none', fontWeight: 600, color: 'rgba(95, 74, 62, 0.9)' }}
-                      role="menuitem"
-                      onClick={() => setTreasureOpen(false)}
-                    >
-                      My Affirmations
-                    </Link>
-                    <Link
-                      href="/mystatments"
-                      style={{ textDecoration: 'none', fontWeight: 600, color: 'rgba(95, 74, 62, 0.9)' }}
-                      role="menuitem"
-                      onClick={() => setTreasureOpen(false)}
-                    >
-                      My Statements
-                    </Link>
-                    <Link
-                      href="/mychecks"
-                      style={{ textDecoration: 'none', fontWeight: 600, color: 'rgba(95, 74, 62, 0.9)' }}
-                      role="menuitem"
-                      onClick={() => setTreasureOpen(false)}
-                    >
-                      My Checks
-                    </Link>
-                  </div>,
-                  document.body
-                )
-              })()
-            : null}
+          {treasureOpen ? (
+            <div
+              ref={treasureMenuRef}
+              className="treasure-menu"
+              style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                marginTop: 8,
+                minWidth: 200,
+                maxWidth: 'calc(100vw - 24px)',
+                borderRadius: 12,
+                border: '1px solid rgba(140, 92, 78, 0.45)',
+                background: 'rgba(252, 245, 240, 1)',
+                opacity: 1,
+                backdropFilter: 'none',
+                backgroundImage: 'none',
+                boxShadow: '0 24px 60px rgba(12, 10, 12, 0.4)',
+                padding: 10,
+                display: 'grid',
+                gap: 8,
+                zIndex: 200000,
+              }}
+              role="menu"
+            >
+              <Link
+                href="/myjournal"
+                style={{
+                  textDecoration: 'none',
+                  fontWeight: 600,
+                  color: 'rgba(95, 74, 62, 0.9)',
+                  textShadow: '0 0 4px rgba(182, 121, 103, 0.25), 0 0 10px rgba(182, 121, 103, 0.2)',
+                }}
+                role="menuitem"
+                onClick={() => setTreasureOpen(false)}
+              >
+                My Journal
+              </Link>
+              <Link
+                href="/myaffirmations"
+                style={{
+                  textDecoration: 'none',
+                  fontWeight: 600,
+                  color: 'rgba(95, 74, 62, 0.9)',
+                  textShadow: '0 0 4px rgba(182, 121, 103, 0.25), 0 0 10px rgba(182, 121, 103, 0.2)',
+                }}
+                role="menuitem"
+                onClick={() => setTreasureOpen(false)}
+              >
+                My Affirmations
+              </Link>
+              <Link
+                href="/mystatments"
+                style={{
+                  textDecoration: 'none',
+                  fontWeight: 600,
+                  color: 'rgba(95, 74, 62, 0.9)',
+                  textShadow: '0 0 4px rgba(182, 121, 103, 0.25), 0 0 10px rgba(182, 121, 103, 0.2)',
+                }}
+                role="menuitem"
+                onClick={() => setTreasureOpen(false)}
+              >
+                My Statements
+              </Link>
+              <Link
+                href="/mychecks"
+                style={{
+                  textDecoration: 'none',
+                  fontWeight: 600,
+                  color: 'rgba(95, 74, 62, 0.9)',
+                  textShadow: '0 0 4px rgba(182, 121, 103, 0.25), 0 0 10px rgba(182, 121, 103, 0.2)',
+                }}
+                role="menuitem"
+                onClick={() => setTreasureOpen(false)}
+              >
+                My Checks
+              </Link>
+              <Link
+                href="/mycredit"
+                style={{
+                  textDecoration: 'none',
+                  fontWeight: 600,
+                  color: 'rgba(95, 74, 62, 0.9)',
+                  textShadow: '0 0 4px rgba(182, 121, 103, 0.25), 0 0 10px rgba(182, 121, 103, 0.2)',
+                }}
+                role="menuitem"
+                onClick={() => setTreasureOpen(false)}
+              >
+                My Credit
+              </Link>
+              <Link
+                href="/myteller"
+                style={{
+                  textDecoration: 'none',
+                  fontWeight: 600,
+                  color: 'rgba(95, 74, 62, 0.9)',
+                  textShadow: '0 0 4px rgba(182, 121, 103, 0.25), 0 0 10px rgba(182, 121, 103, 0.2)',
+                }}
+                role="menuitem"
+                onClick={() => setTreasureOpen(false)}
+              >
+                My Teller
+              </Link>
+            </div>
+          ) : null}
         </div>
         {isLoading ? (
           <span style={{ opacity: 0.75 }}>Loading…</span>

@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import Navbar from '@/app/components/Navbar'
 import { api } from '@/lib/api'
 import { useAuth } from '@/app/providers'
-import PremiumPaywall from '@/app/components/PremiumPaywall'
 import { PREMIUM_TIER_NAME } from '@/app/lib/premium'
 
 function toast(message: string) {
@@ -40,12 +39,17 @@ export default function SavedAffirmationsPage() {
   const [error, setError] = useState('')
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
   const [carouselIndex, setCarouselIndex] = useState(0)
-  const [paywallOpen, setPaywallOpen] = useState(false)
   const isPremium = Boolean(me?.is_premium || me?.role === 'admin')
 
   useEffect(() => {
     if (me && !isPremium) {
-      setPaywallOpen(true)
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('paywall:open', {
+            detail: { reason: `Saved affirmations are available on ${PREMIUM_TIER_NAME}.` },
+          })
+        )
+      }
       setLoading(false)
       return
     }
@@ -91,11 +95,6 @@ export default function SavedAffirmationsPage() {
 
   return (
     <main>
-      <PremiumPaywall
-        open={paywallOpen}
-        onClose={() => setPaywallOpen(false)}
-        reason={`Saved affirmations are available on ${PREMIUM_TIER_NAME}.`}
-      />
       <Navbar />
       <section style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 20px 80px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>

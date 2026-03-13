@@ -795,6 +795,22 @@ export default function MyJournalPage() {
                   <div style={{ opacity: 0.8 }}>{activePrompt}</div>
                 </div>
               ) : null}
+              {error ? (
+                <div
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: 12,
+                    border: '1px solid rgba(122, 75, 62, 0.35)',
+                    background: 'rgba(255, 255, 255, 0.9)',
+                    color: '#7a4b3e',
+                    textShadow: '0 0 8px rgba(182, 121, 103, 0.55), 0 0 16px rgba(182, 121, 103, 0.35)',
+                    fontSize: 13,
+                    fontWeight: 600,
+                  }}
+                >
+                  {error}
+                </div>
+              ) : null}
               <div>
                 <div style={fieldLabelStyle}>Entry Title</div>
                 <input

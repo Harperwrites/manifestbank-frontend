@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { api } from '@/lib/api'
 import PremiumPaywall from '@/app/components/PremiumPaywall'
+import TierComparisonModal from '@/app/components/TierComparisonModal'
 
 export type Me = {
   id: number
@@ -48,10 +49,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [legalError, setLegalError] = useState('')
   const [devPaywallOpen, setDevPaywallOpen] = useState(false)
   const [devPaywallReason, setDevPaywallReason] = useState('')
+  const [tierCompareOpen, setTierCompareOpen] = useState(false)
 
   function getStoredToken() {
     if (typeof window === 'undefined') return null
     return localStorage.getItem('access_token') || sessionStorage.getItem('access_token')
+  }
+
+  function getStoredRefreshToken() {
+    if (typeof window === 'undefined') return null
+    return localStorage.getItem('refresh_token') || sessionStorage.getItem('refresh_token')
+  }
+
+  function storeTokens(accessToken: string, refreshToken: string | null, persist: boolean) {
+    if (persist) {
+      localStorage.setItem('access_token', accessToken)
+      sessionStorage.removeItem('access_token')
+      if (refreshToken) {
+        localStorage.setItem('refresh_token', refreshToken)
+        sessionStorage.removeItem('refresh_token')
+      }
+    } else {
+      sessionStorage.setItem('access_token', accessToken)
+      localStorage.removeItem('access_token')
+      if (refreshToken) {
+        sessionStorage.setItem('refresh_token', refreshToken)
+        localStorage.removeItem('refresh_token')
+      }
+    }
   }
 
   async function refreshMe() {
@@ -68,27 +93,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setMe(res.data)
     } catch (err: any) {
       const status = err?.response?.status
-      // If the backend is temporarily failing, keep the token and show a friendly message.
-      if (status && status >= 500) {
+      // If the backend is temporarily failing or the network hiccups, keep the token.
+      if (!status || status >= 500) {
         setToast('We’re updating your membership — please retry in a moment.')
         setToastPersistent(false)
         return
       }
-      localStorage.removeItem('access_token')
-      sessionStorage.removeItem('access_token')
-      delete api.defaults.headers.common.Authorization
-      setMe(null)
+      if (status === 401 || status === 403) {
+        const refreshed = await refreshAccessToken()
+        if (refreshed) {
+          try {
+            const res = await api.get('/auth/me')
+            setMe(res.data)
+          } catch {
+            // fall through to clear tokens below
+          }
+          return
+        }
+        localStorage.removeItem('access_token')
+        sessionStorage.removeItem('access_token')
+        localStorage.removeItem('refresh_token')
+        sessionStorage.removeItem('refresh_token')
+        delete api.defaults.headers.common.Authorization
+        setMe(null)
+      }
     }
   }
 
-  async function loginWithToken(token: string, persist = true) {
-    if (persist) {
-      localStorage.setItem('access_token', token)
-      sessionStorage.removeItem('access_token')
-    } else {
-      sessionStorage.setItem('access_token', token)
-      localStorage.removeItem('access_token')
+  async function refreshAccessToken() {
+    const refreshToken = getStoredRefreshToken()
+    if (!refreshToken) return false
+    try {
+      const res = await api.post('/auth/refresh', { refresh_token: refreshToken })
+      const accessToken = res.data?.access_token
+      const newRefreshToken = res.data?.refresh_token || refreshToken
+      if (!accessToken) return false
+      const persist = Boolean(localStorage.getItem('refresh_token'))
+      storeTokens(accessToken, newRefreshToken, persist)
+      api.defaults.headers.common.Authorization = `Bearer ${accessToken}`
+      return true
+    } catch {
+      return false
     }
+  }
+
+  async function loginWithToken(token: string, persist = true, refreshToken?: string | null) {
+    storeTokens(token, refreshToken ?? null, persist)
     api.defaults.headers.common.Authorization = `Bearer ${token}`
     await refreshMe()
   }
@@ -96,6 +146,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   function logout() {
     localStorage.removeItem('access_token')
     sessionStorage.removeItem('access_token')
+    localStorage.removeItem('refresh_token')
+    sessionStorage.removeItem('refresh_token')
     delete api.defaults.headers.common.Authorization
     setMe(null)
     // no router here; pages decide where to redirect
@@ -108,6 +160,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false)
     })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        refreshMe().catch(() => {})
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    const interval = window.setInterval(() => {
+      refreshMe().catch(() => {})
+    }, 10 * 60 * 1000)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility)
+      window.clearInterval(interval)
+    }
   }, [])
 
   useEffect(() => {
@@ -179,7 +248,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     function handlePaywallOpen(event: Event) {
       const detail = (event as CustomEvent<{ reason?: string }>).detail
       setDevPaywallReason(detail?.reason ?? 'Upgrade to ManifestBank™ Signature.')
-      setDevPaywallOpen(true)
+      setTierCompareOpen(true)
     }
     window.addEventListener('paywall:open', handlePaywallOpen)
     return () => window.removeEventListener('paywall:open', handlePaywallOpen)
@@ -303,6 +372,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={value}>
+      <TierComparisonModal
+        open={tierCompareOpen}
+        reason={devPaywallReason}
+        onClose={() => setTierCompareOpen(false)}
+        onOpenPaywall={() => {
+          setTierCompareOpen(false)
+          setDevPaywallOpen(true)
+        }}
+      />
       <PremiumPaywall
         open={devPaywallOpen}
         onClose={() => setDevPaywallOpen(false)}
@@ -415,14 +493,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           style={{
             position: 'fixed',
             right: 24,
-            bottom: 24,
+            bottom: 110,
             padding: '12px 16px',
             borderRadius: 12,
             border: '1px solid rgba(95, 74, 62, 0.25)',
             background: 'rgba(255, 255, 255, 0.95)',
             boxShadow: '0 16px 32px rgba(0,0,0,0.18)',
             fontSize: 13,
-            zIndex: 1000,
+            zIndex: 100000,
             display: 'flex',
             alignItems: 'center',
             gap: 10,

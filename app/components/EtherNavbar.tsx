@@ -9,6 +9,7 @@ import InstallAppButton from '@/app/components/InstallAppButton'
 import { Button } from '@/app/components/ui'
 import { api } from '@/lib/api'
 import { PREMIUM_CTA } from '@/app/lib/premium'
+import { validateUsername } from '@/app/lib/username'
 
 type Profile = {
   id: number
@@ -205,8 +206,10 @@ function EtherNavbar({
 
   async function checkUsernameAvailability(value: string) {
     const trimmed = value.trim()
-    if (!trimmed) {
+    const validation = validateUsername(trimmed)
+    if (!validation.ok) {
       setUsernameStatus('invalid')
+      setSettingsUsernameNotice(validation.reason ?? 'Enter a valid username.')
       return
     }
     if (me?.username && trimmed.toLowerCase() === me.username.toLowerCase()) {
@@ -216,7 +219,11 @@ function EtherNavbar({
     setUsernameStatus('checking')
     try {
       const res = await api.get('/auth/username-available', { params: { username: trimmed } })
-      setUsernameStatus(res.data?.available ? 'available' : 'taken')
+      const available = Boolean(res.data?.available)
+      setUsernameStatus(available ? 'available' : 'taken')
+      if (!available && res.data?.reason) {
+        setSettingsUsernameNotice(res.data.reason)
+      }
     } catch {
       setUsernameStatus('invalid')
     }
@@ -224,8 +231,10 @@ function EtherNavbar({
 
   async function saveUsername() {
     const trimmed = settingsUsername.trim()
-    if (!trimmed) {
+    const validation = validateUsername(trimmed)
+    if (!validation.ok) {
       setUsernameStatus('invalid')
+      setSettingsUsernameNotice(validation.reason ?? 'Enter a valid username.')
       return
     }
     setSettingsBusy(true)
@@ -277,6 +286,12 @@ function EtherNavbar({
           0% { background-position: 0% 50%; }
           50% { background-position: 100% 50%; }
           100% { background-position: 0% 50%; }
+        }
+        @keyframes mb-glisten {
+          0% { transform: translateX(-140%) rotate(25deg); opacity: 0; }
+          30% { opacity: 0.9; }
+          60% { opacity: 0.35; }
+          100% { transform: translateX(260%) rotate(25deg); opacity: 0; }
         }
         .signature-member-btn {
           background: linear-gradient(120deg, #b67967, #e2b9a3, #b67967);
@@ -464,9 +479,25 @@ function EtherNavbar({
                 color: '#fff',
                 fontWeight: 700,
                 cursor: 'pointer',
+                position: 'relative',
+                overflow: 'hidden',
               }}
             >
-              {PREMIUM_CTA}
+              <span
+                aria-hidden
+                style={{
+                  position: 'absolute',
+                  top: '-40%',
+                  left: '-30%',
+                  width: '60%',
+                  height: '180%',
+                  transform: 'rotate(25deg)',
+                  background:
+                    'linear-gradient(120deg, rgba(255,255,255,0), rgba(255,255,255,0.55), rgba(255,255,255,0))',
+                  animation: 'mb-glisten 2.8s ease-in-out infinite',
+                }}
+              />
+              <span style={{ position: 'relative', zIndex: 1 }}>{PREMIUM_CTA}</span>
             </button>
           ) : null}
           {portalError ? <div style={{ fontSize: 12, color: '#7a2e2e' }}>{portalError}</div> : null}
@@ -756,6 +787,7 @@ function EtherNavbar({
                   }}
                   onBlur={(e) => checkUsernameAvailability(e.target.value)}
                   placeholder="Choose a username"
+                  maxLength={21}
                   style={{
                     padding: '8px 10px',
                     borderRadius: 10,

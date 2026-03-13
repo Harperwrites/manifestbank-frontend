@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { useAuth } from '@/app/providers'
+import { validateUsername } from '@/app/lib/username'
 
 type Mode = 'login' | 'register'
 
@@ -42,15 +43,26 @@ export default function AuthPage() {
           setLoading(false)
           return
         }
+        const usernameCheck = validateUsername(username)
+        if (!usernameCheck.ok) {
+          setMsg(`❌ ${usernameCheck.reason}`)
+          setLoading(false)
+          return
+        }
         await api.post('/auth/register', { email, password, username, accept_terms: true })
         setMsg('✅ Account created. Check your email to verify and unlock full access.')
         setMode('login')
       } else {
         const res = await api.post('/auth/login', { identifier: email, password })
         const token = res.data?.access_token
+        const refreshToken = res.data?.refresh_token
+        const loginCreditAwarded = Boolean(res.data?.login_credit_awarded)
         if (!token) throw new Error('No access_token in response')
 
-        await loginWithToken(token, keepSignedIn)
+        await loginWithToken(token, keepSignedIn, refreshToken)
+        if (typeof window !== 'undefined' && loginCreditAwarded) {
+          window.localStorage.setItem('mb_login_credit_toast', '1')
+        }
         setMsg('✅ Logged in.')
         router.push('/dashboard')
       }
@@ -235,6 +247,7 @@ export default function AuthPage() {
                 placeholder="wealthbuilder"
                 required
                 minLength={3}
+                maxLength={21}
                 autoComplete="username"
                 style={{
                   padding: 12,

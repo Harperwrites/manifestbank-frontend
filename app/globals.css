@@ -231,6 +231,19 @@ a {
   display: none;
 }
 
+@media (max-width: 900px) {
+  .teller-layout {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (min-width: 1100px) {
+  .teller-shell {
+    margin-left: 0 !important;
+    margin-right: auto !important;
+  }
+}
+
 @keyframes fadeUp {
   from {
     opacity: 0;

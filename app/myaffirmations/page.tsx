@@ -6,7 +6,6 @@ import Link from 'next/link'
 import Navbar from '@/app/components/Navbar'
 import { api } from '@/lib/api'
 import { useAuth } from '@/app/providers'
-import PremiumPaywall from '@/app/components/PremiumPaywall'
 import { PREMIUM_TIER_NAME } from '@/app/lib/premium'
 
 function toast(message: string) {
@@ -209,7 +208,6 @@ export default function MyAffirmationsPage() {
   const [savingDaily, setSavingDaily] = useState(false)
   const [savePulse, setSavePulse] = useState(false)
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
-  const [paywallOpen, setPaywallOpen] = useState(false)
   const [paywallReason, setPaywallReason] = useState<string | null>(null)
   const affirmationNavRef = useRef<HTMLDivElement | null>(null)
   const [etherPortalVisible, setEtherPortalVisible] = useState(false)
@@ -404,8 +402,11 @@ export default function MyAffirmationsPage() {
       return
     }
     if (!isPremium && affirmationsEntries.length >= 10) {
-      setPaywallReason(`Free tier allows 10 affirmation entries. Upgrade to ${PREMIUM_TIER_NAME} for unlimited entries.`)
-      setPaywallOpen(true)
+        const reason = `Free tier allows 10 affirmation entries. Upgrade to ${PREMIUM_TIER_NAME} for unlimited entries.`
+        setPaywallReason(reason)
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('paywall:open', { detail: { reason } }))
+        }
       return
     }
     setSaving(true)
@@ -441,8 +442,11 @@ export default function MyAffirmationsPage() {
   async function saveDailyAffirmation() {
     if (!dailyAffirmation || savingDaily) return
     if (!isPremium) {
-      setPaywallReason(`Saved affirmations are available on ${PREMIUM_TIER_NAME}. Upgrade to save affirmations.`)
-      setPaywallOpen(true)
+      const reason = `Saved affirmations are available on ${PREMIUM_TIER_NAME}. Upgrade to save affirmations.`
+      setPaywallReason(reason)
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('paywall:open', { detail: { reason } }))
+      }
       return
     }
     if (isDailySaved) {
@@ -532,11 +536,6 @@ export default function MyAffirmationsPage() {
 
   return (
     <main className="mb-page-offset" style={{ minHeight: '100vh', background: 'var(--page-bg)' }}>
-      <PremiumPaywall
-        open={paywallOpen}
-        onClose={() => setPaywallOpen(false)}
-        reason={paywallReason ?? undefined}
-      />
       <div ref={affirmationNavRef}>
         <Navbar showAccountsDropdown />
       </div>

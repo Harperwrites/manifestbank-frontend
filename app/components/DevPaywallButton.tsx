@@ -12,9 +12,9 @@ export default function DevPaywallButton() {
       }
       style={{
         position: 'fixed',
-        right: 16,
+        left: 16,
         bottom: 16,
-        zIndex: 99999,
+        zIndex: 99990,
         padding: '8px 12px',
         borderRadius: 999,
         border: '1px solid rgba(95, 74, 62, 0.35)',

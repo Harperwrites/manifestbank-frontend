@@ -60,12 +60,20 @@ export default function PremiumPaywall({
           background:
             'linear-gradient(135deg, rgba(199, 140, 122, 0.96), rgba(220, 193, 179, 0.98)), radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.7), transparent 52%), radial-gradient(circle at 78% 10%, rgba(255, 255, 255, 0.45), transparent 58%)',
           border: '1px solid rgba(95, 74, 62, 0.25)',
-          boxShadow: '0 24px 60px rgba(12, 10, 12, 0.35)',
-          padding: 20,
-          color: '#2c1a14',
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+        boxShadow: '0 24px 60px rgba(12, 10, 12, 0.35)',
+        padding: 20,
+        color: '#2c1a14',
+      }}
+    >
+      <style>{`
+        @keyframes mb-glisten {
+          0% { transform: translateX(-140%) rotate(25deg); opacity: 0; }
+          30% { opacity: 0.9; }
+          60% { opacity: 0.35; }
+          100% { transform: translateX(260%) rotate(25deg); opacity: 0; }
+        }
+      `}</style>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
           <div style={{ fontWeight: 700, fontSize: 18, fontFamily: 'var(--font-serif)' }}>
             {PREMIUM_TIER_NAME}
           </div>
@@ -118,9 +126,27 @@ export default function PremiumPaywall({
                 cursor: 'pointer',
                 width: '100%',
                 boxShadow: '0 10px 22px rgba(12, 10, 12, 0.2)',
+                position: 'relative',
+                overflow: 'hidden',
               }}
             >
-              {loadingPlan === 'annual' ? 'Starting…' : PREMIUM_CTA}
+              <span
+                aria-hidden
+                style={{
+                  position: 'absolute',
+                  top: '-40%',
+                  left: '-30%',
+                  width: '60%',
+                  height: '180%',
+                  transform: 'rotate(25deg)',
+                  background:
+                    'linear-gradient(120deg, rgba(255,255,255,0), rgba(255,255,255,0.55), rgba(255,255,255,0))',
+                  animation: 'mb-glisten 2.8s ease-in-out infinite',
+                }}
+              />
+              <span style={{ position: 'relative', zIndex: 1 }}>
+                {loadingPlan === 'annual' ? 'Starting…' : PREMIUM_CTA}
+              </span>
             </button>
           </div>
           <div

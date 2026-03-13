@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
+import { api } from '@/lib/api'
 import { useAuth } from '@/app/providers'
 
 function GoogleCallbackContent() {
@@ -21,6 +22,14 @@ function GoogleCallbackContent() {
     ;(async () => {
       try {
         await loginWithToken(token, keep !== '0')
+        try {
+          const creditRes = await api.post('/credit/daily-login')
+          if (typeof window !== 'undefined' && creditRes.data?.awarded) {
+            window.localStorage.setItem('mb_login_credit_toast', '1')
+          }
+        } catch {
+          // ignore
+        }
         router.replace(next)
       } catch {
         setMessage('Unable to sign in. Please try again.')

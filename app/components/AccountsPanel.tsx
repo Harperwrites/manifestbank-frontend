@@ -6,7 +6,8 @@ import type { Dispatch, SetStateAction } from 'react'
 import { api } from '../../lib/api'
 import { Card, Button } from './ui'
 import LedgerPanel from './LedgerPanel'
-import PremiumPaywall from './PremiumPaywall'
+import { useAuth } from '@/app/providers'
+import { PREMIUM_TIER_NAME } from '@/app/lib/premium'
 
 type Account = {
   id: number
@@ -51,13 +52,11 @@ export default function AccountsPanel({
   const [msg, setMsg] = useState('')
   const [loading, setLoading] = useState(false)
   const [creating, setCreating] = useState(false)
-  const [newName, setNewName] = useState('Primary Account')
+  const [newName, setNewName] = useState('')
   const [newType, setNewType] = useState('personal')
   const [newParentId, setNewParentId] = useState<number | ''>('')
   const [showCreate, setShowCreate] = useState(false)
   const [createError, setCreateError] = useState('')
-  const [paywallOpen, setPaywallOpen] = useState(false)
-  const [paywallReason, setPaywallReason] = useState('')
   const [openAccounts, setOpenAccounts] = useState<Record<number, boolean>>({})
   const [renameTarget, setRenameTarget] = useState<Account | null>(null)
   const [renameName, setRenameName] = useState('')
@@ -71,6 +70,8 @@ export default function AccountsPanel({
   const [wealthTargetMode, setWealthTargetMode] = useState<'preset' | 'custom'>('preset')
   const [wealthTargetCustom, setWealthTargetCustom] = useState('')
   const [wealthTargetNoticeAt, setWealthTargetNoticeAt] = useState<number | null>(null)
+  const { me } = useAuth()
+  const isPremium = Boolean(me?.is_premium || me?.role === 'admin')
 
   const wealthTargetOptions = [
     { label: 'Set target', value: '' },
@@ -129,6 +130,17 @@ export default function AccountsPanel({
     setCreating(true)
     setMsg('')
     setCreateError('')
+    if (!isPremium) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('paywall:open', {
+            detail: { reason: `${PREMIUM_TIER_NAME} required to create additional accounts.` },
+          })
+        )
+      }
+      setCreating(false)
+      return
+    }
     const fallbackTrustId = trustAccounts[0]?.id
     const parentId =
       newType !== 'trust' && !newParentId && fallbackTrustId ? fallbackTrustId : newParentId
@@ -145,14 +157,19 @@ export default function AccountsPanel({
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new Event('accounts:refresh'))
       }
-      setNewName('Primary Account')
+      setNewName('')
       setNewType('personal')
       setNewParentId('')
       setShowCreate(false)
     } catch (e: any) {
       if (e?.response?.status === 402) {
-        setPaywallReason(e?.response?.data?.detail ?? 'Upgrade to create accounts.')
-        setPaywallOpen(true)
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('paywall:open', {
+              detail: { reason: e?.response?.data?.detail ?? 'Upgrade to create accounts.' },
+            })
+          )
+        }
       } else if (e?.message === 'Network Error') {
         setCreateError('❌ Create failed: Network error. Try again.')
       } else {
@@ -233,7 +250,6 @@ export default function AccountsPanel({
 
   return (
     <>
-      <PremiumPaywall open={paywallOpen} onClose={() => setPaywallOpen(false)} reason={paywallReason} />
       <Card
       title="Your Accounts"
       subtitle="Personal • Trust • Entity"

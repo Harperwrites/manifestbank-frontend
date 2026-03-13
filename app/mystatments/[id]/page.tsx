@@ -5,7 +5,6 @@ import { useParams } from 'next/navigation'
 import Navbar from '@/app/components/Navbar'
 import { api } from '@/lib/api'
 import { useAuth } from '@/app/providers'
-import PremiumPaywall from '@/app/components/PremiumPaywall'
 import { PREMIUM_TIER_NAME } from '@/app/lib/premium'
 
 export const runtime = 'edge'
@@ -98,7 +97,6 @@ export default function AccountStatementPage() {
   const [asOf, setAsOf] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState('')
-  const [paywallOpen, setPaywallOpen] = useState(false)
   const isPremium = Boolean(me?.is_premium || me?.role === 'admin')
 
   useEffect(() => {
@@ -118,7 +116,9 @@ export default function AccountStatementPage() {
     async function loadStatements() {
       if (!selectedMonth || !accountId) return
       if (me && !isPremium) {
-        setPaywallOpen(true)
+        window.dispatchEvent(
+          new CustomEvent('paywall:open', { detail: { reason: `Statements are available on ${PREMIUM_TIER_NAME}.` } })
+        )
         return
       }
       setLoading(true)
@@ -137,7 +137,7 @@ export default function AccountStatementPage() {
       } catch (e: any) {
         const detail = e?.response?.data?.detail ?? e?.message ?? 'Statements unavailable.'
         if (e?.response?.status === 402) {
-          setPaywallOpen(true)
+          window.dispatchEvent(new CustomEvent('paywall:open', { detail: { reason: detail } }))
         }
         setMsg(detail)
         setSummary(buildFallbackSummary())
@@ -154,16 +154,17 @@ export default function AccountStatementPage() {
 
   function handlePrint() {
     if (typeof window === 'undefined') return
+    if (!isPremium) {
+      window.dispatchEvent(
+        new CustomEvent('paywall:open', { detail: { reason: `Statements are available on ${PREMIUM_TIER_NAME}.` } })
+      )
+      return
+    }
     window.print()
   }
 
   return (
     <main style={{ minHeight: '100vh', background: 'var(--page-bg)' }}>
-      <PremiumPaywall
-        open={paywallOpen}
-        onClose={() => setPaywallOpen(false)}
-        reason={`Statements are available on ${PREMIUM_TIER_NAME}.`}
-      />
       <div className="no-print">
         <Navbar showAccountsDropdown />
       </div>
@@ -221,6 +222,77 @@ export default function AccountStatementPage() {
             Print Statement
           </button>
         </div>
+
+        {!isPremium ? (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 20,
+              background: 'rgba(18, 12, 10, 0.45)',
+              zIndex: 7000,
+            }}
+          >
+            <div
+              style={{
+                width: 'min(560px, 92vw)',
+                padding: 20,
+                borderRadius: 20,
+                border: '1px solid rgba(95, 74, 62, 0.28)',
+                background:
+                  'linear-gradient(160deg, rgba(217, 178, 161, 0.95), rgba(198, 159, 143, 0.98))',
+                boxShadow: '0 20px 50px rgba(20, 12, 8, 0.35)',
+                textAlign: 'center',
+              }}
+            >
+              <div style={{ fontWeight: 700, fontSize: 18 }}>Statements Locked</div>
+              <div style={{ marginTop: 8, opacity: 0.85 }}>
+                Statements are available on {PREMIUM_TIER_NAME}. Upgrade to unlock full statement access.
+              </div>
+              <div style={{ marginTop: 14, display: 'grid', gap: 10, justifyItems: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.dispatchEvent(
+                      new CustomEvent('paywall:open', {
+                        detail: { reason: `Statements are available on ${PREMIUM_TIER_NAME}.` },
+                      })
+                    )
+                  }}
+                  style={{
+                    padding: '10px 16px',
+                    borderRadius: 999,
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #b67967, #c6927c)',
+                    color: '#fff',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  View Signature Options
+                </button>
+                <button
+                  type="button"
+                  onClick={() => history.back()}
+                  style={{
+                    padding: '10px 16px',
+                    borderRadius: 999,
+                    border: '1px solid rgba(95, 74, 62, 0.35)',
+                    background: 'rgba(255,255,255,0.8)',
+                    color: '#3b2b24',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Back
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {msg ? (
           <div className="no-print" style={{ marginTop: 12, fontSize: 12, opacity: 0.75 }}>

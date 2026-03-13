@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Navbar from '@/app/components/Navbar'
 import { api } from '@/lib/api'
 import { useAuth } from '@/app/providers'
-import PremiumPaywall from '@/app/components/PremiumPaywall'
 import { PREMIUM_TIER_NAME } from '@/app/lib/premium'
 
 const STATEMENT_MONTHS = [
@@ -100,13 +99,14 @@ function MyStatementsContent() {
   const [asOf, setAsOf] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState('')
-  const [paywallOpen, setPaywallOpen] = useState(false)
   const printRef = useRef<HTMLDivElement | null>(null)
   const isPremium = Boolean(me?.is_premium || me?.role === 'admin')
 
   useEffect(() => {
     if (searchParams.get('paywall') === '1') {
-      setPaywallOpen(true)
+      window.dispatchEvent(
+        new CustomEvent('paywall:open', { detail: { reason: `Statements are available on ${PREMIUM_TIER_NAME}.` } })
+      )
     }
   }, [searchParams])
 
@@ -114,7 +114,9 @@ function MyStatementsContent() {
     async function loadStatements() {
       if (!selectedMonth) return
       if (me && !isPremium) {
-        setPaywallOpen(true)
+        window.dispatchEvent(
+          new CustomEvent('paywall:open', { detail: { reason: `Statements are available on ${PREMIUM_TIER_NAME}.` } })
+        )
         return
       }
       setLoading(true)
@@ -130,7 +132,7 @@ function MyStatementsContent() {
       } catch (e: any) {
         const detail = e?.response?.data?.detail ?? e?.message ?? 'Statements unavailable.'
         if (e?.response?.status === 402) {
-          setPaywallOpen(true)
+          window.dispatchEvent(new CustomEvent('paywall:open', { detail: { reason: detail } }))
         }
         setMsg(detail)
         setSummary(buildFallbackSummary())
@@ -176,7 +178,9 @@ function MyStatementsContent() {
   function handlePrint() {
     if (typeof window === 'undefined') return
     if (!isPremium) {
-      setPaywallOpen(true)
+      window.dispatchEvent(
+        new CustomEvent('paywall:open', { detail: { reason: `Statements are available on ${PREMIUM_TIER_NAME}.` } })
+      )
       return
     }
     window.print()
@@ -184,11 +188,6 @@ function MyStatementsContent() {
 
   return (
     <main className="mb-page-offset" style={{ minHeight: '100vh', background: 'var(--page-bg)' }}>
-      <PremiumPaywall
-        open={paywallOpen}
-        onClose={() => setPaywallOpen(false)}
-        reason={`Statements are available on ${PREMIUM_TIER_NAME}.`}
-      />
       <div className="no-print">
         <Navbar showAccountsDropdown />
       </div>
@@ -279,7 +278,13 @@ function MyStatementsContent() {
               <div style={{ marginTop: 14, display: 'grid', gap: 10, justifyItems: 'center' }}>
                 <button
                   type="button"
-                  onClick={() => setPaywallOpen(true)}
+                  onClick={() => {
+                    window.dispatchEvent(
+                      new CustomEvent('paywall:open', {
+                        detail: { reason: `Statements are available on ${PREMIUM_TIER_NAME}.` },
+                      })
+                    )
+                  }}
                   style={{
                     padding: '10px 16px',
                     borderRadius: 999,
@@ -290,7 +295,7 @@ function MyStatementsContent() {
                     cursor: 'pointer',
                   }}
                 >
-                  Upgrade to Manifest Signature
+                  View Signature Options
                 </button>
                 <button
                   type="button"

@@ -8,6 +8,7 @@ import { useAuth } from '@/app/providers'
 import { api } from '@/lib/api'
 import { Button, Card, Container, Pill } from '@/app/components/ui'
 import InstallAppButton from '@/app/components/InstallAppButton'
+import { validateUsername } from '@/app/lib/username'
 
 type Profile = {
   id: number
@@ -281,8 +282,10 @@ function EtherNavbar({
 
   async function checkUsernameAvailability(value: string) {
     const trimmed = value.trim()
-    if (!trimmed) {
+    const validation = validateUsername(trimmed)
+    if (!validation.ok) {
       setUsernameStatus('invalid')
+      setSettingsUsernameNotice(validation.reason ?? 'Enter a valid username.')
       return
     }
     if (me?.username && trimmed.toLowerCase() === me.username.toLowerCase()) {
@@ -292,7 +295,11 @@ function EtherNavbar({
     setUsernameStatus('checking')
     try {
       const res = await api.get('/auth/username-available', { params: { username: trimmed } })
-      setUsernameStatus(res.data?.available ? 'available' : 'taken')
+      const available = Boolean(res.data?.available)
+      setUsernameStatus(available ? 'available' : 'taken')
+      if (!available && res.data?.reason) {
+        setSettingsUsernameNotice(res.data.reason)
+      }
     } catch {
       setUsernameStatus('invalid')
     }
@@ -300,8 +307,10 @@ function EtherNavbar({
 
   async function saveUsername() {
     const trimmed = settingsUsername.trim()
-    if (!trimmed) {
+    const validation = validateUsername(trimmed)
+    if (!validation.ok) {
       setUsernameStatus('invalid')
+      setSettingsUsernameNotice(validation.reason ?? 'Enter a valid username.')
       return
     }
     setSettingsBusy(true)
@@ -765,6 +774,7 @@ function EtherNavbar({
                   }}
                   onBlur={(e) => checkUsernameAvailability(e.target.value)}
                   placeholder="Choose a username"
+                  maxLength={21}
                   style={{
                     padding: '8px 10px',
                     borderRadius: 10,

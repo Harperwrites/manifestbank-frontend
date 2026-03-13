@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { createPortal } from 'react-dom'
 import { api } from '../../lib/api'
 import { Card, Button } from './ui'
-import PremiumPaywall from './PremiumPaywall'
 import { useAuth } from '@/app/providers'
 
 type LedgerEntry = {
@@ -87,16 +86,19 @@ export default function LedgerPanel({
   const [scheduleRef, setScheduleRef] = useState('')
   const [scheduleDirection, setScheduleDirection] = useState<'credit' | 'debit'>('credit')
   const [scheduleWhen, setScheduleWhen] = useState('')
-  const [paywallOpen, setPaywallOpen] = useState(false)
-  const [paywallReason, setPaywallReason] = useState('')
   const canPost = isVerified !== false
   const router = useRouter()
   const { me } = useAuth()
   const isPremium = Boolean(me?.is_premium || me?.role === 'admin')
 
   function openPaywall(reason?: string) {
-    setPaywallReason(reason ?? 'Upgrade to unlock unlimited transactions.')
-    setPaywallOpen(true)
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('paywall:open', {
+          detail: { reason: reason ?? 'Upgrade to unlock unlimited transactions.' },
+        })
+      )
+    }
   }
 
   async function load() {
@@ -265,7 +267,6 @@ export default function LedgerPanel({
 
   return (
     <>
-      <PremiumPaywall open={paywallOpen} onClose={() => setPaywallOpen(false)} reason={paywallReason} />
       <Card title="Account Activity" subtitle="Private account flow">
       {msg ? <div style={{ fontSize: 13, opacity: 0.9, marginBottom: 10 }}>{msg}</div> : null}
 

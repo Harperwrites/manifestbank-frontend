@@ -8,6 +8,7 @@ import Navbar from '../components/Navbar'
 import { api } from '../../lib/api'
 import { Button, Card, Container, Metric, Pill } from '../components/ui'
 import { useAuth } from '../providers'
+import { validateUsername } from '../lib/username'
 
 function pretty(obj: any) {
   try {
@@ -693,8 +694,9 @@ export default function DashboardPage() {
 
   async function saveUsernamePrompt() {
     const trimmed = usernameDraft.trim()
-    if (!trimmed) {
-      setUsernameError('Username is required.')
+    const validation = validateUsername(trimmed)
+    if (!validation.ok) {
+      setUsernameError(validation.reason ?? 'Enter a valid username.')
       return
     }
     setUsernameSaving(true)
@@ -2919,6 +2921,7 @@ export default function DashboardPage() {
                 value={usernameDraft}
                 onChange={(e) => setUsernameDraft(e.target.value)}
                 placeholder="yourname"
+                maxLength={21}
                 style={{
                   padding: '10px 12px',
                   borderRadius: 12,
