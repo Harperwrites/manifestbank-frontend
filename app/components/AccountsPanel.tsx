@@ -56,6 +56,8 @@ export default function AccountsPanel({
   const [newParentId, setNewParentId] = useState<number | ''>('')
   const [showCreate, setShowCreate] = useState(false)
   const [createError, setCreateError] = useState('')
+  const [paywallOpen, setPaywallOpen] = useState(false)
+  const [paywallReason, setPaywallReason] = useState('')
   const [openAccounts, setOpenAccounts] = useState<Record<number, boolean>>({})
   const [renameTarget, setRenameTarget] = useState<Account | null>(null)
   const [renameName, setRenameName] = useState('')
@@ -69,8 +71,6 @@ export default function AccountsPanel({
   const [wealthTargetMode, setWealthTargetMode] = useState<'preset' | 'custom'>('preset')
   const [wealthTargetCustom, setWealthTargetCustom] = useState('')
   const [wealthTargetNoticeAt, setWealthTargetNoticeAt] = useState<number | null>(null)
-  const [paywallOpen, setPaywallOpen] = useState(false)
-  const [paywallReason, setPaywallReason] = useState('')
 
   const wealthTargetOptions = [
     { label: 'Set target', value: '' },
@@ -151,12 +151,10 @@ export default function AccountsPanel({
       setShowCreate(false)
     } catch (e: any) {
       if (e?.response?.status === 402) {
-        setPaywallReason(e?.response?.data?.detail ?? 'Upgrade to create more accounts.')
+        setPaywallReason(e?.response?.data?.detail ?? 'Upgrade to create accounts.')
         setPaywallOpen(true)
       } else if (e?.message === 'Network Error') {
-        setCreateError('❌ Only 1 Account allowed. Upgrade to ManifestBank™ Signature for unlimited account creation.')
-        setPaywallReason('Only 1 Account allowed. Upgrade to ManifestBank™ Signature for unlimited account creation.')
-        setPaywallOpen(true)
+        setCreateError('❌ Create failed: Network error. Try again.')
       } else {
         setCreateError(`❌ Create failed: ${errMsg(e)}`)
       }
