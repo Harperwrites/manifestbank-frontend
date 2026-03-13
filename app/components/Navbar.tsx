@@ -489,40 +489,38 @@ export default function Navbar({
               >
                 My Checks
               </Link>
-              <Link
-                href="/mycredit"
+              <div
                 style={{
-                  textDecoration: 'none',
                   fontWeight: 600,
-                  color: 'rgba(95, 74, 62, 0.9)',
-                  textShadow: '0 0 4px rgba(182, 121, 103, 0.25), 0 0 10px rgba(182, 121, 103, 0.2)',
+                  color: 'rgba(95, 74, 62, 0.55)',
+                  textShadow: '0 0 4px rgba(182, 121, 103, 0.18), 0 0 10px rgba(182, 121, 103, 0.12)',
                   display: 'flex',
                   alignItems: 'center',
                   gap: 8,
+                  cursor: 'not-allowed',
                 }}
                 role="menuitem"
-                onClick={() => setTreasureOpen(false)}
+                aria-disabled="true"
               >
                 <span>My Credit</span>
-                <span style={{ fontSize: 10, opacity: 0.65 }}>(Coming soon)</span>
-              </Link>
-              <Link
-                href="/myteller"
+                <span style={{ fontSize: 10, opacity: 0.7 }}>(Coming soon)</span>
+              </div>
+              <div
                 style={{
-                  textDecoration: 'none',
                   fontWeight: 600,
-                  color: 'rgba(95, 74, 62, 0.9)',
-                  textShadow: '0 0 4px rgba(182, 121, 103, 0.25), 0 0 10px rgba(182, 121, 103, 0.2)',
+                  color: 'rgba(95, 74, 62, 0.55)',
+                  textShadow: '0 0 4px rgba(182, 121, 103, 0.18), 0 0 10px rgba(182, 121, 103, 0.12)',
                   display: 'flex',
                   alignItems: 'center',
                   gap: 8,
+                  cursor: 'not-allowed',
                 }}
                 role="menuitem"
-                onClick={() => setTreasureOpen(false)}
+                aria-disabled="true"
               >
                 <span>My Teller</span>
-                <span style={{ fontSize: 10, opacity: 0.65 }}>(Coming soon)</span>
-              </Link>
+                <span style={{ fontSize: 10, opacity: 0.7 }}>(Coming soon)</span>
+              </div>
             </div>
           ) : null}
         </div>
