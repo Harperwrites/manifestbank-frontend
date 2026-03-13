@@ -419,6 +419,9 @@ export default function MyLinePage() {
               const profileId = toProfileId(profile?.id ?? null)
               const userId = toProfileId(me?.id)
               const storedTarget = getStoredThreadTarget(thread.id, profileId)
+              const previewCounterpartId = preview?.counterpart_profile_id ?? null
+              const previewCounterpartName = preview?.counterpart_display_name ?? null
+              const previewCounterpartAvatar = preview?.counterpart_avatar_url ?? null
               const participant = Array.isArray(thread.participants)
                 ? (profileId || userId
                     ? thread.participants.find((p) => !isSelfParticipant(p, profileId ?? null, userId ?? null)) ??
@@ -438,7 +441,11 @@ export default function MyLinePage() {
               const safeTarget =
                 storedTarget && (!profileId || storedTarget.profile_id !== profileId) ? storedTarget : null
               let counterpartProfileId =
-                safeTarget?.profile_id ?? otherMessageProfileId ?? participantProfileId ?? null
+                safeTarget?.profile_id ??
+                previewCounterpartId ??
+                otherMessageProfileId ??
+                participantProfileId ??
+                null
               if (
                 (profileId && counterpartProfileId === profileId) ||
                 (userId && counterpartProfileId === userId)
@@ -450,11 +457,13 @@ export default function MyLinePage() {
                 : false
               let counterpartDisplayName =
                 safeTarget?.display_name ??
+                previewCounterpartName ??
                 (!participantIsSelf && typeof participant === 'object' && participant
                   ? participant.display_name ?? null
                   : null)
               let counterpartAvatarUrl =
                 safeTarget?.avatar_url ??
+                previewCounterpartAvatar ??
                 (!participantIsSelf && typeof participant === 'object' && participant
                   ? participant.avatar_url ?? null
                   : null)
