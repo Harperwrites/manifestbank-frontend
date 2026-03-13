@@ -77,7 +77,19 @@ export default function PremiumPaywall({
             Close
           </button>
         </div>
-        {reason ? <div style={{ marginTop: 8, fontSize: 13, fontWeight: 600 }}>{reason}</div> : null}
+        {reason ? (
+          <div
+            style={{
+              marginTop: 8,
+              fontSize: 13,
+              fontWeight: 700,
+              color: '#7a4b3e',
+              textShadow: '0 0 8px rgba(182, 121, 103, 0.55), 0 0 16px rgba(182, 121, 103, 0.35)',
+            }}
+          >
+            {reason}
+          </div>
+        ) : null}
         <div style={{ marginTop: 12, fontSize: 13, opacity: 0.9 }}>{PREMIUM_ANNUAL_NOTE}</div>
         <div style={{ marginTop: 16, display: 'grid', gap: 10 }}>
           <div
