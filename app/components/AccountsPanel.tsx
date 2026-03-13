@@ -130,6 +130,11 @@ export default function AccountsPanel({
     setCreating(true)
     setMsg('')
     setCreateError('')
+    if (me && !me.email_verified) {
+      setCreateError('❌ Please verify your email before creating additional accounts.')
+      setCreating(false)
+      return
+    }
     if (!isPremium) {
       if (typeof window !== 'undefined') {
         window.dispatchEvent(
@@ -162,16 +167,19 @@ export default function AccountsPanel({
       setNewParentId('')
       setShowCreate(false)
     } catch (e: any) {
+      const detail = e?.response?.data?.detail
       if (e?.response?.status === 402) {
         if (typeof window !== 'undefined') {
           window.dispatchEvent(
             new CustomEvent('paywall:open', {
-              detail: { reason: e?.response?.data?.detail ?? 'Upgrade to create accounts.' },
+              detail: { reason: detail ?? 'Upgrade to create accounts.' },
             })
           )
         }
+      } else if (detail) {
+        setCreateError(`❌ Create failed: ${detail}`)
       } else if (e?.message === 'Network Error') {
-        setCreateError('❌ Create failed: Network error. Try again.')
+        setCreateError('❌ Create failed: Network error or blocked request. Please try again.')
       } else {
         setCreateError(`❌ Create failed: ${errMsg(e)}`)
       }
