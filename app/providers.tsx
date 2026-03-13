@@ -21,7 +21,7 @@ type AuthContextValue = {
   me: Me | null
   isLoading: boolean
   refreshMe: () => Promise<void>
-  loginWithToken: (token: string, persist?: boolean) => Promise<void>
+  loginWithToken: (token: string, persist?: boolean, refreshToken?: string | null) => Promise<void>
   logout: () => void
 }
 
