@@ -496,11 +496,15 @@ export default function Navbar({
                   fontWeight: 600,
                   color: 'rgba(95, 74, 62, 0.9)',
                   textShadow: '0 0 4px rgba(182, 121, 103, 0.25), 0 0 10px rgba(182, 121, 103, 0.2)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
                 }}
                 role="menuitem"
                 onClick={() => setTreasureOpen(false)}
               >
-                My Credit
+                <span>My Credit</span>
+                <span style={{ fontSize: 10, opacity: 0.65 }}>(Coming soon)</span>
               </Link>
               <Link
                 href="/myteller"
@@ -509,11 +513,15 @@ export default function Navbar({
                   fontWeight: 600,
                   color: 'rgba(95, 74, 62, 0.9)',
                   textShadow: '0 0 4px rgba(182, 121, 103, 0.25), 0 0 10px rgba(182, 121, 103, 0.2)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
                 }}
                 role="menuitem"
                 onClick={() => setTreasureOpen(false)}
               >
-                My Teller
+                <span>My Teller</span>
+                <span style={{ fontSize: 10, opacity: 0.65 }}>(Coming soon)</span>
               </Link>
             </div>
           ) : null}
