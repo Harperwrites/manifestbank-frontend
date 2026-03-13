@@ -73,6 +73,7 @@ type SyncRequest = {
 export const runtime = 'edge'
 
 const MYLINE_VIEW_KEY = 'myline:last_view'
+const THREAD_PAGE_SIZE = 50
 
 function formatMoney(value: any) {
   const num = Number(value)
@@ -100,6 +101,9 @@ export default function MyLineThreadPage() {
   const [messages, setMessages] = useState<EtherMessage[]>([])
   const [loading, setLoading] = useState(false)
   const [sending, setSending] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(false)
+  const [nextBefore, setNextBefore] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
   const [notice, setNotice] = useState('')
   const [accountsOpen, setAccountsOpen] = useState(false)
@@ -156,11 +160,19 @@ export default function MyLineThreadPage() {
     setLoading(true)
     setNotice('')
     try {
-      const messagesRes = await api.get(`/ether/threads/${threadId}/messages`)
+      const messagesRes = await api.get(`/ether/threads/${threadId}/messages`, {
+        params: { limit: THREAD_PAGE_SIZE },
+      })
       const list = Array.isArray(messagesRes.data) ? (messagesRes.data as EtherMessage[]) : []
       setMessages(list)
       const last = list[list.length - 1]
       markThreadRead(threadId, last?.created_at)
+      if (list.length > 0) {
+        setNextBefore(list[0].created_at)
+      } else {
+        setNextBefore(null)
+      }
+      setHasMore(list.length === THREAD_PAGE_SIZE)
     } catch (e: any) {
       setNotice(e?.response?.data?.detail ?? e?.message ?? 'Failed to load thread')
     } finally {
@@ -184,30 +196,28 @@ export default function MyLineThreadPage() {
   // legacy function retained for manual refresh button
   async function loadThreadFull() {
     if (!Number.isFinite(threadId)) return
-    setLoading(true)
-    setNotice('')
+    await loadThreadFast()
+  }
+
+  async function loadOlderMessages() {
+    if (!Number.isFinite(threadId)) return
+    if (!nextBefore) return
+    if (loadingMore) return
+    setLoadingMore(true)
     try {
-      const [threadsRes, messagesRes] = await Promise.allSettled([
-        api.get('/ether/threads'),
-        api.get(`/ether/threads/${threadId}/messages`),
-      ])
-      if (messagesRes.status === 'fulfilled') {
-        const list = Array.isArray(messagesRes.value.data) ? (messagesRes.value.data as EtherMessage[]) : []
-        setMessages(list)
-        const last = list[list.length - 1]
-        markThreadRead(threadId, last?.created_at)
+      const res = await api.get(`/ether/threads/${threadId}/messages`, {
+        params: { limit: THREAD_PAGE_SIZE, before: nextBefore },
+      })
+      const list = Array.isArray(res.data) ? (res.data as EtherMessage[]) : []
+      if (list.length > 0) {
+        setMessages((prev) => [...list, ...prev])
+        setNextBefore(list[0].created_at)
       }
-      if (threadsRes.status === 'fulfilled') {
-        const list = Array.isArray(threadsRes.value.data) ? (threadsRes.value.data as EtherThread[]) : []
-        setThread(list.find((item) => item.id === threadId) ?? null)
-      }
-      if ([threadsRes, messagesRes].some((res) => res.status === 'rejected')) {
-        setNotice('Some data failed to load. Try refresh.')
-      }
-    } catch (e: any) {
-      setNotice(e?.response?.data?.detail ?? e?.message ?? 'Failed to load thread')
+      setHasMore(list.length === THREAD_PAGE_SIZE)
+    } catch {
+      // ignore
     } finally {
-      setLoading(false)
+      setLoadingMore(false)
     }
   }
 
@@ -831,43 +841,65 @@ export default function MyLineThreadPage() {
             ) : messages.length === 0 ? (
               <div style={{ fontSize: 13, opacity: 0.75 }}>No messages yet.</div>
             ) : (
-              messages.map((message) => {
-                const isMe = message.sender_profile_id === toProfileId(profile?.id ?? null)
-                return (
-                  <div
-                    key={message.id}
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: isMe ? 'flex-end' : 'flex-start',
-                      gap: 6,
-                    }}
-                  >
-                    <div
+              <>
+                {hasMore ? (
+                  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}>
+                    <button
+                      type="button"
+                      onClick={() => loadOlderMessages()}
+                      disabled={loadingMore}
                       style={{
-                        padding: '12px 16px',
-                        borderRadius: 18,
-                        border: '1px solid rgba(140, 92, 78, 0.3)',
-                        background:
-                          'linear-gradient(135deg, rgba(199, 140, 122, 0.96), rgba(220, 193, 179, 0.98)), radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.7), transparent 52%), radial-gradient(circle at 78% 10%, rgba(255, 255, 255, 0.45), transparent 58%), linear-gradient(25deg, rgba(80, 58, 48, 0.35) 0%, rgba(255, 255, 255, 0.12) 22%, rgba(80, 58, 48, 0.32) 40%, rgba(255, 255, 255, 0.1) 58%, rgba(80, 58, 48, 0.28) 100%), linear-gradient(115deg, rgba(90, 66, 54, 0.32) 0%, rgba(255, 255, 255, 0.1) 20%, rgba(90, 66, 54, 0.3) 42%, rgba(255, 255, 255, 0.1) 60%, rgba(90, 66, 54, 0.26) 100%), linear-gradient(160deg, rgba(66, 47, 38, 0.28) 0%, rgba(255, 255, 255, 0.08) 25%, rgba(66, 47, 38, 0.26) 48%, rgba(255, 255, 255, 0.08) 70%, rgba(66, 47, 38, 0.22) 100%)',
-                        color: '#2b1a14',
-                        maxWidth: 'min(640px, 90%)',
-                        boxShadow: '0 12px 24px rgba(12, 10, 12, 0.2)',
-                        transition: 'box-shadow 160ms ease',
-                      }}
-                      onMouseEnter={(event) => {
-                        event.currentTarget.style.boxShadow = '0 18px 32px rgba(12, 10, 12, 0.3)'
-                      }}
-                      onMouseLeave={(event) => {
-                        event.currentTarget.style.boxShadow = '0 12px 24px rgba(12, 10, 12, 0.2)'
+                        padding: '6px 12px',
+                        borderRadius: 999,
+                        border: '1px solid rgba(140, 92, 78, 0.5)',
+                        background: 'rgba(255, 255, 255, 0.85)',
+                        fontWeight: 600,
+                        color: '#4a2f26',
+                        cursor: loadingMore ? 'not-allowed' : 'pointer',
+                        opacity: loadingMore ? 0.7 : 1,
                       }}
                     >
-                      <div style={{ fontSize: 15, lineHeight: 1.55 }}>{message.content}</div>
-                    </div>
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 11, opacity: 0.7 }}>
-                      {!isMe && conversationProfileId ? (
-                        <button
-                          type="button"
+                      {loadingMore ? 'Loading…' : 'Load earlier messages'}
+                    </button>
+                  </div>
+                ) : null}
+                {messages.map((message) => {
+                  const isMe = message.sender_profile_id === toProfileId(profile?.id ?? null)
+                  return (
+                    <div
+                      key={message.id}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: isMe ? 'flex-end' : 'flex-start',
+                        gap: 6,
+                      }}
+                    >
+                      <div
+                        style={{
+                          padding: '12px 16px',
+                          borderRadius: 18,
+                          border: '1px solid rgba(140, 92, 78, 0.3)',
+                          background:
+                            'linear-gradient(135deg, rgba(199, 140, 122, 0.96), rgba(220, 193, 179, 0.98)), radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.7), transparent 52%), radial-gradient(circle at 78% 10%, rgba(255, 255, 255, 0.45), transparent 58%), linear-gradient(25deg, rgba(80, 58, 48, 0.35) 0%, rgba(255, 255, 255, 0.12) 22%, rgba(80, 58, 48, 0.32) 40%, rgba(255, 255, 255, 0.1) 58%, rgba(80, 58, 48, 0.28) 100%), linear-gradient(115deg, rgba(90, 66, 54, 0.32) 0%, rgba(255, 255, 255, 0.1) 20%, rgba(90, 66, 54, 0.3) 42%, rgba(255, 255, 255, 0.1) 60%, rgba(90, 66, 54, 0.26) 100%), linear-gradient(160deg, rgba(66, 47, 38, 0.28) 0%, rgba(255, 255, 255, 0.08) 25%, rgba(66, 47, 38, 0.26) 48%, rgba(255, 255, 255, 0.08) 70%, rgba(66, 47, 38, 0.22) 100%)',
+                          color: '#2b1a14',
+                          maxWidth: 'min(640px, 90%)',
+                          boxShadow: '0 12px 24px rgba(12, 10, 12, 0.2)',
+                          transition: 'box-shadow 160ms ease',
+                        }}
+                        onMouseEnter={(event) => {
+                          event.currentTarget.style.boxShadow = '0 18px 32px rgba(12, 10, 12, 0.3)'
+                        }}
+                        onMouseLeave={(event) => {
+                          event.currentTarget.style.boxShadow = '0 12px 24px rgba(12, 10, 12, 0.2)'
+                        }}
+                      >
+                        <div style={{ fontSize: 15, lineHeight: 1.55 }}>{message.content}</div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 11, opacity: 0.7 }}>
+                        {!isMe && conversationProfileId ? (
+                          <button
+                            type="button"
                           onClick={() => handleProfileClick(conversationProfileId)}
                           style={{
                             border: 'none',
