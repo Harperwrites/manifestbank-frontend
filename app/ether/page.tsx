@@ -1257,6 +1257,23 @@ export default function EtherPage() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const postParam = params.get('post_id')
+    const commentParam = params.get('comment_id')
+    const postId = postParam ? Number(postParam) : null
+    const commentId = commentParam ? Number(commentParam) : null
+    if (!postId || !Number.isFinite(postId)) return
+    setActiveTab('feed')
+    setFocusPostId(postId)
+    setFocusPostOpenComments(postId)
+    if (commentId && Number.isFinite(commentId)) {
+      setFocusCommentId(commentId)
+    }
+    window.history.replaceState({}, '', '/ether')
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
     window.sessionStorage.setItem(
       'ether:last_view',
       JSON.stringify({ path: '/ether', tab: activeTab })
