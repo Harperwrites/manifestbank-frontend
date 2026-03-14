@@ -1292,14 +1292,14 @@ export default function DashboardPage() {
                   <span>My Credit</span>
                   <span style={{ fontSize: 10, opacity: 0.7 }}>(Coming soon)</span>
                 </div>
-                <div
-                  style={{ fontWeight: 600, color: 'rgba(74, 47, 38, 0.55)', display: 'flex', gap: 8 }}
+                <Link
+                  href="/myteller"
+                  style={{ textDecoration: 'none', fontWeight: 600, color: '#4a2f26' }}
                   role="menuitem"
-                  aria-disabled="true"
+                  onClick={() => setTreasureChipOpen(false)}
                 >
-                  <span>My Teller</span>
-                  <span style={{ fontSize: 10, opacity: 0.7 }}>(Coming soon)</span>
-                </div>
+                  My Teller
+                </Link>
               </div>
             ) : null}
           </div>

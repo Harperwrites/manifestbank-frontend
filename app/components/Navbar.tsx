@@ -514,22 +514,9 @@ export default function Navbar({
                 <span>My Credit</span>
                 <span style={{ fontSize: 10, opacity: 0.7 }}>(Coming soon)</span>
               </div>
-              <div
-                style={{
-                  fontWeight: 600,
-                  color: 'rgba(95, 74, 62, 0.55)',
-                  textShadow: '0 0 4px rgba(182, 121, 103, 0.18), 0 0 10px rgba(182, 121, 103, 0.12)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  cursor: 'not-allowed',
-                }}
-                role="menuitem"
-                aria-disabled="true"
-              >
-                <span>My Teller</span>
-                <span style={{ fontSize: 10, opacity: 0.7 }}>(Coming soon)</span>
-              </div>
+              <Link href="/myteller" style={{ textDecoration: 'none' }}>
+                <span style={{ fontWeight: 600 }}>My Teller</span>
+              </Link>
             </div>
           ) : null}
         </div>
