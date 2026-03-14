@@ -9,15 +9,21 @@ export default function PremiumPaywall({
   open,
   onClose,
   reason,
+  isVerified,
 }: {
   open: boolean
   onClose: () => void
   reason?: string
+  isVerified?: boolean
 }) {
   const [loadingPlan, setLoadingPlan] = useState<'annual' | 'monthly' | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   async function startCheckout(plan: 'annual' | 'monthly') {
+    if (!isVerified) {
+      setError('Verify your email before upgrading your membership.')
+      return
+    }
     try {
       setError(null)
       setLoadingPlan(plan)

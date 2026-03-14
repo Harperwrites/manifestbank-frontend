@@ -385,6 +385,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         open={devPaywallOpen}
         onClose={() => setDevPaywallOpen(false)}
         reason={devPaywallReason}
+        isVerified={me?.email_verified}
       />
       {children}
       {legalRequired ? (

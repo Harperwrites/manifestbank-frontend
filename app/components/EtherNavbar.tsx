@@ -466,11 +466,19 @@ function EtherNavbar({
           {!isLoading && !isPremium ? (
             <button
               type="button"
-              onClick={() =>
+              onClick={() => {
+                if (!me?.email_verified) {
+                  window.dispatchEvent(
+                    new CustomEvent('toast', {
+                      detail: { kind: 'error', message: 'Verify your email to upgrade your membership.' },
+                    })
+                  )
+                  return
+                }
                 window.dispatchEvent(
                   new CustomEvent('paywall:open', { detail: { reason: 'Upgrade to ManifestBank™ Signature.' } })
                 )
-              }
+              }}
               style={{
                 padding: '8px 14px',
                 borderRadius: 999,
@@ -478,9 +486,10 @@ function EtherNavbar({
                 background: 'linear-gradient(135deg, #b67967, #c6927c)',
                 color: '#fff',
                 fontWeight: 700,
-                cursor: 'pointer',
+                cursor: me?.email_verified ? 'pointer' : 'not-allowed',
                 position: 'relative',
                 overflow: 'hidden',
+                opacity: me?.email_verified ? 1 : 0.6,
               }}
             >
               <span
