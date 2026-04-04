@@ -8,11 +8,13 @@ import { useAuth } from '@/app/providers'
 import InstallAppButton from '@/app/components/InstallAppButton'
 import { api } from '@/lib/api'
 import { PREMIUM_CTA } from '@/app/lib/premium'
+import { validateUsername } from '@/app/lib/username'
 
 type AccountItem = {
   id: number
   name?: string
   balance?: number
+  currency?: string | null
 }
 
 export default function Navbar({
@@ -40,6 +42,13 @@ export default function Navbar({
   const isPremium = Boolean(me?.is_premium || me?.role === 'admin')
   const [portalLoading, setPortalLoading] = useState(false)
   const [portalError, setPortalError] = useState('')
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const userMenuRef = useRef<HTMLDivElement | null>(null)
+  const [usernameModalOpen, setUsernameModalOpen] = useState(false)
+  const [usernameDraft, setUsernameDraft] = useState('')
+  const [usernameSaving, setUsernameSaving] = useState(false)
+  const [usernameError, setUsernameError] = useState('')
+  const [usernameScopeConfirmed, setUsernameScopeConfirmed] = useState(false)
 
   useEffect(() => {
     setPortalReady(true)
@@ -55,10 +64,14 @@ export default function Navbar({
       ) {
         setTreasureOpen(false)
       }
+      if (userMenuRef.current && !userMenuRef.current.contains(target)) {
+        setUserMenuOpen(false)
+      }
     }
     function handleKey(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         setTreasureOpen(false)
+        setUserMenuOpen(false)
       }
     }
     document.addEventListener('mousedown', handleClick)
@@ -105,20 +118,22 @@ export default function Navbar({
         const list = Array.isArray(res.data) ? res.data : []
         const balances = await Promise.all(
           list.map(async (acct: any) => {
+            const currency = (acct.currency || 'USD').toUpperCase()
             try {
-              const balanceRes = await api.get(`/accounts/${acct.id}/balance?currency=USD`)
-              return { id: acct.id, balance: Number(balanceRes.data?.balance ?? 0) }
+              const balanceRes = await api.get(`/accounts/${acct.id}/balance?currency=${currency}`)
+              return { id: acct.id, balance: Number(balanceRes.data?.balance ?? 0), currency }
             } catch {
-              return { id: acct.id, balance: 0 }
+              return { id: acct.id, balance: 0, currency }
             }
           })
         )
-        const balanceMap = new Map(balances.map((item) => [item.id, item.balance]))
+        const balanceMap = new Map(balances.map((item) => [item.id, item]))
         setAccounts(
           list.map((acct: any) => ({
             id: acct.id,
             name: acct.name,
-            balance: balanceMap.get(acct.id) ?? 0,
+            balance: balanceMap.get(acct.id)?.balance ?? 0,
+            currency: balanceMap.get(acct.id)?.currency ?? (acct.currency || 'USD'),
           }))
         )
         setAccountsLoaded(true)
@@ -127,10 +142,24 @@ export default function Navbar({
       .finally(() => setAccountsLoading(false))
   }, [showAccountsDropdown, accountsOpen, accountsLoaded, accountsLoading])
 
-  function formatMoney(value: any) {
+  useEffect(() => {
+    function handleRefresh() {
+      setAccountsLoaded(false)
+      setAccountsMsg('')
+    }
+    window.addEventListener('accounts:refresh', handleRefresh)
+    return () => window.removeEventListener('accounts:refresh', handleRefresh)
+  }, [])
+
+  function formatMoney(value: any, currency?: string | null) {
     const num = Number(value)
     if (Number.isNaN(num)) return value ?? ''
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num)
+    const code = (currency || 'USD').toUpperCase()
+    try {
+      return new Intl.NumberFormat(undefined, { style: 'currency', currency: code }).format(num)
+    } catch {
+      return `${code} ${num.toFixed(2)}`
+    }
   }
 
   async function openPortal() {
@@ -149,6 +178,45 @@ export default function Navbar({
       setPortalError(err?.response?.data?.detail ?? err?.message ?? 'Unable to open billing portal.')
     } finally {
       setPortalLoading(false)
+    }
+  }
+
+  function queueRefreshToast(message: string) {
+    if (typeof window === 'undefined') return
+    window.sessionStorage.setItem('toast:message', message)
+    window.sessionStorage.setItem('toast:persist', '1')
+    window.sessionStorage.setItem('scroll:top', '1')
+    window.location.reload()
+  }
+
+  function openUsernameEditor() {
+    setUsernameDraft(me?.username ?? '')
+    setUsernameError('')
+    setUsernameScopeConfirmed(false)
+    setUsernameModalOpen(true)
+    setUserMenuOpen(false)
+  }
+
+  async function saveUsername() {
+    const trimmed = usernameDraft.trim()
+    const validation = validateUsername(trimmed)
+    if (!validation.ok) {
+      setUsernameError(validation.reason ?? 'Enter a valid username.')
+      return
+    }
+    if (!usernameScopeConfirmed) {
+      setUsernameError('Confirm that you understand this changes your ManifestBank dashboard username only.')
+      return
+    }
+    setUsernameSaving(true)
+    setUsernameError('')
+    try {
+      await api.patch('/auth/username', { username: trimmed })
+      queueRefreshToast('ManifestBank dashboard username updated.')
+    } catch (err: any) {
+      setUsernameError(err?.response?.data?.detail ?? err?.message ?? 'Unable to update username.')
+    } finally {
+      setUsernameSaving(false)
     }
   }
 
@@ -265,16 +333,18 @@ export default function Navbar({
                           <div
                             key={account.id}
                             style={{
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              gap: 10,
+                              display: 'grid',
+                              gap: 4,
                               fontSize: 13,
-                              paddingBottom: 6,
+                              paddingBottom: 8,
                               borderBottom: '1px solid rgba(95, 74, 62, 0.12)',
                             }}
                           >
                             <div style={{ fontWeight: 600 }}>{account.name}</div>
-                            <div style={{ opacity: 0.8 }}>{formatMoney(account.balance)}</div>
+                            <div style={{ opacity: 0.85 }}>
+                              {formatMoney(account.balance, account.currency)} •{' '}
+                              {(account.currency || 'USD').toUpperCase()}
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -498,49 +568,156 @@ export default function Navbar({
               >
                 My Checks
               </Link>
-              <div
+              <Link
+                href="/mycredit"
                 style={{
+                  textDecoration: 'none',
                   fontWeight: 600,
-                  color: 'rgba(95, 74, 62, 0.55)',
-                  textShadow: '0 0 4px rgba(182, 121, 103, 0.18), 0 0 10px rgba(182, 121, 103, 0.12)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  cursor: 'not-allowed',
+                  color: 'rgba(95, 74, 62, 0.9)',
+                  textShadow: '0 0 4px rgba(182, 121, 103, 0.25), 0 0 10px rgba(182, 121, 103, 0.2)',
                 }}
                 role="menuitem"
-                aria-disabled="true"
+                onClick={() => setTreasureOpen(false)}
               >
-                <span>My Credit</span>
-                <span style={{ fontSize: 10, opacity: 0.7 }}>(Coming soon)</span>
-              </div>
-              <div
-                style={{
-                  fontWeight: 600,
-                  color: 'rgba(95, 74, 62, 0.55)',
-                  textShadow: '0 0 4px rgba(182, 121, 103, 0.18), 0 0 10px rgba(182, 121, 103, 0.12)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  cursor: 'not-allowed',
-                }}
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                  <span aria-hidden="true" style={{ width: 18, height: 18, display: 'inline-flex' }}>
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
+                      <path
+                        d="M4.5 16a7.5 7.5 0 0 1 15 0"
+                        fill="rgba(182, 121, 103, 0.18)"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                        strokeLinecap="round"
+                      />
+                      <path d="M7.2 14.2 8.6 12.8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity="0.45" />
+                      <path d="M12 12v-2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity="0.5" />
+                      <path d="m16.8 14.2-1.4-1.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity="0.45" />
+                      <path d="M12 16 16.2 12.6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                      <circle cx="12" cy="16" r="1.65" fill="currentColor" />
+                      <path d="M6.8 16h10.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.38" />
+                    </svg>
+                  </span>
+                  <span>My Credit</span>
+                  <span
+                    style={{
+                      padding: '2px 7px',
+                      borderRadius: 999,
+                      background: 'linear-gradient(135deg, rgba(182, 121, 103, 0.98), rgba(211, 164, 144, 0.98))',
+                      color: '#fff',
+                      fontSize: 10,
+                      fontWeight: 800,
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      boxShadow: '0 0 10px rgba(182, 121, 103, 0.3)',
+                      fontStyle: 'italic',
+                    }}
+                  >
+                    New
+                  </span>
+                </span>
+              </Link>
+              <Link
+                href="/myteller"
                 role="menuitem"
-                aria-disabled="true"
+                onClick={() => setTreasureOpen(false)}
+                style={{
+                  textDecoration: 'none',
+                  fontWeight: 600,
+                  color: 'rgba(95, 74, 62, 0.9)',
+                  textShadow: '0 0 4px rgba(182, 121, 103, 0.25), 0 0 10px rgba(182, 121, 103, 0.2)',
+                }}
               >
-                <span>My Teller</span>
-                <span style={{ fontSize: 10, opacity: 0.7 }}>(Coming soon)</span>
-              </div>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                  <span aria-hidden="true" style={{ width: 16, height: 16, display: 'inline-flex' }}>
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+                      <path d="M3 9L12 4l9 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M4 10h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                      <path d="M6 10v7M9 10v7M12 10v7M15 10v7M18 10v7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                      <path d="M4 17h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                    </svg>
+                  </span>
+                  <span>My Teller</span>
+                  <span
+                    style={{
+                      padding: '2px 7px',
+                      borderRadius: 999,
+                      background: 'linear-gradient(135deg, rgba(182, 121, 103, 0.98), rgba(211, 164, 144, 0.98))',
+                      color: '#fff',
+                      fontSize: 10,
+                      fontWeight: 800,
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      boxShadow: '0 0 10px rgba(182, 121, 103, 0.3)',
+                      fontStyle: 'italic',
+                    }}
+                  >
+                    Beta
+                  </span>
+                </span>
+              </Link>
             </div>
           ) : null}
         </div>
         {isLoading ? (
           <span style={{ opacity: 0.75 }}>Loading…</span>
         ) : me ? (
-          <>
+          <div ref={userMenuRef} style={{ display: 'flex', alignItems: 'center', gap: 10, position: 'relative' }}>
             <span style={{ opacity: 0.9 }}>
               Signed in as <b>{me.username ?? me.email}</b>
             </span>
-          </>
+            <button
+              type="button"
+              onClick={() => setUserMenuOpen((open) => !open)}
+              aria-label="Account menu"
+              style={{
+                padding: 0,
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                fontSize: 20,
+                lineHeight: 1,
+                color: 'rgba(95, 74, 62, 0.9)',
+              }}
+            >
+              ☰
+            </button>
+            {userMenuOpen ? (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  marginTop: 8,
+                  width: 200,
+                  borderRadius: 14,
+                  border: '1px solid rgba(182, 121, 103, 0.35)',
+                  background: 'linear-gradient(180deg, rgba(245, 234, 223, 0.98), rgba(230, 207, 192, 0.98))',
+                  boxShadow: '0 18px 42px rgba(26, 18, 14, 0.2)',
+                  padding: 12,
+                  display: 'grid',
+                  gap: 10,
+                  zIndex: 100000,
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={openUsernameEditor}
+                  data-testid="navbar-username-open"
+                  style={{
+                    padding: 0,
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    fontSize: 13,
+                    textAlign: 'left',
+                    color: '#6f4a3a',
+                  }}
+                >
+                  Edit username
+                </button>
+              </div>
+            ) : null}
+          </div>
         ) : (
           <Link href="/auth" style={{ textDecoration: 'none' }}>
             Login
@@ -548,6 +725,94 @@ export default function Navbar({
         )}
         </div>
       </div>
+      {usernameModalOpen && portalReady
+        ? createPortal(
+            <div
+              onClick={() => setUsernameModalOpen(false)}
+              style={{
+                position: 'fixed',
+                inset: 0,
+                background: 'rgba(21, 16, 12, 0.55)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 2147483646,
+                padding: 20,
+              }}
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  position: 'relative',
+                  width: 'min(520px, 100%)',
+                  background: 'linear-gradient(135deg, rgba(199, 140, 122, 0.96), rgba(220, 193, 179, 0.98))',
+                  borderRadius: 22,
+                  border: '1px solid rgba(95, 74, 62, 0.25)',
+                  padding: 24,
+                  boxShadow: '0 20px 44px rgba(14, 10, 8, 0.28)',
+                }}
+              >
+                <div style={{ fontFamily: 'var(--font-serif)', fontSize: 22, fontWeight: 600 }}>
+                  ManifestBank Dashboard Username
+                </div>
+                <div style={{ opacity: 0.8, marginTop: 8 }}>
+                  This name appears in your ManifestBank dashboard only. It does not change your Ether display name.
+                </div>
+                <div style={{ marginTop: 14, display: 'grid', gap: 8 }}>
+                  <input
+                    data-testid="dashboard-username-input"
+                    value={usernameDraft}
+                    onChange={(e) => setUsernameDraft(e.target.value)}
+                    placeholder="yourname"
+                    maxLength={21}
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: 12,
+                      border: '1px solid rgba(95, 74, 62, 0.3)',
+                      background: 'rgba(255, 255, 255, 0.95)',
+                      fontSize: 13,
+                    }}
+                  />
+                  <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12, opacity: 0.82 }}>
+                    <input
+                      data-testid="dashboard-username-confirm"
+                      type="checkbox"
+                      checked={usernameScopeConfirmed}
+                      onChange={(e) => setUsernameScopeConfirmed(e.target.checked)}
+                      style={{ marginTop: 2 }}
+                    />
+                    <span>
+                      I understand this changes my ManifestBank dashboard username only. It will be visible in the
+                      dashboard and sign-in identity, and it will not change my Ether name.
+                    </span>
+                  </label>
+                  {usernameError ? <div style={{ fontSize: 12, color: '#7a2e2e' }}>{usernameError}</div> : null}
+                </div>
+                <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
+                  <button
+                    type="button"
+                    data-testid="dashboard-username-save"
+                    onClick={saveUsername}
+                    disabled={usernameSaving}
+                    style={{
+                      borderRadius: 999,
+                      border: 'none',
+                      background: 'linear-gradient(135deg, #b67967, #c6927c)',
+                      color: '#fff',
+                      fontWeight: 700,
+                      cursor: usernameSaving ? 'default' : 'pointer',
+                      padding: '10px 16px',
+                      opacity: usernameSaving ? 0.7 : 1,
+                    }}
+                  >
+                    {usernameSaving ? 'Saving…' : 'Save Dashboard Username'}
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
       {sticky ? <div className="mb-navbar-spacer" /> : null}
     </>
   )

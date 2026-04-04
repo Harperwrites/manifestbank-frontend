@@ -220,6 +220,7 @@ export default function AuthPage() {
           <label style={{ display: 'grid', gap: 6 }}>
             <span>{mode === 'login' ? 'Email or username' : 'Email address'}</span>
             <input
+              data-testid="auth-identifier-input"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               type="text"
@@ -280,6 +281,7 @@ export default function AuthPage() {
           <label style={{ display: 'grid', gap: 6 }}>
             <span>Password</span>
             <input
+              data-testid="auth-password-input"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               type="password"
@@ -351,6 +353,7 @@ export default function AuthPage() {
           ) : null}
 
           <button
+            data-testid="auth-submit-button"
             type="submit"
             disabled={loading}
             style={{

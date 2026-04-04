@@ -9,6 +9,10 @@ import { api } from '../../lib/api'
 import { Button, Card, Container, Metric, Pill } from '../components/ui'
 import { useAuth } from '../providers'
 import { validateUsername } from '../lib/username'
+import { CURRENCIES, getCurrencySymbol } from '@/lib/currencies'
+import { convertAmountLocal, convertAmountWithRates, getDefaultRates } from '@/lib/fx'
+import { formatLocalDate } from '@/lib/time'
+import { PREMIUM_TIER_NAME } from '@/app/lib/premium'
 
 function pretty(obj: any) {
   try {
@@ -44,6 +48,7 @@ type Account = {
   id: number
   account_type: string
   name?: string | null
+  currency?: string | null
 }
 
 type AlertItem = {
@@ -60,6 +65,7 @@ type ActivityItem = {
   meta: string
   accountName: string
   amount: number
+  currency?: string
   entryType: string
   direction: string
   status: string
@@ -87,6 +93,15 @@ const percentFormatter = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 1,
 })
 
+function formatCurrencyAmount(value: number, currency: string | null | undefined) {
+  const code = (currency || 'USD').toUpperCase()
+  try {
+    return new Intl.NumberFormat(undefined, { style: 'currency', currency: code }).format(value)
+  } catch {
+    return `${code} ${value.toFixed(2)}`
+  }
+}
+
 const baseTargetStorageKey = 'manifestbank_wealth_target_usd'
 const targetOwnerStorageKey = 'manifestbank_wealth_target_owner'
 
@@ -107,12 +122,20 @@ export default function DashboardPage() {
   const [summary, setSummary] = useState<any>(null)
   const [log, setLog] = useState<string>('Operations journal ready.')
   const [accounts, setAccounts] = useState<Account[]>([])
-  const [accountBalances, setAccountBalances] = useState<{ id: number; label: string; balance: number }[]>([])
+  const [accountBalances, setAccountBalances] = useState<
+    { id: number; label: string; balance: number; currency: string }[]
+  >([])
   const [portfolio, setPortfolio] = useState<PortfolioSummary>({
     totalAssetsUsd: '—',
     operatingCashUsd: '—',
     altsUsd: '—',
     pendingTransfersUsd: '—',
+  })
+  const [portfolioRaw, setPortfolioRaw] = useState({
+    totalAssets: 0,
+    operatingCash: 0,
+    alts: 0,
+    pendingTransfers: 0,
   })
   const [warmingUp, setWarmingUp] = useState(true)
   const [depositAccountId, setDepositAccountId] = useState<number | ''>('')
@@ -145,16 +168,54 @@ export default function DashboardPage() {
   const [usernameDraft, setUsernameDraft] = useState('')
   const [usernameSaving, setUsernameSaving] = useState(false)
   const [usernameError, setUsernameError] = useState('')
+  const [usernameScopeConfirmed, setUsernameScopeConfirmed] = useState(false)
   const [transferFromId, setTransferFromId] = useState<number | ''>('')
   const [transferToId, setTransferToId] = useState<number | ''>('')
   const [transferAmount, setTransferAmount] = useState('')
   const [transferMemo, setTransferMemo] = useState('')
   const [transferRef, setTransferRef] = useState('')
   const [transferring, setTransferring] = useState(false)
+  const [transferPreview, setTransferPreview] = useState<any>(null)
+  const [transferPreviewLoading, setTransferPreviewLoading] = useState(false)
+  const [transferPreviewError, setTransferPreviewError] = useState('')
   const [profile, setProfile] = useState<any>(null)
   const [wealthTarget, setWealthTarget] = useState<number | null>(null)
   const [selectedActivity, setSelectedActivity] = useState<ActivityItem | null>(null)
   const [activityCheckPreview, setActivityCheckPreview] = useState<string | null>(null)
+  const isPremium = Boolean(me?.is_premium || me?.role === 'admin')
+  const canChangeDashboardCurrency = isPremium && Boolean(me?.email_verified)
+  const [glanceDeltaBase, setGlanceDeltaBase] = useState<number | null>(null)
+  const [glanceDeltaDisplay, setGlanceDeltaDisplay] = useState<number | null>(null)
+  const [glanceBaseTotal, setGlanceBaseTotal] = useState<number | null>(null)
+  const [aggregateDisplayCurrency, setAggregateDisplayCurrency] = useState('USD')
+  const [aggregateDebug, setAggregateDebug] = useState<{
+    selector: string
+    glance: string
+    meCurrency: string
+    sent: string
+    returned: string
+    total: number
+    delta: number | null
+    accounts?: Array<{
+      account_id: number
+      account_name: string
+      native_balance: string
+      native_currency: string
+      converted_base_amount: string
+      converted_amount: string
+      conversion_rate: string
+      conversion_rate_base: string
+    }>
+  } | null>(null)
+  const [aggregateLoading, setAggregateLoading] = useState(false)
+  const [pendingDashboardCurrency, setPendingDashboardCurrency] = useState<string | null>(null)
+  const aggregateRequestIdRef = useRef(0)
+  const aggregateCurrencyRef = useRef<string | null>(null)
+  const skipGlanceEffectRef = useRef(false)
+  const lastBaseTotalRef = useRef<string | null>(null)
+  const lastAggregateStampRef = useRef<number | null>(null)
+  const sessionFxRatesRef = useRef<Record<string, number> | null>(null)
+  const suppressPrevBaseUntilRef = useRef<number | null>(null)
   const [pendingModalOpen, setPendingModalOpen] = useState(false)
   const [pendingDetail, setPendingDetail] = useState<PendingCredit | null>(null)
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null)
@@ -171,6 +232,7 @@ export default function DashboardPage() {
   const [avatarDragging, setAvatarDragging] = useState(false)
   const avatarReuploadRef = useRef<HTMLInputElement | null>(null)
   const [balancesPeekOpen, setBalancesPeekOpen] = useState(false)
+  const [glanceCurrency, setGlanceCurrency] = useState('USD')
   const [verificationMsg, setVerificationMsg] = useState('')
   const [verificationSending, setVerificationSending] = useState(false)
   const dashboardNavRef = useRef<HTMLDivElement | null>(null)
@@ -291,8 +353,14 @@ export default function DashboardPage() {
     setSummary(res)
   }
 
-  async function loadPortfolio() {
+  async function loadPortfolio(forcedCurrency?: string) {
     try {
+      const selectorCurrency = normalizeCurrency(forcedCurrency ?? glanceCurrency)
+      const meCurrency = normalizeCurrency(me?.dashboard_currency)
+      const currentCurrency = selectorCurrency
+      setAggregateDisplayCurrency(selectorCurrency)
+      const requestId = ++aggregateRequestIdRef.current
+      aggregateCurrencyRef.current = currentCurrency
       const list = (await api.get('/accounts')).data as Account[]
       setAccounts(list)
       if (!list.length) {
@@ -307,56 +375,153 @@ export default function DashboardPage() {
 
       const balanceResults = await Promise.all(
         list.map(async (acct) => {
-          const res = await api.get(`/accounts/${acct.id}/balance?currency=USD`)
-          const balance = Number(res.data?.balance ?? 0)
-          return { acct, balance }
-        })
-      )
-
-      const pendingResults = await Promise.all(
-        list.map(async (acct) => {
-          try {
-            const res = await api.get(`/accounts/${acct.id}/ledger?limit=200&offset=0`)
-            const entries = Array.isArray(res.data) ? res.data : []
-            return entries
-              .filter((entry) => entry?.status === 'pending')
-              .reduce((sum, entry) => sum + Number(entry?.amount ?? 0), 0)
-          } catch {
-            return 0
+          const nativeCurrency = (acct.currency || 'USD').toUpperCase()
+          const nativeRes = await api.get(`/accounts/${acct.id}/balance?currency=${nativeCurrency}`)
+          const nativeBalance = Number(nativeRes.data?.balance ?? 0)
+          return {
+            acct,
+            nativeBalance,
+            nativeCurrency,
           }
         })
       )
 
-      const totalAssets = balanceResults.reduce((sum, item) => sum + item.balance, 0)
-      const operatingCash = balanceResults
-        .filter((item) =>
-          ['personal', 'operating', 'family_office', 'wealth_builder'].includes(item.acct.account_type)
-        )
-        .reduce((sum, item) => sum + item.balance, 0)
-      const alts = balanceResults
-        .filter((item) =>
-          ['trust', 'entity', 'foundation', 'estate', 'holding', 'investment'].includes(
-            item.acct.account_type
-          )
-        )
-        .reduce((sum, item) => sum + item.balance, 0)
-      const pendingTransfers = pendingResults.reduce((sum, amount) => sum + amount, 0)
-
-      setPortfolio({
-        totalAssetsUsd: moneyFormatter.format(totalAssets),
-        operatingCashUsd: moneyFormatter.format(operatingCash),
-        altsUsd: moneyFormatter.format(alts),
-        pendingTransfersUsd: moneyFormatter.format(pendingTransfers),
-      })
+      const targetCurrency = currentCurrency
+      const requestCurrency = targetCurrency
       setAccountBalances(
         balanceResults.map((item) => ({
           id: item.acct.id,
           label: item.acct.name ?? item.acct.account_type ?? `Account #${item.acct.id}`,
-          balance: item.balance,
+          balance: item.nativeBalance,
+          currency: item.nativeCurrency,
         }))
       )
+      const key = `mb_glance_base_total:${me?.id || 'anon'}:USD`
+      const nowStamp = Date.now()
+      const suppressPrevBase =
+        suppressPrevBaseUntilRef.current !== null &&
+        nowStamp - suppressPrevBaseUntilRef.current < 4000
+      const prevBase =
+        !suppressPrevBase && lastAggregateStampRef.current && lastBaseTotalRef.current
+          ? lastBaseTotalRef.current
+          : !suppressPrevBase && typeof window !== 'undefined'
+            ? window.localStorage.getItem(key)
+            : null
+      setAggregateLoading(true)
+      setAggregateDebug(null)
+      const aggRes = await api.get(
+        `/dashboard/aggregate?currency=${targetCurrency}&debug=1${
+          prevBase ? `&prev_base_total=${encodeURIComponent(prevBase)}` : ''
+        }`
+      )
+      const agg = aggRes.data || {}
+      if (requestId !== aggregateRequestIdRef.current) {
+        return
+      }
+      // requestId guard already ensures we only apply the latest response
+      console.debug('[aggregate] currency=', targetCurrency)
+      console.debug('[aggregate] total=', agg?.aggregate_total)
+      console.debug('[aggregate] rendered=', agg?.aggregate_total)
+      console.debug('[aggregate] selector=', selectorCurrency)
+      console.debug('[aggregate] glance=', normalizeCurrency(glanceCurrency))
+      console.debug('[aggregate] me.dashboard_currency=', meCurrency)
+      console.debug('[aggregate] sent=', requestCurrency)
+      console.debug('[aggregate] returned=', agg?.display_currency)
+
+      if (agg?.aggregate_total_base) {
+        lastBaseTotalRef.current = String(agg.aggregate_total_base)
+        lastAggregateStampRef.current = nowStamp
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem(key, String(agg.aggregate_total_base))
+        }
+      }
+
+      const returnedCurrency = String(agg?.display_currency || targetCurrency).toUpperCase()
+      if (returnedCurrency !== targetCurrency) {
+        console.warn('[aggregate] currency mismatch', { sent: targetCurrency, returned: returnedCurrency })
+      }
+      if (process.env.NODE_ENV === 'development') {
+        if (selectorCurrency !== normalizeCurrency(glanceCurrency)) {
+          console.warn('[aggregate] selector/glance mismatch', {
+            selector: selectorCurrency,
+            glance: normalizeCurrency(glanceCurrency),
+          })
+        }
+        if (selectorCurrency !== returnedCurrency) {
+          console.warn('[aggregate] selector/returned mismatch', {
+            selector: selectorCurrency,
+            returned: returnedCurrency,
+          })
+        }
+      }
+      if (!sessionFxRatesRef.current && agg?.fx_rates) {
+        const snapshot: Record<string, number> = {}
+        Object.entries(agg.fx_rates as Record<string, string | number>).forEach(([code, rate]) => {
+          const parsed = Number(rate)
+          snapshot[code.toUpperCase()] = Number.isFinite(parsed) ? parsed : 1
+        })
+        sessionFxRatesRef.current = snapshot
+      }
+      const ratesSnapshot = sessionFxRatesRef.current ?? getDefaultRates()
+      const baseTotal = Number(agg?.aggregate_total_base ?? 0)
+      const baseDelta =
+        agg?.momentum?.delta_base !== null && agg?.momentum?.delta_base !== undefined
+          ? Number(agg.momentum.delta_base)
+          : null
+      let incomingDeltaDisplay: number | null = null
+      const totalAssets = convertAmountWithRates(baseTotal, 'USD', selectorCurrency, ratesSnapshot)
+      const operatingBase = Number(agg?.operating_cash_base ?? agg?.operating_cash ?? 0)
+      const altsBase = Number(agg?.alts_base ?? agg?.alts ?? 0)
+      const pendingBase = Number(agg?.pending_transfers_base ?? agg?.pending_transfers ?? 0)
+      const operatingCash = convertAmountWithRates(operatingBase, 'USD', selectorCurrency, ratesSnapshot)
+      const alts = convertAmountWithRates(altsBase, 'USD', selectorCurrency, ratesSnapshot)
+      const pendingTransfers = convertAmountWithRates(pendingBase, 'USD', selectorCurrency, ratesSnapshot)
+
+      setPortfolio({
+        totalAssetsUsd: formatCurrencyAmount(totalAssets, returnedCurrency),
+        operatingCashUsd: formatCurrencyAmount(operatingCash, returnedCurrency),
+        altsUsd: formatCurrencyAmount(alts, returnedCurrency),
+        pendingTransfersUsd: formatCurrencyAmount(pendingTransfers, returnedCurrency),
+      })
+      setPortfolioRaw({
+        totalAssets,
+        operatingCash,
+        alts,
+        pendingTransfers,
+      })
+      setGlanceBaseTotal(baseTotal)
+      if (baseDelta !== null) {
+        setGlanceDeltaBase(baseDelta)
+        incomingDeltaDisplay = convertAmountWithRates(baseDelta, 'USD', selectorCurrency, ratesSnapshot)
+        setGlanceDeltaDisplay(incomingDeltaDisplay)
+        suppressPrevBaseUntilRef.current = Date.now()
+      } else {
+        setGlanceDeltaBase(null)
+        setGlanceDeltaDisplay(null)
+      }
+      setAggregateDebug({
+        selector: selectorCurrency,
+        glance: normalizeCurrency(glanceCurrency),
+        meCurrency,
+        sent: requestCurrency,
+        returned: returnedCurrency,
+        total: totalAssets,
+        delta:
+          incomingDeltaDisplay !== null && incomingDeltaDisplay !== undefined
+            ? Number(incomingDeltaDisplay)
+            : null,
+        accounts: Array.isArray(agg?.accounts) ? agg.accounts : undefined,
+      })
+      if (Array.isArray(agg?.accounts)) {
+        console.debug('[aggregate] account trace')
+        console.table(agg.accounts)
+      }
+      setGlanceCurrency(selectorCurrency)
+      setMe((prev: any) => (prev ? { ...prev, dashboard_currency: selectorCurrency } : prev))
+      setAggregateLoading(false)
     } catch (e: any) {
       addNote(`Portfolio refresh failed: ${errText(e)}`)
+      setAggregateLoading(false)
     }
   }
 
@@ -364,9 +529,25 @@ export default function DashboardPage() {
     return value.replace(/[^\d.,]/g, '').replace(/,/g, '')
   }
 
+  function formatMoneyInputForEditing(value: string) {
+    const cleaned = value.replace(/[^\d.]/g, '')
+    if (!cleaned) return ''
+    const firstDot = cleaned.indexOf('.')
+    const normalized =
+      firstDot === -1 ? cleaned : `${cleaned.slice(0, firstDot + 1)}${cleaned.slice(firstDot + 1).replace(/\./g, '')}`
+    const [rawWhole, rawFraction = ''] = normalized.split('.')
+    const wholeDigits = rawWhole.replace(/^0+(?=\d)/, '')
+    const formattedWhole = wholeDigits ? Number(wholeDigits).toLocaleString('en-US') : '0'
+    if (firstDot !== -1) {
+      return `${formattedWhole}.${rawFraction.slice(0, 2)}`
+    }
+    return formattedWhole
+  }
+
   async function submitDeposit() {
     setDepositError('')
     const parsed = Number(normalizeMoneyInput(depositAmount).trim())
+    const accountCurrency = accountCurrencyById(depositAccountId)
     if (!depositAccountId) {
       const msg = 'Choose an account to deposit into.'
       setDepositError(msg)
@@ -393,22 +574,21 @@ export default function DashboardPage() {
           account_id: Number(depositAccountId),
           direction: 'credit',
           amount: parsed.toFixed(2),
-          currency: 'USD',
+          currency: accountCurrency,
           entry_type: 'scheduled',
           reference: depositRef || 'dashboard-scheduled-deposit',
           memo: depositMemo || 'Scheduled deposit via dashboard',
           scheduled_for: new Date(depositWhen).toISOString(),
         })
-        const whenText = new Date(depositWhen).toLocaleDateString('en-US')
+        const whenText = formatLocalDate(depositWhen)
         addNote(`Deposit scheduled for ${whenText}.`)
-        toast(`Deposit scheduled for ${whenText}.`)
-        await loadPendingDeposits(Number(depositAccountId))
+        queueRefreshToast(`Deposit scheduled for ${whenText}.`)
       } else {
         await api.post('/ledger/entries', {
           account_id: Number(depositAccountId),
           direction: 'credit',
           amount: parsed.toFixed(2),
-          currency: 'USD',
+          currency: accountCurrency,
           entry_type: 'deposit',
           status: 'posted',
           reference: depositRef || 'dashboard-deposit',
@@ -416,7 +596,7 @@ export default function DashboardPage() {
           memo: depositMemo || 'Deposit via dashboard',
           meta: { source: 'dashboard', kind: 'deposit' },
         })
-        toast(`Deposit posted to ${accountLabelById(depositAccountId)}.`)
+        queueRefreshToast(`Deposit posted to ${accountLabelById(depositAccountId)}.`)
       }
       setDepositAmount('')
       setDepositMemo('')
@@ -445,6 +625,7 @@ export default function DashboardPage() {
   async function submitExpense() {
     setExpenseError('')
     const parsed = Number(normalizeMoneyInput(expenseAmount).trim())
+    const accountCurrency = accountCurrencyById(expenseAccountId)
     if (!expenseAccountId) {
       const msg = 'Choose an account to withdraw from.'
       setExpenseError(msg)
@@ -471,21 +652,21 @@ export default function DashboardPage() {
           account_id: Number(expenseAccountId),
           direction: 'debit',
           amount: parsed.toFixed(2),
-          currency: 'USD',
+          currency: accountCurrency,
           entry_type: 'scheduled',
           reference: expenseRef || 'dashboard-scheduled-withdrawal',
           memo: expenseMemo || 'Scheduled withdrawal via dashboard',
           scheduled_for: new Date(expenseWhen).toISOString(),
         })
-        const whenText = new Date(expenseWhen).toLocaleDateString('en-US')
+        const whenText = formatLocalDate(expenseWhen)
         addNote(`Withdrawal scheduled for ${whenText}.`)
-        toast(`Withdrawal scheduled for ${whenText}.`)
+        queueRefreshToast(`Withdrawal scheduled for ${whenText}.`)
       } else {
         await api.post('/ledger/entries', {
           account_id: Number(expenseAccountId),
           direction: 'debit',
           amount: parsed.toFixed(2),
-          currency: 'USD',
+          currency: accountCurrency,
           entry_type: 'withdrawal',
           status: 'posted',
           reference: expenseRef || 'dashboard-withdrawal',
@@ -493,7 +674,7 @@ export default function DashboardPage() {
           memo: expenseMemo || 'Withdrawal via dashboard',
           meta: { source: 'dashboard', kind: 'withdrawal' },
         })
-        toast(`Withdrawal posted from ${accountLabelById(expenseAccountId)}.`)
+        queueRefreshToast(`Withdrawal posted from ${accountLabelById(expenseAccountId)}.`)
       }
       setExpenseAmount('')
       setExpenseMemo('')
@@ -586,13 +767,21 @@ export default function DashboardPage() {
           try {
               const res = await api.get(`/accounts/${acct.id}/ledger?limit=20&offset=0`)
             const entries = Array.isArray(res.data) ? res.data : []
-            return entries.map((entry: any) => ({
+            return entries.map((entry: any) => {
+              const entryCurrency = (entry.currency || (acct as any).currency || 'USD') as string
+              const rawAmount = Number(entry.amount ?? 0)
+              const convertedAmount = convertAmountLocal(rawAmount, entryCurrency, glanceCurrency || 'USD')
+              return {
               id: `acct-${acct.id}-${entry.id ?? entry.created_at ?? Math.random()}`,
               label: entry.entry_type ?? entry.direction ?? 'Ledger entry',
               time: entry.created_at ?? entry.posted_at ?? entry.scheduled_for ?? '',
-              meta: `${acct.name ?? `Account #${acct.id}`} • ${moneyFormatter.format(Number(entry.amount ?? 0))}`,
+              meta: `${acct.name ?? `Account #${acct.id}`} • ${formatCurrencyAmount(
+                convertedAmount,
+                glanceCurrency
+              )}`,
               accountName: acct.name ?? `Account #${acct.id}`,
-              amount: Number(entry.amount ?? 0),
+              amount: convertedAmount,
+              currency: glanceCurrency,
               entryType: entry.entry_type ?? '',
               direction: entry.direction ?? '',
               status: entry.status ?? '',
@@ -601,7 +790,8 @@ export default function DashboardPage() {
               entryId: entry.id ?? null,
               accountId: acct.id,
               checkSnapshot: entry.meta?.check_snapshot ?? null,
-            }))
+            }
+          })
           } catch {
             return []
           }
@@ -630,13 +820,15 @@ export default function DashboardPage() {
       return
     }
 
+    const fromAccount = accounts.find((acct) => acct.id === Number(transferFromId))
+    const baseCurrency = (fromAccount as any)?.currency || 'USD'
     setTransferring(true)
     try {
       await api.post('/transfers', {
         from_account_id: Number(transferFromId),
         to_account_id: Number(transferToId),
         amount: parsed.toFixed(2),
-        currency: 'USD',
+        currency: baseCurrency,
         memo: transferMemo || 'Account transfer',
         reference: transferRef || 'transfer',
       })
@@ -646,7 +838,9 @@ export default function DashboardPage() {
       setTransferFromId('')
       setTransferToId('')
       addNote('Transfer executed.')
-      toast(`Transfer sent from ${accountLabelById(transferFromId)} to ${accountLabelById(transferToId)}.`)
+      queueRefreshToast(
+        `Transfer sent from ${accountLabelById(transferFromId)} to ${accountLabelById(transferToId)}.`
+      )
       await loadPortfolio()
       await loadSummary()
       await loadRecentActivity(accounts)
@@ -679,8 +873,7 @@ export default function DashboardPage() {
           !window.localStorage.getItem(promptedKey) &&
           nextMe?.email?.toLowerCase().endsWith('@gmail.com')
         ) {
-          setUsernameDraft(nextMe?.username ?? '')
-          setShowUsernamePrompt(true)
+          openDashboardUsernameEditor(nextMe?.username ?? '')
         }
       }
     } catch (e: any) {
@@ -699,6 +892,10 @@ export default function DashboardPage() {
       setUsernameError(validation.reason ?? 'Enter a valid username.')
       return
     }
+    if (!usernameScopeConfirmed) {
+      setUsernameError('Confirm that you understand this changes your ManifestBank dashboard username only.')
+      return
+    }
     setUsernameSaving(true)
     setUsernameError('')
     try {
@@ -708,7 +905,7 @@ export default function DashboardPage() {
       if (typeof window !== 'undefined') {
         const key = me?.id ? `username_prompted:${me.id}` : null
         if (key) window.localStorage.setItem(key, '1')
-        window.dispatchEvent(new CustomEvent('auth:logged_out', { detail: { message: 'Username saved.' } }))
+        queueRefreshToast('ManifestBank dashboard username updated.')
       }
       setShowUsernamePrompt(false)
     } catch (e: any) {
@@ -717,6 +914,13 @@ export default function DashboardPage() {
     } finally {
       setUsernameSaving(false)
     }
+  }
+
+  function openDashboardUsernameEditor(nextValue?: string) {
+    setUsernameDraft(nextValue ?? me?.username ?? '')
+    setUsernameError('')
+    setUsernameScopeConfirmed(false)
+    setShowUsernamePrompt(true)
   }
 
   async function listAccounts() {
@@ -758,10 +962,57 @@ export default function DashboardPage() {
     window.dispatchEvent(new CustomEvent('auth:logged_out', { detail: { message } }))
   }
 
+  function queueRefreshToast(message: string) {
+    if (typeof window === 'undefined') return
+    window.sessionStorage.setItem('toast:message', message)
+    window.sessionStorage.setItem('toast:persist', '1')
+    window.sessionStorage.setItem('scroll:top', '1')
+    window.location.reload()
+  }
+
+  function openSignaturePaywall(reason: string) {
+    if (typeof window === 'undefined') return
+    window.dispatchEvent(new CustomEvent('paywall:open', { detail: { reason } }))
+  }
+
+  async function updateDashboardCurrency(nextCurrency: string) {
+    const cleaned = normalizeCurrency(nextCurrency)
+    if (!canChangeDashboardCurrency) {
+      if (!isPremium) {
+        openSignaturePaywall(`${PREMIUM_TIER_NAME} required to choose your dashboard currency.`)
+      } else {
+        toast('Verify your email to activate dashboard currency selection.')
+      }
+      return
+    }
+    const prev = glanceCurrency
+    setGlanceCurrency(cleaned)
+    setPendingDashboardCurrency(cleaned)
+    setAggregateDebug(null)
+    try {
+      await api.patch('/users/dashboard-currency', { dashboard_currency: cleaned })
+      setPendingDashboardCurrency(null)
+      toast(`Dashboard currency updated to ${cleaned}.`)
+      skipGlanceEffectRef.current = true
+      await loadPortfolio(cleaned)
+      await loadSummary()
+    } catch (e: any) {
+      setGlanceCurrency(prev)
+      setPendingDashboardCurrency(null)
+      toast(e?.response?.data?.detail ?? e?.message ?? 'Unable to update dashboard currency.')
+    }
+  }
+
   function accountLabelById(id: number | '') {
     if (!id) return 'this account'
     const match = accounts.find((acct) => acct.id === Number(id))
     return match?.name ?? `Account #${id}`
+  }
+
+  function accountCurrencyById(id: number | '') {
+    if (!id) return 'USD'
+    const match = accounts.find((acct) => acct.id === Number(id))
+    return (match?.currency || 'USD').toUpperCase()
   }
 
   async function uploadAvatar(file: File) {
@@ -891,6 +1142,16 @@ export default function DashboardPage() {
     })()
   }, [])
 
+  const didInitCurrency = useRef(false)
+  useEffect(() => {
+    if (!me) return
+    const next = normalizeCurrency(me?.dashboard_currency)
+    if (!didInitCurrency.current) {
+      setGlanceCurrency(next)
+      didInitCurrency.current = true
+    }
+  }, [me?.dashboard_currency])
+
   useEffect(() => {
     const isAdminLocal = me?.role === 'admin'
     if (isAdminLocal) {
@@ -903,9 +1164,25 @@ export default function DashboardPage() {
         .catch(() => {})
         .finally(() => setWarmingUp(false))
     }, 600)
+    function handleRefresh() {
+      Promise.all([loadSummary(), loadPortfolio()]).catch(() => {})
+    }
+    window.addEventListener('accounts:refresh', handleRefresh)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    return () => window.clearTimeout(warmTimer)
+    return () => {
+      window.clearTimeout(warmTimer)
+      window.removeEventListener('accounts:refresh', handleRefresh)
+    }
   }, [me?.role])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (skipGlanceEffectRef.current) {
+      skipGlanceEffectRef.current = false
+      return
+    }
+    Promise.all([loadSummary(), loadPortfolio(glanceCurrency)]).catch(() => {})
+  }, [glanceCurrency])
 
   function syncWealthTarget() {
     const saved = window.localStorage.getItem(targetStorageKey)
@@ -965,6 +1242,48 @@ export default function DashboardPage() {
     loadPendingCreditsAll(accounts).catch(() => {})
     loadRecentActivity(accounts).catch(() => {})
   }, [accounts])
+
+  useEffect(() => {
+    if (!transferFromId || !transferToId || transferFromId === transferToId) {
+      setTransferPreview(null)
+      setTransferPreviewError('')
+      return
+    }
+    const parsed = Number(normalizeMoneyInput(transferAmount).trim())
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      setTransferPreview(null)
+      setTransferPreviewError('')
+      return
+    }
+    const fromCurrency = accountCurrencyById(transferFromId)
+    let cancelled = false
+    setTransferPreviewLoading(true)
+    setTransferPreviewError('')
+    const timer = window.setTimeout(async () => {
+      try {
+        const res = await api.post('/transfers/preview', {
+          from_account_id: Number(transferFromId),
+          to_account_id: Number(transferToId),
+          amount: parsed.toFixed(2),
+          currency: fromCurrency,
+        })
+        if (!cancelled) {
+          setTransferPreview(res.data)
+        }
+      } catch (e: any) {
+        if (!cancelled) {
+          setTransferPreview(null)
+          setTransferPreviewError(e?.response?.data?.detail ?? 'Unable to preview transfer.')
+        }
+      } finally {
+        if (!cancelled) setTransferPreviewLoading(false)
+      }
+    }, 300)
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [transferFromId, transferToId, transferAmount])
 
   useEffect(() => {
     if (!selectedActivity && !pendingModalOpen && !pendingDetail && !avatarPreviewUrl) return
@@ -1057,7 +1376,8 @@ export default function DashboardPage() {
     []
   )
 
-  const totalAssetsValue = useMemo(() => parseMoneyValue(portfolio.totalAssetsUsd), [portfolio.totalAssetsUsd])
+  // Canonical/base totals only for Wealth Builder % (must not change across display currencies).
+  const totalAssetsValue = useMemo(() => glanceBaseTotal, [glanceBaseTotal])
   const wealthBuilderLabel = useMemo(() => {
     const name = accounts.find((acct) => acct.account_type === 'wealth_builder')?.name
     return `${(name ?? 'Wealth Builder').toUpperCase()} PROGRESS`
@@ -1069,6 +1389,10 @@ export default function DashboardPage() {
   }, [totalAssetsValue, wealthTarget])
 
   const isVerified = Boolean(me?.email_verified)
+  const depositCurrency = accountCurrencyById(depositAccountId)
+  const expenseCurrency = accountCurrencyById(expenseAccountId)
+  const depositSymbol = getCurrencySymbol(depositCurrency)
+  const expenseSymbol = getCurrencySymbol(expenseCurrency)
   const transactionsLocked = !isVerified
 
   return (
@@ -1284,22 +1608,83 @@ export default function DashboardPage() {
                 >
                   My Checks
                 </Link>
-                <div
-                  style={{ fontWeight: 600, color: 'rgba(74, 47, 38, 0.55)', display: 'flex', gap: 8 }}
+                <Link
+                  href="/mycredit"
+                  style={{ textDecoration: 'none', fontWeight: 600, color: '#4a2f26' }}
                   role="menuitem"
-                  aria-disabled="true"
+                  onClick={() => setTreasureChipOpen(false)}
                 >
-                  <span>My Credit</span>
-                  <span style={{ fontSize: 10, opacity: 0.7 }}>(Coming soon)</span>
-                </div>
-                <div
-                  style={{ fontWeight: 600, color: 'rgba(74, 47, 38, 0.55)', display: 'flex', gap: 8 }}
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                    <span aria-hidden="true" style={{ width: 18, height: 18, display: 'inline-flex' }}>
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
+                        <path
+                          d="M4.5 16a7.5 7.5 0 0 1 15 0"
+                          fill="rgba(182, 121, 103, 0.18)"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                          strokeLinecap="round"
+                        />
+                        <path d="M7.2 14.2 8.6 12.8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity="0.45" />
+                        <path d="M12 12v-2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity="0.5" />
+                        <path d="m16.8 14.2-1.4-1.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity="0.45" />
+                        <path d="M12 16 16.2 12.6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                        <circle cx="12" cy="16" r="1.65" fill="currentColor" />
+                        <path d="M6.8 16h10.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.38" />
+                      </svg>
+                    </span>
+                    <span>My Credit</span>
+                  <span
+                      style={{
+                        padding: '2px 7px',
+                        borderRadius: 999,
+                        background: 'linear-gradient(135deg, rgba(182, 121, 103, 0.98), rgba(211, 164, 144, 0.98))',
+                        color: '#fff',
+                        fontSize: 10,
+                        fontWeight: 800,
+                        letterSpacing: '0.08em',
+                        textTransform: 'uppercase',
+                        boxShadow: '0 0 10px rgba(182, 121, 103, 0.28)',
+                        fontStyle: 'italic',
+                      }}
+                    >
+                      New
+                    </span>
+                  </span>
+                </Link>
+                <Link
+                  href="/myteller"
+                  style={{ textDecoration: 'none', fontWeight: 600, color: '#4a2f26' }}
                   role="menuitem"
-                  aria-disabled="true"
+                  onClick={() => setTreasureChipOpen(false)}
                 >
-                  <span>My Teller</span>
-                  <span style={{ fontSize: 10, opacity: 0.7 }}>(Coming soon)</span>
-                </div>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                    <span aria-hidden="true" style={{ width: 16, height: 16, display: 'inline-flex' }}>
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+                        <path d="M3 9L12 4l9 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M4 10h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                        <path d="M6 10v7M9 10v7M12 10v7M15 10v7M18 10v7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                        <path d="M4 17h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                      </svg>
+                    </span>
+                    <span>My Teller</span>
+                    <span
+                      style={{
+                        padding: '2px 7px',
+                        borderRadius: 999,
+                        background: 'linear-gradient(135deg, rgba(182, 121, 103, 0.98), rgba(211, 164, 144, 0.98))',
+                        color: '#fff',
+                        fontSize: 10,
+                        fontWeight: 800,
+                        letterSpacing: '0.08em',
+                        textTransform: 'uppercase',
+                        boxShadow: '0 0 10px rgba(182, 121, 103, 0.28)',
+                        fontStyle: 'italic',
+                      }}
+                    >
+                      Beta
+                    </span>
+                  </span>
+                </Link>
               </div>
             ) : null}
           </div>
@@ -1571,24 +1956,140 @@ export default function DashboardPage() {
                     textShadow: '0 0 18px rgba(140, 82, 64, 0.75), 0 0 34px rgba(140, 82, 64, 0.45)',
                   }}
                 >
-                  {portfolio.totalAssetsUsd}
+                  {formatCurrencyAmount(portfolioRaw.totalAssets, aggregateDisplayCurrency)}
                 </div>
+                {null}
+                <div style={{ marginTop: 4, fontSize: 11, opacity: 0.6 }}>
+                  Displayed in {aggregateDisplayCurrency.toUpperCase()}
+                </div>
+                {false && process.env.NODE_ENV === 'development' && aggregateDebug ? (
+                  <div style={{ marginTop: 6, fontSize: 10, opacity: 0.6, lineHeight: 1.5 }}>
+                    <div>
+                      agg({aggregateDebug?.returned}): {aggregateDebug?.total}
+                      {aggregateDebug?.delta !== null ? ` • Δ ${aggregateDebug?.delta}` : ''}
+                    </div>
+                    <div>selector: {aggregateDebug?.selector}</div>
+                    <div>sent: {aggregateDebug?.sent}</div>
+                    <div>returned: {aggregateDebug?.returned}</div>
+                    {aggregateDebug?.accounts?.length ? (
+                      <div style={{ marginTop: 6 }}>
+                        {aggregateDebug?.accounts?.map((acct) => (
+                          <div key={acct.account_id} style={{ marginBottom: 6 }}>
+                            <div>
+                              {acct.account_name || `Account #${acct.account_id}`}
+                            </div>
+                            <div>
+                              native: {acct.native_balance} {acct.native_currency}
+                            </div>
+                            <div>
+                              base: {acct.converted_base_amount} USD
+                            </div>
+                            <div>
+                              display: {acct.converted_amount} {aggregateDebug?.returned}
+                            </div>
+                            <div>
+                              rate: {acct.conversion_rate} | base: {acct.conversion_rate_base}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
-              <button
-                type="button"
-                onClick={() => setBalancesPeekOpen((open) => !open)}
-                style={{
-                  alignSelf: 'flex-start',
-                  border: '1px solid rgba(95, 74, 62, 0.35)',
-                  background: 'rgba(255, 255, 255, 0.8)',
-                  borderRadius: 999,
-                  padding: '6px 10px',
-                  fontSize: 11,
-                  cursor: 'pointer',
-                }}
-              >
-                {balancesPeekOpen ? 'Hide' : 'Peek'}
-              </button>
+              <div style={{ display: 'grid', gap: 6, justifyItems: 'end' }}>
+                <div style={{ display: 'grid', gap: 4, justifyItems: 'end' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 12, opacity: 0.7 }}>⇄</span>
+                    <div style={{ position: 'relative' }}>
+                      <select
+                        data-testid="dashboard-currency-select"
+                        key={normalizeCurrency(glanceCurrency)}
+                        value={normalizeCurrency(glanceCurrency)}
+                        onChange={(e) => updateDashboardCurrency(e.target.value)}
+                        title="Totals are converted into your selected dashboard currency. Account balances remain in their native currencies."
+                        style={{
+                          border: '1px solid rgba(95, 74, 62, 0.35)',
+                          background: canChangeDashboardCurrency
+                            ? 'rgba(255, 255, 255, 0.9)'
+                            : 'rgba(255, 255, 255, 0.6)',
+                          borderRadius: 999,
+                          padding: '2px 18px 2px 8px',
+                          fontSize: 10,
+                          height: 22,
+                          appearance: 'none',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {(() => {
+                          const normalized = normalizeCurrency(glanceCurrency)
+                          const has = CURRENCIES.some((currency) => currency.code === normalized)
+                          return has ? null : (
+                            <option key={normalized} value={normalized}>
+                              {normalized}
+                            </option>
+                          )
+                        })()}
+                        {CURRENCIES.map((currency) => (
+                          <option key={currency.code} value={currency.code}>
+                            {currency.code}
+                          </option>
+                        ))}
+                      </select>
+                      <span
+                        style={{
+                          position: 'absolute',
+                          right: 6,
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          fontSize: 9,
+                          opacity: 0.6,
+                          pointerEvents: 'none',
+                        }}
+                      >
+                        ▾
+                      </span>
+                      {!canChangeDashboardCurrency ? (
+                        <button
+                          type="button"
+                          aria-label="Choose dashboard currency"
+                          title="Totals are converted into your selected dashboard currency. Account balances remain in their native currencies."
+                          onClick={() => {
+                            if (!isPremium) {
+                              openSignaturePaywall(`${PREMIUM_TIER_NAME} required to choose your dashboard currency.`)
+                            } else {
+                              toast('Verify your email to activate dashboard currency selection.')
+                            }
+                          }}
+                          style={{
+                            position: 'absolute',
+                            inset: 0,
+                            border: 'none',
+                            background: 'transparent',
+                            borderRadius: 999,
+                            cursor: 'pointer',
+                          }}
+                        />
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setBalancesPeekOpen((open) => !open)}
+                  style={{
+                    alignSelf: 'flex-start',
+                    border: '1px solid rgba(95, 74, 62, 0.35)',
+                    background: 'rgba(255, 255, 255, 0.8)',
+                    borderRadius: 999,
+                    padding: '6px 10px',
+                    fontSize: 11,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {balancesPeekOpen ? 'Hide' : 'Peek'}
+                </button>
+              </div>
             </div>
             {balancesPeekOpen ? (
               <div style={{ marginTop: 10, display: 'grid', gap: 6 }}>
@@ -1600,8 +2101,11 @@ export default function DashboardPage() {
                       key={item.id}
                       style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}
                     >
-                      <span style={{ fontSize: 12 }}>{item.label}</span>
-                      <span style={{ fontSize: 12, opacity: 0.8 }}>{moneyFormatter.format(item.balance)}</span>
+                      <span style={{ fontSize: 12, fontWeight: 600 }}>{item.label}</span>
+                      <span style={{ fontSize: 12, opacity: 0.8 }}>
+                        {formatCurrencyAmount(item.balance, item.currency)} •{' '}
+                        {(item.currency || 'USD').toUpperCase()}
+                      </span>
                     </div>
                   ))
                 )}
@@ -1649,10 +2153,22 @@ export default function DashboardPage() {
         >
           <Card title="Portfolio Balances" tone="soft">
             <div style={{ display: 'grid', gap: 12 }}>
-              <BalanceRow label="Total Assets (USD)" value={portfolio.totalAssetsUsd} />
-              <BalanceRow label="Operating Cash" value={portfolio.operatingCashUsd} />
-              <BalanceRow label="Alternative Holdings" value={portfolio.altsUsd} />
-              <BalanceRow label="Pending Transfers" value={portfolio.pendingTransfersUsd} />
+              <BalanceRow
+                label={`Total Assets (${aggregateDisplayCurrency.toUpperCase()})`}
+                value={formatCurrencyAmount(portfolioRaw.totalAssets, aggregateDisplayCurrency)}
+              />
+              <BalanceRow
+                label="Operating Cash"
+                value={formatCurrencyAmount(portfolioRaw.operatingCash, aggregateDisplayCurrency)}
+              />
+              <BalanceRow
+                label="Alternative Holdings"
+                value={formatCurrencyAmount(portfolioRaw.alts, aggregateDisplayCurrency)}
+              />
+              <BalanceRow
+                label="Pending Transfers"
+                value={formatCurrencyAmount(portfolioRaw.pendingTransfers, aggregateDisplayCurrency)}
+              />
             </div>
             <div style={{ marginTop: 14, opacity: 0.7, fontSize: 12 }}>
               Balances update after ledger close. Adjust targets in Treasury settings.
@@ -1746,17 +2262,14 @@ export default function DashboardPage() {
                       fontSize: 13,
                     }}
                   >
-                    $
+                    {depositSymbol}
                   </span>
                   <input
                     type="text"
                     inputMode="decimal"
-                    placeholder="Amount (USD)"
+                    placeholder={`Amount (${depositCurrency})`}
                     value={depositAmount}
-                    onChange={(e) => {
-                      const next = e.target.value.replace(/[^\d.,]/g, '')
-                      setDepositAmount(next)
-                    }}
+                    onChange={(e) => setDepositAmount(formatMoneyInputForEditing(e.target.value))}
                     disabled={transactionsLocked}
                     style={{
                       padding: '10px 12px 10px 28px',
@@ -1883,12 +2396,12 @@ export default function DashboardPage() {
                       fontSize: 13,
                     }}
                   >
-                    $
+                    {expenseSymbol}
                   </span>
                   <input
                     type="text"
                     inputMode="decimal"
-                    placeholder="Amount (USD)"
+                    placeholder={`Amount (${expenseCurrency})`}
                     value={expenseAmount}
                     onChange={(e) => {
                       const next = e.target.value.replace(/[^\d.,]/g, '')
@@ -1968,6 +2481,7 @@ export default function DashboardPage() {
             ) : (
               <div style={{ display: 'grid', gap: 10 }}>
                 <select
+                  data-testid="transfer-from-select"
                   value={transferFromId}
                   onChange={(e) => setTransferFromId(Number(e.target.value))}
                   disabled={transactionsLocked}
@@ -1987,6 +2501,7 @@ export default function DashboardPage() {
                   ))}
                 </select>
                 <select
+                  data-testid="transfer-to-select"
                   value={transferToId}
                   onChange={(e) => setTransferToId(Number(e.target.value))}
                   disabled={transactionsLocked}
@@ -2006,11 +2521,15 @@ export default function DashboardPage() {
                   ))}
                 </select>
                 <input
+                  data-testid="transfer-amount-input"
                   type="text"
                   inputMode="decimal"
-                  placeholder="Amount (USD)"
+                  placeholder={`Amount (${accountCurrencyById(transferFromId)})`}
                   value={transferAmount}
-                  onChange={(e) => setTransferAmount(e.target.value)}
+                  onChange={(e) => {
+                    const next = e.target.value.replace(/[^\d.,]/g, '')
+                    setTransferAmount(next)
+                  }}
                   disabled={transactionsLocked}
                   style={{
                     padding: '10px 12px',
@@ -2020,6 +2539,20 @@ export default function DashboardPage() {
                     fontSize: 13,
                   }}
                 />
+                {transferPreviewLoading ? (
+                  <div style={{ fontSize: 12, opacity: 0.7 }}>Preparing transfer preview…</div>
+                ) : transferPreview ? (
+                  <div data-testid="transfer-preview" style={{ fontSize: 12, opacity: 0.75, lineHeight: 1.4 }}>
+                    Preview: {transferPreview.debit_amount} {transferPreview.debit_currency} →{' '}
+                    {transferPreview.credit_amount} {transferPreview.credit_currency} at rate{' '}
+                    {transferPreview.debit_rate}
+                    {transferPreview.missing_rates && transferPreview.missing_rates.length > 0
+                      ? ` (fallback used: ${transferPreview.missing_rates.join(', ')})`
+                      : ''}
+                  </div>
+                ) : transferPreviewError ? (
+                  <div style={{ fontSize: 12, color: '#7a2e2e' }}>{transferPreviewError}</div>
+                ) : null}
                 <input
                   type="text"
                   placeholder="Description / memo"
@@ -2109,7 +2642,7 @@ export default function DashboardPage() {
                           {moneyFormatter.format(Number(entry.amount ?? 0))}
                         </div>
                         <div style={{ fontSize: 12, opacity: 0.7 }}>
-                          {entry.scheduled_for ? new Date(entry.scheduled_for).toLocaleDateString('en-US') : 'Scheduled'}
+                          {entry.scheduled_for ? formatLocalDate(entry.scheduled_for) : 'Scheduled'}
                         </div>
                       </div>
                     </div>
@@ -2160,7 +2693,7 @@ export default function DashboardPage() {
                   >
                     <div style={{ fontWeight: 600 }}>{item.label}</div>
                     <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>
-                      {item.time ? new Date(item.time).toLocaleDateString('en-US') : '—'} • {item.meta}
+                      {item.time ? formatLocalDate(item.time) : '—'} • {item.meta}
                     </div>
                   </div>
                 ))}
@@ -2295,11 +2828,14 @@ export default function DashboardPage() {
             <div style={{ marginTop: 14, display: 'grid', gap: 10 }}>
               <div style={{ fontWeight: 600 }}>{selectedActivity.label}</div>
               <div style={{ fontSize: 12, opacity: 0.7 }}>
-                {selectedActivity.time ? new Date(selectedActivity.time).toLocaleDateString('en-US') : '—'}
+                {selectedActivity.time ? formatLocalDate(selectedActivity.time) : '—'}
               </div>
               <div style={{ display: 'grid', gap: 8 }}>
                 <BalanceRow label="Account" value={selectedActivity.accountName} />
-                <BalanceRow label="Amount" value={moneyFormatter.format(selectedActivity.amount)} />
+                <BalanceRow
+                  label="Amount"
+                  value={formatCurrencyAmount(selectedActivity.amount, glanceCurrency)}
+                />
                 <BalanceRow
                   label="Type"
                   value={selectedActivity.entryType || selectedActivity.direction || '—'}
@@ -2467,7 +3003,7 @@ export default function DashboardPage() {
                             {moneyFormatter.format(Number(entry.amount ?? 0))}
                           </div>
                           <div style={{ fontSize: 12, opacity: 0.7 }}>
-                            {entry.scheduled_for ? new Date(entry.scheduled_for).toLocaleDateString('en-US') : 'Scheduled'}
+                            {entry.scheduled_for ? formatLocalDate(entry.scheduled_for) : 'Scheduled'}
                           </div>
                         </div>
                       </div>
@@ -2533,7 +3069,7 @@ export default function DashboardPage() {
               </div>
               <div style={{ fontSize: 12, opacity: 0.7 }}>
                 {pendingDetail.scheduled_for
-                  ? new Date(pendingDetail.scheduled_for).toLocaleDateString('en-US')
+                  ? formatLocalDate(pendingDetail.scheduled_for)
                   : 'Scheduled'}
               </div>
               <div style={{ display: 'grid', gap: 8 }}>
@@ -2911,13 +3447,14 @@ export default function DashboardPage() {
             }}
           >
             <div style={{ fontFamily: 'var(--font-serif)', fontSize: 22, fontWeight: 600 }}>
-              Choose Your Username
+              ManifestBank Dashboard Username
             </div>
             <div style={{ opacity: 0.8, marginTop: 8 }}>
-              This will be how you show up across ManifestBank™ and The Ether™.
+              This name appears in your ManifestBank dashboard only. It does not change your Ether display name.
             </div>
             <div style={{ marginTop: 14, display: 'grid', gap: 8 }}>
               <input
+                data-testid="dashboard-username-input"
                 value={usernameDraft}
                 onChange={(e) => setUsernameDraft(e.target.value)}
                 placeholder="yourname"
@@ -2930,13 +3467,26 @@ export default function DashboardPage() {
                   fontSize: 13,
                 }}
               />
+              <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12, opacity: 0.82 }}>
+                <input
+                  data-testid="dashboard-username-confirm"
+                  type="checkbox"
+                  checked={usernameScopeConfirmed}
+                  onChange={(e) => setUsernameScopeConfirmed(e.target.checked)}
+                  style={{ marginTop: 2 }}
+                />
+                <span>
+                  I understand this changes my ManifestBank dashboard username only. It will be visible in the
+                  dashboard and sign-in identity, and it will not change my Ether name.
+                </span>
+              </label>
               {usernameError ? (
                 <div style={{ fontSize: 12, color: '#7a2e2e' }}>{usernameError}</div>
               ) : null}
             </div>
             <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
-              <Button variant="solid" onClick={saveUsernamePrompt} disabled={usernameSaving}>
-                {usernameSaving ? 'Saving…' : 'Save Username'}
+              <Button variant="solid" data-testid="dashboard-username-save" onClick={saveUsernamePrompt} disabled={usernameSaving}>
+                {usernameSaving ? 'Saving…' : 'Save Dashboard Username'}
               </Button>
             </div>
           </div>
@@ -3027,3 +3577,6 @@ function Confetti() {
     </div>
   )
 }
+  function normalizeCurrency(value: string | null | undefined) {
+    return (value || 'USD').toUpperCase().trim()
+  }

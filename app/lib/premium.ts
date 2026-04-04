@@ -7,7 +7,7 @@ export const PREMIUM_ANNUAL_NOTE = 'Save 33% with Annual — $72/yr ($6/mo)'
 export const FREE_LIMIT_COPY = {
   transactions: '2 deposits + 2 expenses per 7 days',
   checks: '1 check per 7 days',
-  scheduled: '1 scheduled movement per 7 days',
+  scheduled: 'Scheduled movements are locked',
   affirmations: '10 affirmation entries',
   accounts: '1 account',
   statements: 'Statements are locked',

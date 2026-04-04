@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Navbar from '@/app/components/Navbar'
 import { api } from '@/lib/api'
+import { formatLocalDate } from '@/lib/time'
 import { useAuth } from '@/app/providers'
 import { PREMIUM_TIER_NAME } from '@/app/lib/premium'
 
@@ -319,7 +320,7 @@ export default function AccountStatementPage() {
               <div style={{ marginTop: 6, opacity: 0.7 }}>Month: {selectedMonth}</div>
               {asOf ? (
                 <div style={{ marginTop: 4, fontSize: 12, opacity: 0.65 }}>
-                  *As of {new Date(asOf).toLocaleDateString('en-US')}
+                  *As of {formatLocalDate(asOf)}
                 </div>
               ) : null}
             </div>

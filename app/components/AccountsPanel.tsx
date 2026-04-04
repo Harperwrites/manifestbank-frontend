@@ -8,12 +8,14 @@ import { Card, Button } from './ui'
 import LedgerPanel from './LedgerPanel'
 import { useAuth } from '@/app/providers'
 import { PREMIUM_TIER_NAME } from '@/app/lib/premium'
+import { CURRENCIES } from '@/lib/currencies'
 
 type Account = {
   id: number
   owner_user_id: number
   name: string
   account_type: string
+  currency?: string | null
   parent_account_id?: number | null
   is_active: boolean
   created_at: string
@@ -28,6 +30,19 @@ function errMsg(err: any) {
 function toast(message: string) {
   if (typeof window === 'undefined') return
   window.dispatchEvent(new CustomEvent('auth:logged_out', { detail: { message } }))
+}
+
+function openPaywall(reason: string) {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new CustomEvent('paywall:open', { detail: { reason } }))
+}
+
+function queueRefreshToast(message: string) {
+  if (typeof window === 'undefined') return
+  window.sessionStorage.setItem('toast:message', message)
+  window.sessionStorage.setItem('toast:persist', '1')
+  window.sessionStorage.setItem('scroll:top', '1')
+  window.location.reload()
 }
 
 const targetOwnerStorageKey = 'manifestbank_wealth_target_owner'
@@ -61,6 +76,10 @@ export default function AccountsPanel({
   const [renameTarget, setRenameTarget] = useState<Account | null>(null)
   const [renameName, setRenameName] = useState('')
   const [renameError, setRenameError] = useState('')
+  const [currencyTarget, setCurrencyTarget] = useState<Account | null>(null)
+  const [currencyValue, setCurrencyValue] = useState('USD')
+  const [currencyError, setCurrencyError] = useState('')
+  const [changingCurrency, setChangingCurrency] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Account | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState('')
   const [deleteError, setDeleteError] = useState('')
@@ -72,6 +91,7 @@ export default function AccountsPanel({
   const [wealthTargetNoticeAt, setWealthTargetNoticeAt] = useState<number | null>(null)
   const { me } = useAuth()
   const isPremium = Boolean(me?.is_premium || me?.role === 'admin')
+  const [newCurrency, setNewCurrency] = useState('USD')
 
   const wealthTargetOptions = [
     { label: 'Set target', value: '' },
@@ -84,6 +104,7 @@ export default function AccountsPanel({
   ]
 
   const targetStorageKey = wealthTargetStorageKey ?? 'manifestbank_wealth_target_usd'
+
 
   useEffect(() => {
     const saved = window.localStorage.getItem(targetStorageKey)
@@ -136,13 +157,7 @@ export default function AccountsPanel({
       return
     }
     if (!isPremium) {
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(
-          new CustomEvent('paywall:open', {
-            detail: { reason: `${PREMIUM_TIER_NAME} required to create additional accounts.` },
-          })
-        )
-      }
+      openPaywall(`${PREMIUM_TIER_NAME} required to create additional accounts.`)
       setCreating(false)
       return
     }
@@ -154,6 +169,7 @@ export default function AccountsPanel({
         name: newName || 'Primary Account',
         account_type: newType,
         parent_account_id: parentId || null,
+        currency: newCurrency,
         is_active: true,
       })
       setMsg(`✅ Created account #${res.data?.id ?? 'new'} . Reloading…`)
@@ -165,17 +181,12 @@ export default function AccountsPanel({
       setNewName('')
       setNewType('personal')
       setNewParentId('')
+      setNewCurrency('USD')
       setShowCreate(false)
     } catch (e: any) {
       const detail = e?.response?.data?.detail
       if (e?.response?.status === 402) {
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(
-            new CustomEvent('paywall:open', {
-              detail: { reason: detail ?? 'Upgrade to create accounts.' },
-            })
-          )
-        }
+        openPaywall(detail ?? 'Upgrade to create accounts.')
       } else if (detail) {
         setCreateError(`❌ Create failed: ${detail}`)
       } else if (e?.message === 'Network Error') {
@@ -204,6 +215,29 @@ export default function AccountsPanel({
       await load()
     } catch (e: any) {
       setRenameError(`❌ Rename failed: ${errMsg(e)}`)
+    }
+  }
+
+  async function submitCurrencyChange() {
+    if (!currencyTarget) return
+    const nextCurrency = currencyValue.trim().toUpperCase()
+    if (!nextCurrency || nextCurrency.length !== 3) {
+      setCurrencyError('Currency must be a 3-letter code.')
+      return
+    }
+    if (!isPremium) {
+      openPaywall(`${PREMIUM_TIER_NAME} required to change account currency.`)
+      return
+    }
+    setCurrencyError('')
+    setChangingCurrency(true)
+    try {
+      await api.patch(`/accounts/${currencyTarget.id}`, { currency: nextCurrency })
+      queueRefreshToast(`Currency updated for account #${currencyTarget.id}.`)
+    } catch (e: any) {
+      setCurrencyError(`❌ Update failed: ${errMsg(e)}`)
+    } finally {
+      setChangingCurrency(false)
     }
   }
 
@@ -264,6 +298,7 @@ export default function AccountsPanel({
       right={
         <Button
           variant="solid"
+          data-testid="accounts-create-open"
           disabled={!canEdit}
           onClick={() => {
             if (!canEdit) return
@@ -296,6 +331,9 @@ export default function AccountsPanel({
                 setRenameTarget,
                 setRenameName,
                 setRenameError,
+                setCurrencyTarget,
+                setCurrencyValue,
+                setCurrencyError,
                 setDeleteTarget,
                 setDeleteConfirm,
                 setDeleteError,
@@ -310,7 +348,8 @@ export default function AccountsPanel({
                 wealthTargetOwnerEmail,
                 wealthTargetNoticeAt,
                 setWealthTargetNoticeAt,
-                canEdit
+                canEdit,
+                isPremium
               )}
               {(childAccountsByParent[a.id] || []).map((child) => (
                 <div key={child.id} style={{ marginLeft: 16, marginTop: 10 }}>
@@ -321,6 +360,9 @@ export default function AccountsPanel({
                     setRenameTarget,
                     setRenameName,
                     setRenameError,
+                    setCurrencyTarget,
+                    setCurrencyValue,
+                    setCurrencyError,
                     setDeleteTarget,
                     setDeleteConfirm,
                     setDeleteError,
@@ -336,6 +378,7 @@ export default function AccountsPanel({
                     wealthTargetNoticeAt,
                     setWealthTargetNoticeAt,
                     canEdit,
+                    isPremium,
                     a.name
                   )}
                 </div>
@@ -351,6 +394,9 @@ export default function AccountsPanel({
                 setRenameTarget,
                 setRenameName,
                 setRenameError,
+                setCurrencyTarget,
+                setCurrencyValue,
+                setCurrencyError,
                 setDeleteTarget,
                 setDeleteConfirm,
                 setDeleteError,
@@ -365,7 +411,8 @@ export default function AccountsPanel({
                 wealthTargetOwnerEmail,
                 wealthTargetNoticeAt,
                 setWealthTargetNoticeAt,
-                canEdit
+                canEdit,
+                isPremium
               )}
             </div>
           ))}
@@ -407,6 +454,7 @@ export default function AccountsPanel({
                 <div style={{ display: 'grid', gap: 10, marginTop: 16 }}>
                   <input
                     type="text"
+                    data-testid="accounts-create-name-input"
                     placeholder="Account name"
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
@@ -419,6 +467,7 @@ export default function AccountsPanel({
                     }}
                   />
                   <select
+                    data-testid="accounts-create-type-select"
                     value={newType}
                     onChange={(e) => setNewType(e.target.value)}
                     style={{
@@ -439,8 +488,27 @@ export default function AccountsPanel({
                     <option value="entity">Entity</option>
                     <option value="operating">Operating</option>
                   </select>
+                  <select
+                    data-testid="accounts-create-currency-select"
+                    value={newCurrency}
+                    onChange={(e) => setNewCurrency(e.target.value)}
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: 12,
+                      border: '1px solid rgba(95, 74, 62, 0.3)',
+                      background: 'rgba(255, 255, 255, 0.9)',
+                      fontSize: 13,
+                    }}
+                  >
+                  {CURRENCIES.map((currency) => (
+                      <option key={currency.code} value={currency.code}>
+                        {currency.code} — {currency.name}
+                      </option>
+                    ))}
+                  </select>
                   {newType !== 'trust' ? (
                     <select
+                      data-testid="accounts-create-parent-select"
                       value={newParentId}
                       onChange={(e) => setNewParentId(e.target.value ? Number(e.target.value) : '')}
                       style={{
@@ -464,13 +532,14 @@ export default function AccountsPanel({
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
                   <Button
                     variant="outline"
+                    data-testid="accounts-create-cancel"
                     onClick={() => {
                       setShowCreate(false)
                     }}
                   >
                     Cancel
                   </Button>
-                  <Button variant="solid" onClick={createAccount} disabled={creating}>
+                  <Button variant="solid" data-testid="accounts-create-submit" onClick={createAccount} disabled={creating}>
                     {creating ? 'Creating…' : 'Create'}
                   </Button>
                 </div>
@@ -517,6 +586,7 @@ export default function AccountsPanel({
                 <div style={{ display: 'grid', gap: 10, marginTop: 16 }}>
                   <input
                     type="text"
+                    data-testid="accounts-rename-input"
                     placeholder="Account name"
                     value={renameName}
                     onChange={(e) => setRenameName(e.target.value)}
@@ -533,14 +603,90 @@ export default function AccountsPanel({
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
                   <Button
                     variant="outline"
+                    data-testid="accounts-rename-cancel"
                     onClick={() => {
                       setRenameTarget(null)
                     }}
                   >
                     Cancel
                   </Button>
-                  <Button variant="solid" onClick={submitRename}>
+                  <Button variant="solid" data-testid="accounts-rename-submit" onClick={submitRename}>
                     Save
+                  </Button>
+                </div>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
+
+      {currencyTarget && portalReady
+        ? createPortal(
+            <div
+              style={{
+                position: 'fixed',
+                inset: 0,
+                height: '100dvh',
+                background: 'rgba(21, 16, 12, 0.45)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 99999,
+                padding: 20,
+              }}
+              onClick={() => setCurrencyTarget(null)}
+            >
+              <div
+                style={{
+                  width: 'min(520px, 100%)',
+                  background:
+                    'linear-gradient(135deg, rgba(199, 140, 122, 0.96), rgba(220, 193, 179, 0.98))',
+                  borderRadius: 20,
+                  border: '1px solid rgba(95, 74, 62, 0.2)',
+                  padding: 20,
+                  boxShadow: 'var(--shadow)',
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div style={{ fontFamily: 'var(--font-serif)', fontSize: 22, fontWeight: 600 }}>
+                  Change Currency
+                </div>
+                <div style={{ opacity: 0.7, marginTop: 4 }}>
+                  Update the currency for #{currencyTarget.id}.
+                </div>
+                <div style={{ display: 'grid', gap: 10, marginTop: 16 }}>
+                  <select
+                    data-testid="accounts-currency-select"
+                    value={currencyValue}
+                    onChange={(e) => setCurrencyValue(e.target.value)}
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: 12,
+                      border: '1px solid rgba(95, 74, 62, 0.3)',
+                      background: 'rgba(255, 255, 255, 0.9)',
+                      fontSize: 13,
+                    }}
+                  >
+                    {CURRENCIES.map((currency) => (
+                      <option key={currency.code} value={currency.code}>
+                        {currency.code} — {currency.name}
+                      </option>
+                    ))}
+                  </select>
+                  {currencyError ? <div style={{ fontSize: 12, color: '#7a2e2e' }}>{currencyError}</div> : null}
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
+                  <Button
+                    variant="outline"
+                    data-testid="accounts-currency-cancel"
+                    onClick={() => {
+                      setCurrencyTarget(null)
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button variant="solid" data-testid="accounts-currency-submit" onClick={submitCurrencyChange} disabled={changingCurrency}>
+                    {changingCurrency ? 'Saving…' : 'Save'}
                   </Button>
                 </div>
               </div>
@@ -584,6 +730,7 @@ export default function AccountsPanel({
             <div style={{ display: 'grid', gap: 10, marginTop: 16 }}>
               <input
                 type="text"
+                data-testid="accounts-delete-input"
                 placeholder="Type DELETE to confirm"
                 value={deleteConfirm}
                 onChange={(e) => setDeleteConfirm(e.target.value)}
@@ -600,13 +747,14 @@ export default function AccountsPanel({
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
               <Button
                 variant="outline"
+                data-testid="accounts-delete-cancel"
                 onClick={() => {
                   setDeleteTarget(null)
                 }}
               >
                 Cancel
               </Button>
-              <Button variant="danger" onClick={submitDelete} disabled={deleting}>
+              <Button variant="danger" data-testid="accounts-delete-submit" onClick={submitDelete} disabled={deleting}>
                 {deleting ? 'Deleting…' : 'Delete'}
               </Button>
             </div>
@@ -625,6 +773,9 @@ export default function AccountsPanel({
   setRenameTarget: Dispatch<SetStateAction<Account | null>>,
   setRenameName: Dispatch<SetStateAction<string>>,
   setRenameError: Dispatch<SetStateAction<string>>,
+  setCurrencyTarget: Dispatch<SetStateAction<Account | null>>,
+  setCurrencyValue: Dispatch<SetStateAction<string>>,
+  setCurrencyError: Dispatch<SetStateAction<string>>,
   setDeleteTarget: Dispatch<SetStateAction<Account | null>>,
   setDeleteConfirm: Dispatch<SetStateAction<string>>,
   setDeleteError: Dispatch<SetStateAction<string>>,
@@ -640,6 +791,7 @@ export default function AccountsPanel({
   wealthTargetNoticeAt: number | null,
   setWealthTargetNoticeAt: Dispatch<SetStateAction<number | null>>,
   canEdit: boolean,
+  isPremium: boolean,
   parentName?: string
 ) {
   const showTargetNotice = wealthTargetNoticeAt !== null
@@ -655,6 +807,7 @@ export default function AccountsPanel({
     >
       <button
         type="button"
+        data-testid={`account-toggle-${account.id}`}
         onClick={() =>
           setOpenAccounts((prev) => ({
             ...prev,
@@ -675,7 +828,8 @@ export default function AccountsPanel({
           <div>
             <div style={{ fontWeight: 900, fontSize: 14 }}>{account.name}</div>
             <div style={{ fontSize: 12, opacity: 0.75, marginTop: 4 }}>
-              Type: <b>{formatAccountType(account.account_type)}</b> • Active: <b>{String(account.is_active)}</b>
+              Type: <b>{formatAccountType(account.account_type)}</b> • Currency: <b>{account.currency ?? 'USD'}</b> •
+              Active: <b>{String(account.is_active)}</b>
             </div>
             {parentName ? (
               <div style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>Parent trust: {parentName}</div>
@@ -693,6 +847,7 @@ export default function AccountsPanel({
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
             <Button
               variant="outline"
+              data-testid={`account-rename-${account.id}`}
               disabled={!canEdit}
               onClick={() => {
                 if (!canEdit) return
@@ -703,8 +858,26 @@ export default function AccountsPanel({
             >
               Rename
             </Button>
+            {canEdit ? (
+              <Button
+                variant="outline"
+                data-testid={`account-currency-${account.id}`}
+                onClick={() => {
+                  if (!isPremium) {
+                    openPaywall(`${PREMIUM_TIER_NAME} required to change account currency.`)
+                    return
+                  }
+                  setCurrencyTarget(account)
+                  setCurrencyValue(account.currency ?? 'USD')
+                  setCurrencyError('')
+                }}
+              >
+                Change currency
+              </Button>
+            ) : null}
             <Button
               variant="danger"
+              data-testid={`account-delete-${account.id}`}
               disabled={!canEdit}
               onClick={() => {
                 if (!canEdit) return
@@ -840,7 +1013,7 @@ export default function AccountsPanel({
               ) : null}
             </div>
           ) : null}
-          <LedgerPanel accountId={account.id} isVerified={canEdit} />
+          <LedgerPanel accountId={account.id} isVerified={canEdit} currency={account.currency ?? 'USD'} />
         </div>
       ) : null}
     </div>

@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "test:e2e": "playwright test",
+    "test:smoke": "node --test test/smoke/*.test.mjs",
     "pages:build": "next build && npx @cloudflare/next-on-pages",
     "start": "next start",
     "lint": "eslint"
@@ -13,10 +15,13 @@
     "axios": "^1.13.2",
     "next": "15.5.2",
     "react": "18.2.0",
-    "react-dom": "18.2.0"
+    "react-dom": "18.2.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@cloudflare/next-on-pages": "^1.7.4",
+    "@playwright/test": "^1.58.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^18",

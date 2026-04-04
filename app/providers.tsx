@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { api } from '@/lib/api'
 import PremiumPaywall from '@/app/components/PremiumPaywall'
 import TierComparisonModal from '@/app/components/TierComparisonModal'
@@ -15,6 +16,7 @@ export type Me = {
   email_verified?: boolean | null
   wealth_target_usd?: number | null
   is_premium?: boolean | null
+  dashboard_currency?: string | null
 }
 
 type AuthContextValue = {
@@ -37,6 +39,7 @@ type NotificationToast = {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
   const [me, setMe] = useState<Me | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [toast, setToast] = useState('')
@@ -50,6 +53,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [devPaywallOpen, setDevPaywallOpen] = useState(false)
   const [devPaywallReason, setDevPaywallReason] = useState('')
   const [tierCompareOpen, setTierCompareOpen] = useState(false)
+  const legalReadOnlyPath =
+    pathname === '/terms' || pathname === '/privacy' || pathname === '/conditions'
+  const [legalDocOpen, setLegalDocOpen] = useState<null | 'terms' | 'privacy'>(null)
+  const [legalTermsText, setLegalTermsText] = useState('')
+  const [legalPrivacyText, setLegalPrivacyText] = useState('')
+  const [legalContentLoading, setLegalContentLoading] = useState(false)
+  const [legalContentError, setLegalContentError] = useState('')
+
+  function parseLegal(text: string) {
+    const lines = text.split('\n')
+    return {
+      title: lines[0] ?? '',
+      effective: lines[1] ?? '',
+      body: lines.slice(2).join('\n').trim(),
+    }
+  }
 
   function getStoredToken() {
     if (typeof window === 'undefined') return null
@@ -148,8 +167,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     sessionStorage.removeItem('access_token')
     localStorage.removeItem('refresh_token')
     sessionStorage.removeItem('refresh_token')
+    sessionStorage.removeItem('mb_open_task')
+    sessionStorage.removeItem('mb_teller_thread')
     delete api.defaults.headers.common.Authorization
     setMe(null)
+    setDevPaywallOpen(false)
+    setTierCompareOpen(false)
     // no router here; pages decide where to redirect
   }
 
@@ -185,6 +208,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLegalChecked(false)
       setLegalSubmitting(false)
       setLegalError('')
+      setLegalDocOpen(null)
       return
     }
     let active = true
@@ -206,6 +230,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [me])
 
   useEffect(() => {
+    if (!legalDocOpen) return
+    if ((legalDocOpen === 'terms' && legalTermsText) || (legalDocOpen === 'privacy' && legalPrivacyText)) return
+    let active = true
+    ;(async () => {
+      setLegalContentLoading(true)
+      setLegalContentError('')
+      try {
+        const res = await api.get('/legal/content')
+        if (!active) return
+        setLegalTermsText(typeof res.data?.termsText === 'string' ? res.data.termsText : '')
+        setLegalPrivacyText(typeof res.data?.privacyText === 'string' ? res.data.privacyText : '')
+      } catch (err: any) {
+        if (!active) return
+        const detail =
+          err?.response?.data?.detail ?? err?.response?.data?.message ?? err?.message ?? 'Unable to load document.'
+        setLegalContentError(detail)
+      } finally {
+        if (active) setLegalContentLoading(false)
+      }
+    })()
+    return () => {
+      active = false
+    }
+  }, [legalDocOpen, legalPrivacyText, legalTermsText])
+
+  useEffect(() => {
     let active = true
     if (typeof window === 'undefined') return
     api
@@ -223,9 +273,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (typeof window === 'undefined') return
 
     const stored = sessionStorage.getItem('toast:message')
+    const storedPersist = sessionStorage.getItem('toast:persist')
+    const shouldScrollTop = sessionStorage.getItem('scroll:top') === '1'
     if (stored) {
       setToast(stored)
+      setToastPersistent(storedPersist === '1')
       sessionStorage.removeItem('toast:message')
+      sessionStorage.removeItem('toast:persist')
+    }
+    if (shouldScrollTop) {
+      sessionStorage.removeItem('scroll:top')
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
     }
 
     function handleToastEvent(event: Event) {
@@ -323,6 +381,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               ? 'Commented on your post'
               : n.kind === 'comment_align'
               ? 'Aligned with a comment on your post'
+              : n.kind === 'message_align'
+              ? 'Aligned with your message'
               : n.kind === 'sync_approved'
               ? 'Accepted your sync request'
               : 'New activity'
@@ -388,7 +448,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isVerified={Boolean(me?.email_verified)}
       />
       {children}
-      {legalRequired ? (
+      {legalRequired && !legalReadOnlyPath ? (
         <div
           style={{
             position: 'fixed',
@@ -437,13 +497,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               />
               <span>
                 I agree to the{' '}
-                <a href="/terms" style={{ textDecoration: 'underline', color: 'inherit' }}>
+                <button
+                  type="button"
+                  onClick={() => setLegalDocOpen('terms')}
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    padding: 0,
+                    color: 'inherit',
+                    textDecoration: 'underline',
+                    textUnderlineOffset: 2,
+                    fontSize: 'inherit',
+                  }}
+                >
                   Terms &amp; Conditions
-                </a>{' '}
+                </button>{' '}
                 and{' '}
-                <a href="/privacy" style={{ textDecoration: 'underline', color: 'inherit' }}>
+                <button
+                  type="button"
+                  onClick={() => setLegalDocOpen('privacy')}
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    padding: 0,
+                    color: 'inherit',
+                    textDecoration: 'underline',
+                    textUnderlineOffset: 2,
+                    fontSize: 'inherit',
+                  }}
+                >
                   Privacy Policy
-                </a>
+                </button>
                 .
               </span>
             </label>
@@ -486,6 +572,110 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 {legalSubmitting ? 'Saving...' : 'Accept and Continue'}
               </button>
             </div>
+            {legalDocOpen ? (
+              <div
+                onClick={() => setLegalDocOpen(null)}
+                style={{
+                  position: 'fixed',
+                  inset: 0,
+                  background: 'rgba(20, 12, 8, 0.55)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 2147483648,
+                  padding: 20,
+                }}
+              >
+                <div
+                  onClick={(event) => event.stopPropagation()}
+                  style={{
+                    width: 'min(760px, 100%)',
+                    maxHeight: 'min(82vh, 900px)',
+                    overflowY: 'auto',
+                    background:
+                      'linear-gradient(135deg, rgba(199, 140, 122, 0.96), rgba(236, 214, 201, 0.98)), radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.7), transparent 52%), radial-gradient(circle at 78% 10%, rgba(255, 255, 255, 0.45), transparent 58%)',
+                    borderRadius: 22,
+                    border: '1px solid rgba(95, 74, 62, 0.3)',
+                    padding: '24px 22px 20px',
+                    boxShadow: '0 28px 70px rgba(0,0,0,0.35)',
+                    color: '#2b1b16',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+                    <div style={{ fontFamily: 'var(--font-serif)', fontSize: 22, fontWeight: 600 }}>
+                      {legalDocOpen === 'terms' ? 'Terms & Conditions' : 'Privacy Policy'}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setLegalDocOpen(null)}
+                      style={{ border: 'none', background: 'transparent', cursor: 'pointer', opacity: 0.7 }}
+                    >
+                      Close
+                    </button>
+                  </div>
+                  {legalContentLoading ? (
+                    <div style={{ marginTop: 16 }}>Loading…</div>
+                  ) : legalContentError ? (
+                    <div style={{ marginTop: 16, color: '#5a1f1f' }}>{legalContentError}</div>
+                  ) : (() => {
+                      const raw = legalDocOpen === 'terms' ? legalTermsText : legalPrivacyText
+                      const parsed = raw ? parseLegal(raw) : null
+                      if (!parsed) {
+                        return <div style={{ marginTop: 16 }}>Legal document unavailable.</div>
+                      }
+                      return (
+                        <>
+                          <div
+                            style={{
+                              marginTop: 14,
+                              padding: '14px 16px',
+                              borderRadius: 16,
+                              background: 'rgba(255, 255, 255, 0.7)',
+                              border: '1px solid rgba(95, 74, 62, 0.18)',
+                            }}
+                          >
+                            <div style={{ fontWeight: 700 }}>{parsed.title}</div>
+                            <div style={{ marginTop: 4, fontSize: 13, fontWeight: 600 }}>{parsed.effective}</div>
+                          </div>
+                          <div
+                            style={{
+                              marginTop: 16,
+                              whiteSpace: 'pre-wrap',
+                              lineHeight: 1.6,
+                              fontSize: 14,
+                              background: 'rgba(255, 255, 255, 0.62)',
+                              border: '1px solid rgba(95, 74, 62, 0.16)',
+                              borderRadius: 18,
+                              padding: '16px 16px 18px',
+                            }}
+                          >
+                            {parsed.body}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setLegalDocOpen(null)}
+                            style={{
+                              marginTop: 16,
+                              border: 'none',
+                              background: 'transparent',
+                              cursor: 'pointer',
+                              padding: 0,
+                              color: '#6f4a3a',
+                              textDecoration: 'underline',
+                              textUnderlineOffset: 2,
+                              fontSize: 13,
+                              fontWeight: 700,
+                              textShadow: '0 0 8px rgba(182, 121, 103, 0.22)',
+                            }}
+                          >
+                            Close this pop up to agree.
+                          </button>
+                        </>
+                      )
+                    })()}
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}

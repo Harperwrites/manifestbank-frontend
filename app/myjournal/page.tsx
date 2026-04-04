@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Navbar from '@/app/components/Navbar'
 import { api } from '@/lib/api'
+import { formatLocalDate, parseServerDate } from '@/lib/time'
 
 const overlayStyle: CSSProperties = {
   position: 'fixed',
@@ -63,10 +64,7 @@ type JournalEntry = {
 }
 
 function formatEntryDate(value?: string | null) {
-  if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value ?? ''
-  return date.toLocaleDateString('en-US')
+  return formatLocalDate(value)
 }
 
 export default function MyJournalPage() {
@@ -114,7 +112,8 @@ export default function MyJournalPage() {
         const readAt = getThreadReadAt(preview.id)
         const isUnread =
           senderId !== profileId &&
-          (!readAt || new Date(lastAt).getTime() > new Date(readAt).getTime())
+          (!readAt ||
+            (parseServerDate(lastAt)?.getTime() ?? 0) > (parseServerDate(readAt)?.getTime() ?? 0))
         return sum + (isUnread ? 1 : 0)
       }, 0)
     } catch {
@@ -714,7 +713,7 @@ export default function MyJournalPage() {
             <p style={{ marginTop: 6, opacity: 0.75 }}>Capture your reflections, milestones, and daily wins.</p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button type="button" onClick={openNewEntry} style={buttonStyle}>
+            <button type="button" data-testid="journal-new-entry-button" onClick={openNewEntry} style={buttonStyle}>
               New Entry
             </button>
           </div>
@@ -814,6 +813,7 @@ export default function MyJournalPage() {
               <div>
                 <div style={fieldLabelStyle}>Entry Title</div>
                 <input
+                  data-testid="journal-title-input"
                   value={draftTitle}
                   onChange={(event) => setDraftTitle(event.target.value)}
                   style={inputStyle}
@@ -824,6 +824,7 @@ export default function MyJournalPage() {
                 <div style={fieldLabelStyle}>Entry Date</div>
                 <input
                   type="date"
+                  data-testid="journal-date-input"
                   value={draftDate}
                   onChange={(event) => setDraftDate(event.target.value)}
                   style={inputStyle}
@@ -832,6 +833,7 @@ export default function MyJournalPage() {
               <div>
                 <div style={fieldLabelStyle}>Your Entry</div>
                 <textarea
+                  data-testid="journal-content-input"
                   value={draftContent}
                   onChange={(event) => setDraftContent(event.target.value)}
                   style={{ ...inputStyle, minHeight: 160, resize: 'vertical' }}
@@ -843,6 +845,7 @@ export default function MyJournalPage() {
                 <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, ...buttonStyle }}>
                   Choose File
                   <input
+                    data-testid="journal-image-input"
                     type="file"
                     accept="image/*"
                     onChange={(event) => {
@@ -881,6 +884,7 @@ export default function MyJournalPage() {
             <div style={{ marginTop: 20, display: 'flex', justifyContent: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
               <button
                 type="button"
+                data-testid="journal-save-button"
                 onClick={saveEntry}
                 style={{
                   ...buttonStyle,

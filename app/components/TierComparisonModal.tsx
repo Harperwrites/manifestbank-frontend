@@ -25,6 +25,11 @@ export default function TierComparisonModal({
     { label: 'Affirmation entries', free: true, freeNote: '10 total', signature: true, sigNote: 'Unlimited' },
     { label: 'Saved affirmations', free: false, freeNote: 'Not included', signature: true, sigNote: 'Unlimited' },
     { label: 'Statements', free: false, freeNote: 'Not included', signature: true, sigNote: 'Full access' },
+    { label: 'Credit points per login', free: true, freeNote: '1 point', signature: true, sigNote: '2 points' },
+    { label: 'Daily credit points cap', free: true, freeNote: '2 points', signature: true, sigNote: '5 points' },
+    { label: 'My Teller', free: false, freeNote: 'Not included', signature: true, sigNote: 'Included' },
+    { label: 'Beta access', free: false, freeNote: 'Not included', signature: true, sigNote: 'First in line for Beta releases' },
+    { label: 'Currency flexibility', free: false, freeNote: 'Not included', signature: true, sigNote: 'Change your currency across supported features' },
   ]
 
   const handleFreeClick = () => {
@@ -41,6 +46,7 @@ export default function TierComparisonModal({
   return createPortal(
     <div
       onClick={onClose}
+      className="mb-tier-comparison-overlay"
       style={{
         position: 'fixed',
         inset: 0,
@@ -55,6 +61,7 @@ export default function TierComparisonModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        className="mb-tier-comparison-modal"
         style={{
           width: 'min(920px, 100%)',
           marginTop: 12,
@@ -77,9 +84,41 @@ export default function TierComparisonModal({
             60% { opacity: 0.35; }
             100% { transform: translateX(260%) rotate(25deg); opacity: 0; }
           }
+          @media (max-width: 640px) {
+            .mb-tier-comparison-overlay {
+              padding: 10px 10px 18px !important;
+            }
+            .mb-tier-comparison-modal {
+              margin-top: 0 !important;
+              margin-bottom: 0 !important;
+              max-height: calc(100vh - 20px) !important;
+              border-radius: 18px !important;
+              padding: 14px !important;
+            }
+            .mb-tier-comparison-modal .mb-tier-header {
+              align-items: flex-start !important;
+            }
+            .mb-tier-comparison-modal .mb-tier-title {
+              font-size: 18px !important;
+              line-height: 1.2 !important;
+            }
+            .mb-tier-comparison-modal .mb-tier-grid {
+              grid-template-columns: 1fr !important;
+              gap: 12px !important;
+            }
+            .mb-tier-comparison-modal .mb-tier-actions {
+              justify-content: stretch !important;
+            }
+            .mb-tier-comparison-modal .mb-tier-actions > * {
+              width: 100% !important;
+            }
+            .mb-tier-comparison-modal .mb-tier-secondary {
+              justify-items: stretch !important;
+            }
+          }
         `}</style>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
-          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 22, fontWeight: 700 }}>
+        <div className="mb-tier-header" style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+          <div className="mb-tier-title" style={{ fontFamily: 'var(--font-serif)', fontSize: 22, fontWeight: 700 }}>
             Choose Your ManifestBank Path
           </div>
           <button
@@ -106,6 +145,7 @@ export default function TierComparisonModal({
         ) : null}
 
         <div
+          className="mb-tier-grid"
           style={{
             marginTop: 18,
             display: 'grid',
@@ -115,9 +155,14 @@ export default function TierComparisonModal({
         >
           <button
             type="button"
+            data-testid="tier-free-button"
             onClick={handleFreeClick}
             style={{
-              background: 'rgba(255,255,255,0.85)',
+              backgroundColor: 'rgba(247,243,237,0.92)',
+              backgroundImage:
+                'linear-gradient(rgba(247,243,237,0.72), rgba(247,243,237,0.72)), url("/marble-veins.png")',
+              backgroundSize: '205%',
+              backgroundPosition: '12% 10%',
               borderRadius: 18,
               padding: 16,
               border: '1px solid rgba(95, 74, 62, 0.2)',
@@ -125,7 +170,13 @@ export default function TierComparisonModal({
               cursor: 'pointer',
             }}
           >
-            <div style={{ fontWeight: 700, fontSize: 16 }}>Free</div>
+            <div style={{ display: 'grid', gap: 2 }}>
+              <div style={{ fontWeight: 700, fontSize: 16 }}>Free</div>
+              <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em' }}>$0</div>
+              <div style={{ fontSize: 11, opacity: 0.72, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                Start with the essentials
+              </div>
+            </div>
             <ul style={{ marginTop: 10, display: 'grid', gap: 8, listStyle: 'none', padding: 0 }}>
               {features.map((item) => (
                 <li key={`free-${item.label}`} style={{ display: 'grid', gridTemplateColumns: '16px 1fr', gap: 8 }}>
@@ -143,19 +194,45 @@ export default function TierComparisonModal({
 
           <button
             type="button"
+            data-testid="tier-signature-button"
             onClick={onOpenPaywall}
             style={{
-              background: 'rgba(255,255,255,0.95)',
+              backgroundColor: 'rgba(243,238,232,0.94)',
+              backgroundImage:
+                'linear-gradient(rgba(243,238,232,0.58), rgba(243,238,232,0.58)), url("/marble-veins.png")',
+              backgroundSize: '235%',
+              backgroundPosition: '8% 6%',
               borderRadius: 18,
               padding: 16,
               border: '1px solid rgba(95, 74, 62, 0.28)',
-              boxShadow: '0 18px 36px rgba(12, 10, 12, 0.2)',
+              boxShadow: '0 22px 42px rgba(12, 10, 12, 0.24), 0 0 24px rgba(182, 121, 103, 0.18)',
               textAlign: 'left',
               cursor: 'pointer',
+              position: 'relative',
+              overflow: 'hidden',
             }}
-          >
-            <div style={{ fontWeight: 800, fontSize: 16 }}>{PREMIUM_TIER_NAME}</div>
-            <ul style={{ marginTop: 10, display: 'grid', gap: 8, listStyle: 'none', padding: 0 }}>
+            >
+            <span
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 72,
+                background:
+                  'linear-gradient(180deg, rgba(255,255,255,0.34), rgba(255,255,255,0.12) 58%, rgba(255,255,255,0))',
+                pointerEvents: 'none',
+              }}
+            />
+            <div style={{ position: 'relative', zIndex: 1, display: 'grid', gap: 2 }}>
+              <div style={{ fontWeight: 800, fontSize: 16 }}>{PREMIUM_TIER_NAME}</div>
+              <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em' }}>*as low as $6/month</div>
+              <div style={{ fontSize: 11, opacity: 0.72, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                Built for expanded access
+              </div>
+            </div>
+            <ul style={{ position: 'relative', zIndex: 1, marginTop: 10, display: 'grid', gap: 8, listStyle: 'none', padding: 0 }}>
               {features.map((item) => (
                 <li
                   key={`sig-${item.label}`}
@@ -173,6 +250,7 @@ export default function TierComparisonModal({
         </div>
 
         <div
+          className="mb-tier-actions"
           style={{
             marginTop: 18,
             display: 'flex',
@@ -212,7 +290,7 @@ export default function TierComparisonModal({
             />
             <span style={{ position: 'relative', zIndex: 1 }}>View Signature Options</span>
           </button>
-          <div style={{ display: 'grid', justifyItems: 'end', gap: 4 }}>
+          <div className="mb-tier-secondary" style={{ display: 'grid', justifyItems: 'end', gap: 4 }}>
             <div
               style={{
                 fontSize: 11,

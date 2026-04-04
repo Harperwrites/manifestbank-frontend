@@ -28,6 +28,11 @@ api.interceptors.response.use(
     }
     if (typeof window !== "undefined" && status === 401) {
       localStorage.removeItem("access_token");
+      sessionStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+      sessionStorage.removeItem("refresh_token");
+      sessionStorage.removeItem("mb_open_task");
+      sessionStorage.removeItem("mb_teller_thread");
       sessionStorage.setItem("toast:message", "You were logged out. Please sign in again.");
       window.dispatchEvent(new CustomEvent("auth:logged_out"));
       window.location.href = "/auth?reason=logged_out";

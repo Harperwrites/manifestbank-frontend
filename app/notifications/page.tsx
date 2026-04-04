@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/app/providers'
 import { api } from '@/lib/api'
+import { parseServerDate } from '@/lib/time'
 import { Container } from '@/app/components/ui'
 import EtherNavbar from '@/app/components/EtherNavbar'
 
@@ -23,16 +24,16 @@ type EtherNotification = {
 
 function formatMessageTimestamp(value?: string | null) {
   if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return ''
+  const date = parseServerDate(value)
+  if (!date) return ''
   const now = new Date()
   if (date.toDateString() === now.toDateString()) {
-    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+    return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
   }
   const yesterday = new Date(now)
   yesterday.setDate(now.getDate() - 1)
   if (date.toDateString() === yesterday.toDateString()) return 'Yesterday'
-  return date.toLocaleDateString('en-US')
+  return date.toLocaleDateString()
 }
 
 type SyncRequest = {
