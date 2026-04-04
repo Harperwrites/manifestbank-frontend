@@ -1,5 +1,7 @@
 'use client'
 
+export const runtime = 'edge'
+
 import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Navbar from '@/app/components/Navbar'
