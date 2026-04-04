@@ -31,7 +31,7 @@ function EtherNavbar({
   onAvatarSelect: (file: File) => void
 }) {
   const router = useRouter()
-  const { me, isLoading, refreshMe } = useAuth()
+  const { me, isLoading } = useAuth()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const settingsRef = useRef<HTMLDivElement | null>(null)
   const [accountsOpen, setAccountsOpen] = useState(false)
@@ -56,9 +56,18 @@ function EtherNavbar({
   const [settingsBioNotice, setSettingsBioNotice] = useState('')
   const [settingsLinksNotice, setSettingsLinksNotice] = useState('')
   const [settingsUsernameNotice, setSettingsUsernameNotice] = useState('')
+  const [settingsUsernameConfirmed, setSettingsUsernameConfirmed] = useState(false)
   const isPremium = Boolean(me?.is_premium || me?.role === 'admin')
   const [portalLoading, setPortalLoading] = useState(false)
   const [portalError, setPortalError] = useState('')
+
+  function queueRefreshToast(message: string) {
+    if (typeof window === 'undefined') return
+    window.sessionStorage.setItem('toast:message', message)
+    window.sessionStorage.setItem('toast:persist', '1')
+    window.sessionStorage.setItem('scroll:top', '1')
+    window.location.reload()
+  }
 
   function pushToast(message: string) {
     if (typeof window === 'undefined') return
@@ -128,15 +137,16 @@ function EtherNavbar({
     const wasOpen = profileEditOpenedRef.current
     setSettingsBio(profile?.bio ?? '')
     setSettingsLinks(profile?.links ?? '')
-    setSettingsUsername(me?.username ?? '')
+    setSettingsUsername(profile?.display_name ?? '')
     setUsernameStatus('idle')
     if (!wasOpen) {
       setSettingsBioNotice('')
       setSettingsLinksNotice('')
       setSettingsUsernameNotice('')
+      setSettingsUsernameConfirmed(false)
     }
     profileEditOpenedRef.current = true
-  }, [settingsOpen, profileEditOpen, profile?.bio, profile?.links, me?.username])
+  }, [settingsOpen, profileEditOpen, profile?.bio, profile?.links, profile?.display_name])
 
   useEffect(() => {
     if (!profileEditOpen) {
@@ -177,19 +187,21 @@ function EtherNavbar({
         const list = Array.isArray(res.data) ? res.data : []
         const balances = await Promise.all(
           list.map(async (acct: any) => {
+            const currency = (acct.currency || 'USD').toUpperCase()
             try {
-              const balanceRes = await api.get(`/accounts/${acct.id}/balance?currency=USD`)
-              return { id: acct.id, balance: Number(balanceRes.data?.balance ?? 0) }
+              const balanceRes = await api.get(`/accounts/${acct.id}/balance?currency=${currency}`)
+              return { id: acct.id, balance: Number(balanceRes.data?.balance ?? 0), currency }
             } catch {
-              return { id: acct.id, balance: 0 }
+              return { id: acct.id, balance: 0, currency }
             }
           })
         )
-        const balanceMap = new Map(balances.map((item) => [item.id, item.balance]))
+        const balanceMap = new Map(balances.map((item) => [item.id, item]))
         setAccounts(
           list.map((acct: any) => ({
             ...acct,
-            balance: balanceMap.get(acct.id) ?? 0,
+            balance: balanceMap.get(acct.id)?.balance ?? 0,
+            currency: balanceMap.get(acct.id)?.currency ?? (acct.currency || 'USD'),
           }))
         )
         setAccountsLoaded(true)
@@ -198,10 +210,24 @@ function EtherNavbar({
       .finally(() => setAccountsLoading(false))
   }, [accountsOpen, accountsLoaded, accountsLoading])
 
-  function formatMoney(value: any) {
+  useEffect(() => {
+    function handleRefresh() {
+      setAccountsLoaded(false)
+      setAccountsMsg('')
+    }
+    window.addEventListener('accounts:refresh', handleRefresh)
+    return () => window.removeEventListener('accounts:refresh', handleRefresh)
+  }, [])
+
+  function formatMoney(value: any, currency?: string | null) {
     const num = Number(value)
     if (Number.isNaN(num)) return value ?? ''
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num)
+    const code = (currency || 'USD').toUpperCase()
+    try {
+      return new Intl.NumberFormat(undefined, { style: 'currency', currency: code }).format(num)
+    } catch {
+      return `${code} ${num.toFixed(2)}`
+    }
   }
 
   async function checkUsernameAvailability(value: string) {
@@ -212,21 +238,11 @@ function EtherNavbar({
       setSettingsUsernameNotice(validation.reason ?? 'Enter a valid username.')
       return
     }
-    if (me?.username && trimmed.toLowerCase() === me.username.toLowerCase()) {
+    if (profile?.display_name && trimmed.toLowerCase() === profile.display_name.toLowerCase()) {
       setUsernameStatus('current')
       return
     }
-    setUsernameStatus('checking')
-    try {
-      const res = await api.get('/auth/username-available', { params: { username: trimmed } })
-      const available = Boolean(res.data?.available)
-      setUsernameStatus(available ? 'available' : 'taken')
-      if (!available && res.data?.reason) {
-        setSettingsUsernameNotice(res.data.reason)
-      }
-    } catch {
-      setUsernameStatus('invalid')
-    }
+    setUsernameStatus('available')
   }
 
   async function saveUsername() {
@@ -234,23 +250,22 @@ function EtherNavbar({
     const validation = validateUsername(trimmed)
     if (!validation.ok) {
       setUsernameStatus('invalid')
-      setSettingsUsernameNotice(validation.reason ?? 'Enter a valid username.')
+      setSettingsUsernameNotice(validation.reason ?? 'Enter a valid Ether name.')
+      return
+    }
+    if (!settingsUsernameConfirmed) {
+      setSettingsUsernameNotice('Confirm that you understand this changes your Ether name only.')
       return
     }
     setSettingsBusy(true)
     setSettingsUsernameNotice('')
     try {
-      await api.patch('/auth/username', { username: trimmed })
       await updateSettings({ display_name: trimmed })
-      await refreshMe()
-      setUsernameStatus('current')
-      setSettingsUsernameNotice('Username updated.')
+      queueRefreshToast('Ether name updated.')
     } catch (e: any) {
-      const msg = e?.response?.data?.detail ?? e?.message ?? 'Username update failed'
+      const msg = e?.response?.data?.detail ?? e?.message ?? 'Ether name update failed'
       setSettingsUsernameNotice(msg)
-      if (e?.response?.status === 400) {
-        setUsernameStatus('taken')
-      }
+      setUsernameStatus('invalid')
     } finally {
       setSettingsBusy(false)
     }
@@ -375,16 +390,18 @@ function EtherNavbar({
                         <div
                           key={account.id}
                           style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            gap: 10,
+                            display: 'grid',
+                            gap: 4,
                             fontSize: 13,
-                            paddingBottom: 6,
+                            paddingBottom: 8,
                             borderBottom: '1px solid rgba(95, 74, 62, 0.12)',
                           }}
                         >
                           <div style={{ fontWeight: 600 }}>{account.name}</div>
-                          <div style={{ opacity: 0.8 }}>{formatMoney(account.balance)}</div>
+                          <div style={{ opacity: 0.8 }}>
+                            {formatMoney(account.balance, account.currency)} •{' '}
+                            {(account.currency || 'USD').toUpperCase()}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -527,7 +544,7 @@ function EtherNavbar({
               ) : me ? (
                 <>
                 <span className="ether-nav-signed" style={{ opacity: 0.9, wordBreak: 'break-word' }}>
-                  Signed in as <b>{me.username ?? me.email}</b>
+                  Signed in as <b>{profile?.display_name ?? me.username ?? me.email}</b>
                 </span>
                 </>
               ) : (
@@ -787,15 +804,16 @@ function EtherNavbar({
               </div>
 
               <div style={{ display: 'grid', gap: 6 }}>
-                <label style={{ fontSize: 12, opacity: 0.7 }}>Username</label>
+                <label style={{ fontSize: 12, opacity: 0.7 }}>Ether display name</label>
                 <input
+                  data-testid="ether-display-name-input"
                   value={settingsUsername}
                   onChange={(e) => {
                     setSettingsUsername(e.target.value)
                     setUsernameStatus('idle')
                   }}
                   onBlur={(e) => checkUsernameAvailability(e.target.value)}
-                  placeholder="Choose a username"
+                  placeholder="Choose an Ether name"
                   maxLength={21}
                   style={{
                     padding: '8px 10px',
@@ -809,26 +827,39 @@ function EtherNavbar({
                   {usernameStatus === 'checking'
                     ? 'Checking availability…'
                     : usernameStatus === 'available'
-                    ? 'Username available.'
+                    ? 'Ether name available.'
                     : usernameStatus === 'taken'
-                    ? 'Username already in use.'
+                    ? 'Ether name already in use.'
                     : usernameStatus === 'current'
-                    ? 'Current username.'
+                    ? 'Current Ether name.'
                     : usernameStatus === 'invalid'
-                    ? 'Enter a valid username.'
-                    : ' '}
+                    ? 'Enter a valid Ether name.'
+                    : 'Visible in The Ether only. This does not change your ManifestBank dashboard username.'}
                 </div>
+                <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 11, opacity: 0.82 }}>
+                  <input
+                    data-testid="ether-display-name-confirm"
+                    type="checkbox"
+                    checked={settingsUsernameConfirmed}
+                    onChange={(e) => setSettingsUsernameConfirmed(e.target.checked)}
+                    style={{ marginTop: 2 }}
+                  />
+                  <span>
+                    I understand this changes my Ether name only. It will be visible in The Ether and will not
+                    change my ManifestBank dashboard username.
+                  </span>
+                </label>
                 <Button
                   variant="outline"
+                  data-testid="ether-display-name-save"
                   onClick={saveUsername}
                   disabled={
                     settingsBusy ||
                     usernameStatus === 'checking' ||
-                    usernameStatus === 'taken' ||
                     usernameStatus === 'invalid'
                   }
                 >
-                  {settingsBusy ? 'Saving…' : 'Save username'}
+                  {settingsBusy ? 'Saving…' : 'Save Ether name'}
                 </Button>
                 {settingsUsernameNotice ? (
                   <div

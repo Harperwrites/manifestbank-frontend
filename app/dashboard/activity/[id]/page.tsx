@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { useParams, useRouter } from 'next/navigation'
 import { api } from '../../../../lib/api'
 import { Button, Card, Container } from '../../../components/ui'
+import { formatLocalDate } from '@/lib/time'
 
 export const runtime = 'edge'
 
@@ -170,7 +171,7 @@ export default function AccountActivityPage() {
                   </div>
                   <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>
                     {formatEntryType(entry.entry_type)} • {formatStatus(entry.status)} •{' '}
-                    {new Date(entry.created_at).toLocaleDateString('en-US')}
+                    {formatLocalDate(entry.created_at)}
                   </div>
                   {entry.memo ? (
                     <div style={{ fontSize: 12, opacity: 0.85, marginTop: 6, overflowWrap: 'anywhere' }}>
@@ -250,7 +251,7 @@ export default function AccountActivityPage() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
                       <div style={{ opacity: 0.7 }}>Date</div>
                       <div style={{ fontWeight: 600 }}>
-                        {new Date(selectedEntry.created_at).toLocaleDateString('en-US')}
+                        {formatLocalDate(selectedEntry.created_at)}
                       </div>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>

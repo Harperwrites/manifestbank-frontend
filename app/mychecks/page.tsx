@@ -5,11 +5,14 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/app/components/Navbar'
 import { api } from '@/lib/api'
+import { CURRENCIES, getCurrencySymbol } from '@/lib/currencies'
+import { convertAmountLocal, getRateLocal } from '@/lib/fx'
 
 type Account = {
   id: number
   name: string
   account_type: string
+  currency?: string | null
 }
 
 type Me = {
@@ -18,6 +21,13 @@ type Me = {
   email?: string | null
   is_premium?: boolean | null
   role?: string | null
+  dashboard_currency?: string | null
+}
+
+type FreeTierStatus = {
+  checks?: {
+    next_available_at?: string | null
+  }
 }
 
 const recipientPresets = [
@@ -28,6 +38,7 @@ const recipientPresets = [
   'Future Self',
   'Partner',
 ]
+
 
 const checkAffirmations = [
   'Money flows to me.',
@@ -88,6 +99,21 @@ function formatAmountWithCommas(value: string) {
   const parsed = Number(normalizeMoneyInput(value))
   if (!Number.isFinite(parsed)) return '0.00'
   return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(parsed)
+}
+
+function formatMoneyInputForEditing(value: string) {
+  const cleaned = value.replace(/[^\d.]/g, '')
+  if (!cleaned) return ''
+  const firstDot = cleaned.indexOf('.')
+  const normalized =
+    firstDot === -1 ? cleaned : `${cleaned.slice(0, firstDot + 1)}${cleaned.slice(firstDot + 1).replace(/\./g, '')}`
+  const [rawWhole, rawFraction = ''] = normalized.split('.')
+  const wholeDigits = rawWhole.replace(/^0+(?=\d)/, '')
+  const formattedWhole = wholeDigits ? Number(wholeDigits).toLocaleString('en-US') : '0'
+  if (firstDot !== -1) {
+    return `${formattedWhole}.${rawFraction.slice(0, 2)}`
+  }
+  return formattedWhole
 }
 
 function numberToWords(n: number): string {
@@ -158,6 +184,23 @@ function pickCheckAffirmation() {
   return { text, angle: 0 }
 }
 
+function formatCountdown(targetIso?: string | null, nowMs?: number) {
+  if (!targetIso) return ''
+  const targetMs = new Date(targetIso).getTime()
+  const currentMs = nowMs ?? Date.now()
+  const diff = targetMs - currentMs
+  if (!Number.isFinite(diff) || diff <= 0) return 'Ready now'
+  const totalMinutes = Math.ceil(diff / 60000)
+  const days = Math.floor(totalMinutes / (60 * 24))
+  const hours = Math.floor((totalMinutes % (60 * 24)) / 60)
+  const minutes = totalMinutes % 60
+  const parts = []
+  if (days > 0) parts.push(`${days}d`)
+  if (hours > 0 || days > 0) parts.push(`${hours}h`)
+  parts.push(`${minutes}m`)
+  return parts.join(' ')
+}
+
 export default function MyChecksPage() {
   const router = useRouter()
   const [me, setMe] = useState<Me | null>(null)
@@ -170,6 +213,7 @@ export default function MyChecksPage() {
   const [fromCustom, setFromCustom] = useState('')
   const [toCustom, setToCustom] = useState('')
   const [amount, setAmount] = useState('')
+  const [checkCurrency, setCheckCurrency] = useState('USD')
   const [memo, setMemo] = useState('')
   const [checkNumber, setCheckNumber] = useState('')
   const [checkDate, setCheckDate] = useState('')
@@ -181,6 +225,8 @@ export default function MyChecksPage() {
   const [isSigning, setIsSigning] = useState(false)
   const [signatureOpen, setSignatureOpen] = useState(false)
   const [signatureConfirmed, setSignatureConfirmed] = useState(false)
+  const [freeTierStatus, setFreeTierStatus] = useState<FreeTierStatus | null>(null)
+  const [nowTick, setNowTick] = useState(Date.now())
   const isPremium = Boolean(me?.is_premium || me?.role === 'admin')
   const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const signatureLastPoint = useRef<{ x: number; y: number } | null>(null)
@@ -201,7 +247,20 @@ export default function MyChecksPage() {
   const toDisplay =
     toChoice === 'me' ? meLabel : toChoice === 'custom' ? toCustom || 'Custom recipient' : toChoice
   const requiresSignature = fromChoice === 'me' && direction === 'outgoing'
-  const amountDisplay = amount ? `$${amount}` : ''
+  const currencySymbol = getCurrencySymbol(checkCurrency)
+  const baseCurrency = (me?.dashboard_currency || 'USD').toUpperCase()
+  const parsedAmount = Number(normalizeMoneyInput(amount).trim())
+  const approxAmount =
+    Number.isFinite(parsedAmount) && parsedAmount > 0
+      ? convertAmountLocal(parsedAmount, checkCurrency, baseCurrency)
+      : null
+  const approxRate = getRateLocal(checkCurrency, baseCurrency)
+  const amountDisplay = amount ? `${amount}` : ''
+
+  function openSignaturePaywall(reason: string) {
+    if (typeof window === 'undefined') return
+    window.dispatchEvent(new CustomEvent('paywall:open', { detail: { reason } }))
+  }
 
   async function buildCheckSnapshot(payload?: { affirmation?: string; angle?: number }) {
     const canvas = document.createElement('canvas')
@@ -232,7 +291,7 @@ export default function MyChecksPage() {
     ctx.lineWidth = 2
     ctx.strokeRect(640, 30, 230, 50)
     ctx.font = '700 18px serif'
-    ctx.fillText(`$${formatAmountWithCommas(amount)}`, 650, 62)
+    ctx.fillText(`${currencySymbol}${formatAmountWithCommas(amount)}`, 650, 62)
 
     const affirmationText = payload?.affirmation ?? ''
     if (affirmationText) {
@@ -249,7 +308,7 @@ export default function MyChecksPage() {
       ctx.fillText(affirmationText, 0, 0, boxW - 8)
       ctx.restore()
     }
-    const legalAmount = formatLegalAmount(amount)
+    const legalAmount = `${checkCurrency} ${formatLegalAmount(amount)}`
     if (legalAmount) {
       ctx.font = '600 14px serif'
       ctx.fillText(legalAmount, 30, 175)
@@ -288,6 +347,13 @@ export default function MyChecksPage() {
         if (!mounted) return
         setMe(meRes.data)
         setAccounts(Array.isArray(accountsRes.data) ? accountsRes.data : [])
+        if (!(meRes.data?.is_premium || meRes.data?.role === 'admin')) {
+          const statusRes = await api.get('/ledger/free-tier-status')
+          if (!mounted) return
+          setFreeTierStatus(statusRes.data)
+        } else {
+          setFreeTierStatus(null)
+        }
       } catch (e: any) {
         if (!mounted) return
         setError(e?.response?.data?.detail ?? e?.message ?? 'Unable to load checks data.')
@@ -305,6 +371,20 @@ export default function MyChecksPage() {
       mounted = false
     }
   }, [])
+
+  useEffect(() => {
+    if (isPremium) return
+    const timer = window.setInterval(() => setNowTick(Date.now()), 60000)
+    return () => window.clearInterval(timer)
+  }, [isPremium])
+
+  useEffect(() => {
+    if (!accountId) return
+    const acct = accounts.find((a) => a.id === Number(accountId))
+    if (acct?.currency) {
+      setCheckCurrency(acct.currency)
+    }
+  }, [accountId, accounts])
 
   useEffect(() => {
     if (typeof document === 'undefined') return
@@ -362,11 +442,20 @@ export default function MyChecksPage() {
       memo: memo || null,
       kind: 'check',
       direction,
+      currency: checkCurrency,
       check_date: checkDate || null,
       signature: requiresSignature ? signatureDataUrl : null,
       affirmation: affirmationPick.text,
       affirmation_angle: affirmationPick.angle,
     }
+    const fxMeta =
+      baseCurrency && baseCurrency !== checkCurrency
+        ? {
+            fx_base_currency: baseCurrency,
+            fx_rate: approxRate,
+            fx_timestamp: new Date().toISOString(),
+          }
+        : {}
     setSaving(true)
     try {
       const checkSnapshot =
@@ -377,12 +466,12 @@ export default function MyChecksPage() {
         account_id: Number(accountId),
         direction: directionLabel,
         amount: parsed.toFixed(2),
-        currency: 'USD',
+        currency: checkCurrency,
         entry_type: entryType,
         status: 'posted',
         reference,
         memo: memo || `Check ${direction === 'incoming' ? 'deposit' : 'expense'}`,
-        meta: { ...detail, check_snapshot: checkSnapshot },
+        meta: { ...detail, ...fxMeta, check_snapshot: checkSnapshot },
       })
       toast(`Check ${direction === 'incoming' ? 'deposit' : 'expense'} posted.`)
       setAmount('')
@@ -465,7 +554,7 @@ export default function MyChecksPage() {
 
   return (
     <main className="mb-page-offset">
-      <Navbar />
+      <Navbar showAccountsDropdown />
       <div style={{ padding: '28px 24px 60px', maxWidth: 980, margin: '0 auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
           <div>
@@ -520,13 +609,34 @@ export default function MyChecksPage() {
                   textShadow: '0 0 8px rgba(182, 121, 103, 0.55), 0 0 16px rgba(182, 121, 103, 0.35)',
                 }}
               >
-                Free tier: 1 check per 7 days.
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <span>Free tier: 1 check per 7 days.</span>
+                  {freeTierStatus?.checks?.next_available_at ? (
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        padding: '3px 9px',
+                        borderRadius: 999,
+                        border: '1px solid rgba(138, 101, 50, 0.28)',
+                        background: 'linear-gradient(135deg, rgba(202, 170, 103, 0.22), rgba(120, 82, 28, 0.14))',
+                        color: '#8a6532',
+                        boxShadow: '0 10px 24px rgba(120, 82, 28, 0.14)',
+                        textShadow: '0 0 8px rgba(190, 150, 67, 0.55), 0 0 16px rgba(120, 82, 28, 0.35)',
+                      }}
+                    >
+                      Next in {formatCountdown(freeTierStatus.checks.next_available_at, nowTick)}
+                    </span>
+                  ) : null}
+                </div>
+                <div>Upgrade to Manifest Signature for unlimited checks.</div>
               </div>
             ) : null}
             <div style={{ marginTop: 14, display: 'grid', gap: 12 }}>
               <label style={{ display: 'grid', gap: 6 }}>
                 <span style={{ fontSize: 12, opacity: 0.7 }}>Direction</span>
                 <select
+                  data-testid="checks-direction-select"
                   value={direction}
                   onChange={(e) => setDirection(e.target.value as 'incoming' | 'outgoing')}
                   style={{
@@ -632,22 +742,25 @@ export default function MyChecksPage() {
               </div>
 
               <label style={{ display: 'grid', gap: 6 }}>
-                <span style={{ fontSize: 12, opacity: 0.7 }}>Amount</span>
-                <input
-                  value={amountDisplay}
-                  onChange={(e) => {
-                    const raw = e.target.value.replace(/^\$/i, '')
-                    setAmount(raw.replace(/[^\d.,]/g, ''))
-                  }}
-                  placeholder="$0.00"
+                <span style={{ fontSize: 12, opacity: 0.7 }}>Account to post</span>
+                <select
+                  data-testid="checks-account-select"
+                  value={accountId}
+                  onChange={(e) => setAccountId(e.target.value ? Number(e.target.value) : '')}
                   style={{
                     padding: '10px 12px',
                     borderRadius: 12,
                     border: '1px solid rgba(95, 74, 62, 0.28)',
                     background: 'rgba(255,255,255,0.9)',
                   }}
-                  className="mb-placeholder"
-                />
+                >
+                  <option value="">Select account…</option>
+                  {accounts.map((acct) => (
+                    <option key={acct.id} value={acct.id}>
+                      {acct.name} • {acct.account_type}
+                    </option>
+                  ))}
+                </select>
               </label>
 
               <label style={{ display: 'grid', gap: 6 }}>
@@ -680,30 +793,91 @@ export default function MyChecksPage() {
                 />
               </label>
 
+              <div style={{ display: 'grid', gap: 6 }}>
+                <span style={{ fontSize: 12, opacity: 0.7 }}>Currency</span>
+                <div style={{ position: 'relative' }}>
+                  <select
+                    data-testid="checks-currency-select"
+                    value={checkCurrency}
+                    onChange={(e) => setCheckCurrency(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: 12,
+                      border: '1px solid rgba(95, 74, 62, 0.28)',
+                      background: 'rgba(255,255,255,0.9)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {CURRENCIES.map((currency) => (
+                      <option key={currency.code} value={currency.code}>
+                        {currency.code} — {currency.name}
+                      </option>
+                    ))}
+                  </select>
+                  {!isPremium ? (
+                    <button
+                      type="button"
+                      aria-label="Choose check currency"
+                      title="Choose check currency"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        openSignaturePaywall('ManifestBank™ Signature required to change check currency.')
+                      }}
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        border: 'none',
+                        background: 'transparent',
+                        borderRadius: 12,
+                        cursor: 'pointer',
+                      }}
+                    />
+                  ) : null}
+                </div>
+              </div>
+
               <label style={{ display: 'grid', gap: 6 }}>
-                <span style={{ fontSize: 12, opacity: 0.7 }}>Account to post</span>
-                <select
-                  value={accountId}
-                  onChange={(e) => setAccountId(e.target.value ? Number(e.target.value) : '')}
-                  style={{
-                    padding: '10px 12px',
-                    borderRadius: 12,
-                    border: '1px solid rgba(95, 74, 62, 0.28)',
-                    background: 'rgba(255,255,255,0.9)',
-                  }}
-                >
-                  <option value="">Select account…</option>
-                  {accounts.map((acct) => (
-                    <option key={acct.id} value={acct.id}>
-                      {acct.name} • {acct.account_type}
-                    </option>
-                  ))}
-                </select>
+                <span style={{ fontSize: 12, opacity: 0.7 }}>Amount</span>
+                <div style={{ position: 'relative' }}>
+                  <span
+                    style={{
+                      position: 'absolute',
+                      left: 12,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      opacity: 0.6,
+                      fontSize: 13,
+                    }}
+                  >
+                    {currencySymbol}
+                  </span>
+                  <input
+                    data-testid="checks-amount-input"
+                    value={amountDisplay}
+                    onChange={(e) => setAmount(formatMoneyInputForEditing(e.target.value))}
+                    placeholder={`${currencySymbol}0.00`}
+                    style={{
+                      padding: '10px 12px 10px 44px',
+                      borderRadius: 12,
+                      border: '1px solid rgba(95, 74, 62, 0.28)',
+                      background: 'rgba(255,255,255,0.9)',
+                    }}
+                    className="mb-placeholder"
+                  />
+                </div>
+                {approxAmount !== null && baseCurrency !== checkCurrency ? (
+                  <div style={{ fontSize: 11, opacity: 0.7 }}>
+                    Approx. {baseCurrency} {approxAmount.toLocaleString()} @ {approxRate}
+                  </div>
+                ) : null}
               </label>
 
               <label style={{ display: 'grid', gap: 6 }}>
                 <span style={{ fontSize: 12, opacity: 0.7 }}>Memo</span>
                 <input
+                  data-testid="checks-memo-input"
                   value={memo}
                   onChange={(e) => setMemo(e.target.value)}
                   placeholder="For abundance..."
@@ -743,6 +917,7 @@ export default function MyChecksPage() {
 
               <button
                 type="button"
+                data-testid="checks-create-button"
                 onClick={createCheckEntry}
                 disabled={saving}
                 style={{
@@ -940,7 +1115,7 @@ export default function MyChecksPage() {
                     transform: 'translateX(-156px)',
                   }}
                 >
-                  {amount ? `$${formatAmountWithCommas(amount)}` : '$0.00'}
+                  {amount ? `${currencySymbol}${formatAmountWithCommas(amount)}` : `${currencySymbol}0.00`}
                 </div>
               </div>
               {affirmation ? (

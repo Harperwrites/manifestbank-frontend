@@ -466,6 +466,7 @@ function SyncPageInner() {
           <div style={{ marginTop: 12 }}>
             <input
               type="text"
+              data-testid="sync-search-input"
               placeholder="Search by email or username"
               value={syncQuery}
               onChange={(e) => setSyncQuery(e.target.value)}
@@ -542,6 +543,7 @@ function SyncPageInner() {
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button
                     type="button"
+                    data-testid={`sync-approve-${req.id}`}
                     onClick={() => approveSync(req.id)}
                     style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, opacity: 0.9 }}
                   >
@@ -549,6 +551,7 @@ function SyncPageInner() {
                   </button>
                   <button
                     type="button"
+                    data-testid={`sync-decline-${req.id}`}
                     onClick={() => declineSync(req.id)}
                     style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, opacity: 0.6 }}
                   >
@@ -666,6 +669,7 @@ function SyncPageInner() {
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button
                     type="button"
+                    data-testid={`sync-request-${p.id}`}
                     onClick={() => sendSyncRequest(p.id)}
                     style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, opacity: 0.9 }}
                   >

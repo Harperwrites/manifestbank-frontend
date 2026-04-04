@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom'
 import { api } from '../../lib/api'
 import { Card, Button } from './ui'
 import { useAuth } from '@/app/providers'
+import { formatLocalDate } from '@/lib/time'
 
 type LedgerEntry = {
   id: number
@@ -46,6 +47,15 @@ type ScheduledEntry = {
   posted_entry_id?: number | null
 }
 
+type FreeTierStatus = {
+  deposits?: {
+    next_available_at?: string | null
+  }
+  expenses?: {
+    next_available_at?: string | null
+  }
+}
+
 function getCurrencyFormatter(currency: string) {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -61,12 +71,46 @@ function errMsg(err: any) {
   return detail ?? err?.message ?? 'Unknown error'
 }
 
+function formatCountdown(targetIso?: string | null, nowMs?: number) {
+  if (!targetIso) return ''
+  const targetMs = new Date(targetIso).getTime()
+  const currentMs = nowMs ?? Date.now()
+  const diff = targetMs - currentMs
+  if (!Number.isFinite(diff) || diff <= 0) return 'Ready now'
+  const totalMinutes = Math.ceil(diff / 60000)
+  const days = Math.floor(totalMinutes / (60 * 24))
+  const hours = Math.floor((totalMinutes % (60 * 24)) / 60)
+  const minutes = totalMinutes % 60
+  const parts = []
+  if (days > 0) parts.push(`${days}d`)
+  if (hours > 0 || days > 0) parts.push(`${hours}h`)
+  parts.push(`${minutes}m`)
+  return parts.join(' ')
+}
+
+function formatMoneyInputForEditing(value: string) {
+  const cleaned = value.replace(/[^\d.]/g, '')
+  if (!cleaned) return ''
+  const firstDot = cleaned.indexOf('.')
+  const normalized =
+    firstDot === -1 ? cleaned : `${cleaned.slice(0, firstDot + 1)}${cleaned.slice(firstDot + 1).replace(/\./g, '')}`
+  const [rawWhole, rawFraction = ''] = normalized.split('.')
+  const wholeDigits = rawWhole.replace(/^0+(?=\d)/, '')
+  const formattedWhole = wholeDigits ? Number(wholeDigits).toLocaleString('en-US') : '0'
+  if (firstDot !== -1) {
+    return `${formattedWhole}.${rawFraction.slice(0, 2)}`
+  }
+  return formattedWhole
+}
+
 export default function LedgerPanel({
   accountId,
   isVerified = true,
+  currency = 'USD',
 }: {
   accountId: number
   isVerified?: boolean
+  currency?: string
 }) {
   const [entries, setEntries] = useState<LedgerEntry[]>([])
   const [balance, setBalance] = useState<Balance | null>(null)
@@ -86,6 +130,8 @@ export default function LedgerPanel({
   const [scheduleRef, setScheduleRef] = useState('')
   const [scheduleDirection, setScheduleDirection] = useState<'credit' | 'debit'>('credit')
   const [scheduleWhen, setScheduleWhen] = useState('')
+  const [freeTierStatus, setFreeTierStatus] = useState<FreeTierStatus | null>(null)
+  const [nowTick, setNowTick] = useState(Date.now())
   const canPost = isVerified !== false
   const router = useRouter()
   const { me } = useAuth()
@@ -101,18 +147,32 @@ export default function LedgerPanel({
     }
   }
 
+  function queueRefreshToast(message: string) {
+    if (typeof window === 'undefined') return
+    window.sessionStorage.setItem('toast:message', message)
+    window.sessionStorage.setItem('toast:persist', '1')
+    window.sessionStorage.setItem('scroll:top', '1')
+    window.location.reload()
+  }
+
   async function load() {
     setLoading(true)
     setMsg('')
     try {
       const [eRes, bRes] = await Promise.all([
         api.get(`/accounts/${accountId}/ledger?limit=25&offset=0`),
-        api.get(`/accounts/${accountId}/balance?currency=USD`),
+        api.get(`/accounts/${accountId}/balance?currency=${currency}`),
       ])
       setEntries(eRes.data)
       setBalance(bRes.data)
       const sRes = await api.get(`/accounts/${accountId}/scheduled-entries`)
       setScheduled(sRes.data)
+      if (!isPremium) {
+        const tierRes = await api.get('/ledger/free-tier-status')
+        setFreeTierStatus(tierRes.data)
+      } else {
+        setFreeTierStatus(null)
+      }
     } catch (e: any) {
       setMsg(`❌ Ledger load failed: ${errMsg(e)}`)
     } finally {
@@ -133,7 +193,7 @@ export default function LedgerPanel({
         account_id: accountId,
         direction,
         amount,
-        currency: 'USD',
+        currency,
         entry_type: entryType,
         status: 'posted',
         reference: 'dashboard',
@@ -141,7 +201,7 @@ export default function LedgerPanel({
         memo: `${entryType} via dashboard`,
         meta: { source: 'dashboard', quick_action: true },
       })
-      await load()
+      queueRefreshToast(`${entryType === 'deposit' ? 'Deposit' : 'Withdrawal'} posted.`)
     } catch (e: any) {
       if (e?.response?.status === 402) {
         openPaywall(e?.response?.data?.detail)
@@ -172,7 +232,7 @@ export default function LedgerPanel({
         account_id: accountId,
         direction: 'credit',
         amount: parsed.toFixed(2),
-        currency: 'USD',
+        currency,
         entry_type: 'deposit',
         status: 'posted',
         reference: depositRef || 'dashboard-deposit',
@@ -183,9 +243,7 @@ export default function LedgerPanel({
       setDepositAmount('')
       setDepositMemo('')
       setDepositRef('')
-      await load()
-      setMsg('✅ Deposit posted.')
-      setShowDeposit(false)
+      queueRefreshToast('Deposit posted.')
     } catch (e: any) {
       if (e?.response?.status === 402) {
         openPaywall(e?.response?.data?.detail)
@@ -220,7 +278,7 @@ export default function LedgerPanel({
         account_id: accountId,
         direction: scheduleDirection,
         amount: parsed.toFixed(2),
-        currency: 'USD',
+        currency,
         entry_type: 'scheduled',
         reference: scheduleRef || 'scheduled',
         memo: scheduleMemo || 'Scheduled movement',
@@ -231,8 +289,7 @@ export default function LedgerPanel({
       setScheduleRef('')
       setScheduleWhen('')
       setShowSchedule(false)
-      await load()
-      setMsg('✅ Scheduled movement saved.')
+      queueRefreshToast('Scheduled movement saved.')
     } catch (e: any) {
       if (e?.response?.status === 402) {
         openPaywall(e?.response?.data?.detail)
@@ -247,7 +304,13 @@ export default function LedgerPanel({
   useEffect(() => {
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accountId])
+  }, [accountId, currency, isPremium])
+
+  useEffect(() => {
+    if (isPremium) return
+    const timer = window.setInterval(() => setNowTick(Date.now()), 60000)
+    return () => window.clearInterval(timer)
+  }, [isPremium])
 
   useEffect(() => {
     if (!selectedEntry) return
@@ -285,7 +348,44 @@ export default function LedgerPanel({
             textShadow: '0 0 8px rgba(182, 121, 103, 0.55), 0 0 16px rgba(182, 121, 103, 0.35)',
           }}
         >
-          Free tier: 2 deposits + 2 expenses per 7 days.
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <span>Free tier: 2 deposits + 2 expenses per 7 days.</span>
+            {freeTierStatus?.deposits?.next_available_at ? (
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  padding: '3px 9px',
+                  borderRadius: 999,
+                  border: '1px solid rgba(138, 101, 50, 0.28)',
+                  background: 'linear-gradient(135deg, rgba(202, 170, 103, 0.22), rgba(120, 82, 28, 0.14))',
+                  color: '#8a6532',
+                  boxShadow: '0 10px 24px rgba(120, 82, 28, 0.14)',
+                  textShadow: '0 0 8px rgba(190, 150, 67, 0.55), 0 0 16px rgba(120, 82, 28, 0.35)',
+                }}
+              >
+                Deposits: {formatCountdown(freeTierStatus.deposits.next_available_at, nowTick)}
+              </span>
+            ) : null}
+            {freeTierStatus?.expenses?.next_available_at ? (
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  padding: '3px 9px',
+                  borderRadius: 999,
+                  border: '1px solid rgba(138, 101, 50, 0.28)',
+                  background: 'linear-gradient(135deg, rgba(202, 170, 103, 0.22), rgba(120, 82, 28, 0.14))',
+                  color: '#8a6532',
+                  boxShadow: '0 10px 24px rgba(120, 82, 28, 0.14)',
+                  textShadow: '0 0 8px rgba(190, 150, 67, 0.55), 0 0 16px rgba(120, 82, 28, 0.35)',
+                }}
+              >
+                Expenses: {formatCountdown(freeTierStatus.expenses.next_available_at, nowTick)}
+              </span>
+            ) : null}
+          </div>
+          <div>Upgrade to Manifest Signature for unlimited deposits/expenses.</div>
         </div>
       ) : null}
 
@@ -349,7 +449,7 @@ export default function LedgerPanel({
 
               <div style={{ fontSize: 12, opacity: 0.75, marginTop: 6 }}>
                 {formatEntryType(e.entry_type)} • {formatStatusLabel(e.status)} •{' '}
-                {new Date(e.created_at).toLocaleDateString('en-US')}
+                {formatLocalDate(e.created_at)}
               </div>
 
               {e.memo ? <div style={{ fontSize: 12, opacity: 0.85, marginTop: 6 }}>{e.memo}</div> : null}
@@ -422,9 +522,9 @@ export default function LedgerPanel({
                   <input
                     type="text"
                     inputMode="decimal"
-                    placeholder="Amount (USD)"
+                    placeholder={`Amount (${currency})`}
                     value={depositAmount}
-                    onChange={(e) => setDepositAmount(e.target.value)}
+                    onChange={(e) => setDepositAmount(formatMoneyInputForEditing(e.target.value))}
                     disabled={!canPost}
                     style={{
                       padding: '10px 12px',
@@ -521,7 +621,7 @@ export default function LedgerPanel({
               <DetailRow label="Amount" value={formatCurrency(selectedEntry.amount, selectedEntry.currency)} />
               <DetailRow label="Reference" value={selectedEntry.reference || '—'} />
               <DetailRow label="Memo" value={selectedEntry.memo || '—'} />
-              <DetailRow label="Date / Time" value={new Date(selectedEntry.created_at).toLocaleDateString('en-US')} />
+              <DetailRow label="Date / Time" value={formatLocalDate(selectedEntry.created_at)} />
               <DetailRow label="Status" value={formatStatusLabel(selectedEntry.status)} />
               <DetailRow label="Entry ID" value={`#${selectedEntry.id}`} />
               <DetailRow
@@ -646,9 +746,9 @@ export default function LedgerPanel({
                   <input
                     type="text"
                     inputMode="decimal"
-                    placeholder="Amount (USD)"
+                    placeholder={`Amount (${currency})`}
                     value={scheduleAmount}
-                    onChange={(e) => setScheduleAmount(e.target.value)}
+                    onChange={(e) => setScheduleAmount(formatMoneyInputForEditing(e.target.value))}
                     disabled={!canPost}
                     style={{
                       padding: '10px 12px',

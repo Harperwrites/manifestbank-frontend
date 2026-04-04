@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Navbar from '@/app/components/Navbar'
 import { api } from '@/lib/api'
+import { formatLocalDate } from '@/lib/time'
 import { useAuth } from '@/app/providers'
 import { PREMIUM_TIER_NAME } from '@/app/lib/premium'
 
@@ -70,10 +71,7 @@ type AffirmationsEntry = {
 }
 
 function formatEntryDate(value?: string | null) {
-  if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value ?? ''
-  return date.toLocaleDateString('en-US')
+  return formatLocalDate(value)
 }
 
 const DAILY_AFFIRMATIONS = [
@@ -692,29 +690,115 @@ export default function MyAffirmationsPage() {
                 >
                   My Checks
                 </Link>
-                <div
-                  style={{ fontWeight: 600, color: 'rgba(74, 47, 38, 0.55)', display: 'flex', gap: 8 }}
+                <Link
+                  href="/mycredit"
+                  style={{ textDecoration: 'none', fontWeight: 600, color: '#4a2f26' }}
                   role="menuitem"
-                  aria-disabled="true"
+                  onClick={() => setTreasureChipOpen(false)}
                 >
-                  <span>My Credit</span>
-                  <span style={{ fontSize: 10, opacity: 0.7 }}>(Coming soon)</span>
-                </div>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                    <span aria-hidden="true" style={{ width: 18, height: 18, display: 'inline-flex' }}>
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
+                        <path
+                          d="M4.5 16a7.5 7.5 0 0 1 15 0"
+                          fill="rgba(182, 121, 103, 0.18)"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                          strokeLinecap="round"
+                        />
+                        <path d="M7.2 14.2 8.6 12.8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity="0.45" />
+                        <path d="M12 12v-2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity="0.5" />
+                        <path d="m16.8 14.2-1.4-1.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity="0.45" />
+                        <path d="M12 16 16.2 12.6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                        <circle cx="12" cy="16" r="1.65" fill="currentColor" />
+                        <path d="M6.8 16h10.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.38" />
+                      </svg>
+                    </span>
+                    <span>My Credit</span>
+                    <span
+                      style={{
+                        padding: '2px 7px',
+                        borderRadius: 999,
+                        background: 'linear-gradient(135deg, rgba(182, 121, 103, 0.98), rgba(211, 164, 144, 0.98))',
+                        color: '#fff',
+                        fontSize: 10,
+                        fontWeight: 800,
+                        letterSpacing: '0.08em',
+                        textTransform: 'uppercase',
+                        boxShadow: '0 0 10px rgba(182, 121, 103, 0.28)',
+                        fontStyle: 'italic',
+                      }}
+                    >
+                      New
+                    </span>
+                  </span>
+                </Link>
                 <Link
                   href="/myteller"
                   style={{ textDecoration: 'none', fontWeight: 600, color: '#4a2f26' }}
                   role="menuitem"
                   onClick={() => setTreasureChipOpen(false)}
                 >
-                  My Teller
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                    <span aria-hidden="true" style={{ width: 16, height: 16, display: 'inline-flex' }}>
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+                        <path d="M3 9L12 4l9 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M4 10h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                        <path d="M6 10v7M9 10v7M12 10v7M15 10v7M18 10v7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                        <path d="M4 17h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                      </svg>
+                    </span>
+                    <span>My Teller</span>
+                    <span
+                      style={{
+                        padding: '2px 7px',
+                        borderRadius: 999,
+                        background: 'linear-gradient(135deg, rgba(182, 121, 103, 0.98), rgba(211, 164, 144, 0.98))',
+                        color: '#fff',
+                        fontSize: 10,
+                        fontWeight: 800,
+                        letterSpacing: '0.08em',
+                        textTransform: 'uppercase',
+                        boxShadow: '0 0 10px rgba(182, 121, 103, 0.28)',
+                        fontStyle: 'italic',
+                      }}
+                    >
+                      Beta
+                    </span>
+                  </span>
                 </Link>
               </div>
             ) : null}
           </div>
         </div>
       ) : null}
-      <section style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 20px 80px' }}>
-        <div style={{ display: 'grid', justifyItems: 'center', gap: 10, marginBottom: 18 }}>
+      <section style={{ maxWidth: 1100, margin: '0 auto', padding: '18px 20px 80px' }} className="daily-affirmation-section">
+        <div className="daily-affirmation-wrap" style={{ display: 'grid', justifyItems: 'center', gap: 6, marginBottom: 16 }}>
+          <div
+            className="daily-affirmation-label"
+            style={{
+              fontSize: 12,
+              letterSpacing: '0.18em',
+              textTransform: 'uppercase',
+              color: 'rgba(120, 92, 78, 0.75)',
+              fontWeight: 700,
+              textAlign: 'center',
+            }}
+          >
+            Daily affirmation:
+          </div>
+          <div style={{ display: 'none' }}>version: daily-affirmation-label-v1</div>
+          <style>{`
+            @media (max-width: 900px) {
+              .daily-affirmation-section {
+                padding-top: 24px !important;
+              }
+              .daily-affirmation-wrap {
+                gap: 0px !important;
+                margin-bottom: 4px !important;
+              }
+            }
+          `}</style>
           <div
             style={{
               fontFamily: '"Playfair Display", "Cormorant Garamond", "Libre Baskerville", serif',
@@ -738,6 +822,7 @@ export default function MyAffirmationsPage() {
           <div className={savePulse ? 'align-heart-pulse' : undefined}>
             <button
               type="button"
+              data-testid="affirmations-save-daily-button"
               onClick={saveDailyAffirmation}
               disabled={savingDaily}
               style={{
@@ -800,7 +885,7 @@ export default function MyAffirmationsPage() {
           </div>
           <div style={{ display: 'grid', gap: 12, minWidth: 240 }}>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-              <button type="button" onClick={openNewEntry} style={buttonStyle}>
+              <button type="button" data-testid="affirmations-new-entry-button" onClick={openNewEntry} style={buttonStyle}>
                 New Entry
               </button>
             </div>
@@ -976,6 +1061,7 @@ export default function MyAffirmationsPage() {
               <div>
                 <div style={fieldLabelStyle}>Entry Title</div>
                 <input
+                  data-testid="affirmations-title-input"
                   value={draftTitle}
                   onChange={(event) => setDraftTitle(event.target.value)}
                   style={inputStyle}
@@ -986,6 +1072,7 @@ export default function MyAffirmationsPage() {
                 <div style={fieldLabelStyle}>Entry Date</div>
                 <input
                   type="date"
+                  data-testid="affirmations-date-input"
                   value={draftDate}
                   onChange={(event) => setDraftDate(event.target.value)}
                   style={inputStyle}
@@ -994,6 +1081,7 @@ export default function MyAffirmationsPage() {
               <div>
                 <div style={fieldLabelStyle}>Your Entry</div>
                 <textarea
+                  data-testid="affirmations-content-input"
                   value={draftContent}
                   onChange={(event) => setDraftContent(event.target.value)}
                   style={{ ...inputStyle, minHeight: 160, resize: 'vertical' }}
@@ -1005,6 +1093,7 @@ export default function MyAffirmationsPage() {
                 <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, ...buttonStyle }}>
                   Choose File
                   <input
+                    data-testid="affirmations-image-input"
                     type="file"
                     accept="image/*"
                     onChange={(event) => {
@@ -1043,6 +1132,7 @@ export default function MyAffirmationsPage() {
             <div style={{ marginTop: 20, display: 'flex', justifyContent: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
               <button
                 type="button"
+                data-testid="affirmations-save-button"
                 onClick={saveEntry}
                 style={{
                   ...buttonStyle,

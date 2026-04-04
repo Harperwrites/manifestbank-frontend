@@ -88,13 +88,14 @@ export function Button({
   disabled,
   variant = 'primary',
   type = 'button',
+  ...props
 }: {
   children: React.ReactNode
   onClick?: () => void
   disabled?: boolean
   variant?: 'primary' | 'solid' | 'ghost' | 'danger' | 'outline' | 'outlineLight'
   type?: 'button' | 'submit'
-}) {
+} & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'onClick' | 'disabled' | 'type'>) {
   const base: React.CSSProperties = {
     borderRadius: 999,
     padding: '10px 16px',
@@ -145,6 +146,7 @@ export function Button({
       type={type}
       onClick={disabled ? undefined : onClick}
       disabled={disabled}
+      {...props}
       style={{ ...base, ...(stylesByVariant[variant] ?? stylesByVariant.primary) }}
     >
       {children}

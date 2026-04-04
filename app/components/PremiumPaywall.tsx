@@ -47,6 +47,7 @@ export default function PremiumPaywall({
   return createPortal(
     <div
       onClick={onClose}
+      className="mb-paywall-overlay"
       style={{
         position: 'fixed',
         inset: 0,
@@ -56,10 +57,12 @@ export default function PremiumPaywall({
         justifyContent: 'center',
         zIndex: 2147483646,
         padding: 20,
+        overflowY: 'auto',
       }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        className="mb-paywall-modal"
         style={{
           width: 'min(520px, 100%)',
           borderRadius: 22,
@@ -78,9 +81,32 @@ export default function PremiumPaywall({
           60% { opacity: 0.35; }
           100% { transform: translateX(260%) rotate(25deg); opacity: 0; }
         }
+        @media (max-width: 640px) {
+          .mb-paywall-overlay {
+            align-items: flex-start !important;
+            padding: 10px !important;
+          }
+          .mb-paywall-modal {
+            border-radius: 18px !important;
+            padding: 14px !important;
+            max-height: calc(100vh - 20px) !important;
+            overflow-y: auto !important;
+          }
+          .mb-paywall-modal .mb-paywall-header {
+            align-items: flex-start !important;
+          }
+          .mb-paywall-modal .mb-paywall-title {
+            font-size: 16px !important;
+            line-height: 1.2 !important;
+          }
+        }
       `}</style>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
-          <div style={{ fontWeight: 700, fontSize: 18, fontFamily: 'var(--font-serif)' }}>
+      <div className="mb-paywall-header" style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+          <div
+            className="mb-paywall-title"
+            data-testid="paywall-title"
+            style={{ fontWeight: 700, fontSize: 18, fontFamily: 'var(--font-serif)' }}
+          >
             {PREMIUM_TIER_NAME}
           </div>
           <button
@@ -119,6 +145,7 @@ export default function PremiumPaywall({
             <div style={{ fontSize: 12, opacity: 0.75 }}>$6/mo equivalent</div>
             <button
               type="button"
+              data-testid="paywall-annual-button"
               onClick={() => startCheckout('annual')}
               disabled={loadingPlan !== null}
               style={{
@@ -167,6 +194,7 @@ export default function PremiumPaywall({
             <div style={{ fontSize: 18, fontWeight: 700 }}>{PREMIUM_MONTHLY_PRICE}</div>
             <button
               type="button"
+              data-testid="paywall-monthly-button"
               onClick={() => startCheckout('monthly')}
               disabled={loadingPlan !== null}
               style={{

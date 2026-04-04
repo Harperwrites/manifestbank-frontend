@@ -4,6 +4,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Navbar from '@/app/components/Navbar'
 import { api } from '@/lib/api'
+import { formatLocalDate } from '@/lib/time'
 import { useAuth } from '@/app/providers'
 import { PREMIUM_TIER_NAME } from '@/app/lib/premium'
 
@@ -41,6 +42,7 @@ type AccountBalance = {
   id: number
   name: string
   balance: number
+  currency: string
 }
 
 function formatMonthLabel(date: Date) {
@@ -82,9 +84,13 @@ function buildFallbackEntries(): StatementEntry[] {
   ]
 }
 
-function formatMoney(value: number) {
+function formatMoney(value: number, currency = 'USD') {
   if (!Number.isFinite(value)) return '$0.00'
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value)
+  try {
+    return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(value)
+  } catch {
+    return `${currency} ${value.toFixed(2)}`
+  }
 }
 
 function MyStatementsContent() {
@@ -153,19 +159,20 @@ function MyStatementsContent() {
         const balances = await Promise.all(
           rawAccounts.map(async (acct: any) => {
             try {
-              const balanceRes = await api.get(`/accounts/${acct.id}/balance`, { params: { currency: 'USD' } })
-              return { id: acct.id, name: acct.name ?? 'Account', balance: Number(balanceRes.data?.balance ?? 0) }
+              const currency = (acct.currency || 'USD').toUpperCase()
+              const balanceRes = await api.get(`/accounts/${acct.id}/balance`, { params: { currency } })
+              return {
+                id: acct.id,
+                name: acct.name ?? 'Account',
+                balance: Number(balanceRes.data?.balance ?? 0),
+                currency,
+              }
             } catch {
-              return { id: acct.id, name: acct.name ?? 'Account', balance: NaN }
+              return { id: acct.id, name: acct.name ?? 'Account', balance: NaN, currency: (acct.currency || 'USD').toUpperCase() }
             }
           })
         )
         setAccounts(balances)
-        const totalBalance = balances.reduce((sum, acct) => sum + (Number.isFinite(acct.balance) ? acct.balance : 0), 0)
-        setSummary((prev) => ({
-          ...prev,
-          endingBalance: totalBalance > 0 ? formatMoney(totalBalance) : prev.endingBalance,
-        }))
       } catch {
         setAccounts([])
       }
@@ -278,6 +285,7 @@ function MyStatementsContent() {
               <div style={{ marginTop: 14, display: 'grid', gap: 10, justifyItems: 'center' }}>
                 <button
                   type="button"
+                  data-testid="statements-upgrade-button"
                   onClick={() => {
                     window.dispatchEvent(
                       new CustomEvent('paywall:open', {
@@ -342,7 +350,7 @@ function MyStatementsContent() {
               <div style={{ marginTop: 6, opacity: 0.7 }}>Private Vault | {selectedMonth}</div>
               {asOf ? (
                 <div style={{ marginTop: 4, fontSize: 12, opacity: 0.65 }}>
-                  *As of {new Date(asOf).toLocaleDateString('en-US')}
+                  *As of {formatLocalDate(asOf)}
                 </div>
               ) : null}
             </div>
@@ -428,7 +436,11 @@ function MyStatementsContent() {
                   }}
                 >
                   <div style={{ fontWeight: 600 }}>{acct.name}</div>
-                  <div>{Number.isFinite(acct.balance) ? formatMoney(acct.balance) : 'Unavailable'}</div>
+                  <div>
+                    {Number.isFinite(acct.balance)
+                      ? `${formatMoney(acct.balance, acct.currency)} • ${acct.currency}`
+                      : 'Unavailable'}
+                  </div>
                 </button>
               ))
             ) : (

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
+import { parseServerDate } from '@/lib/time'
 import { useAuth } from '@/app/providers'
 import EtherNavbar from '@/app/components/EtherNavbar'
 import { Button, Container } from '@/app/components/ui'
@@ -34,6 +35,8 @@ type EtherMessage = {
   sender_profile_id: number
   content: string
   created_at: string
+  align_count?: number
+  aligned_by_me?: boolean
 }
 
 type EtherNotification = {
@@ -50,16 +53,16 @@ type EtherNotification = {
 
 function formatMessageTimestamp(value?: string | null) {
   if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return ''
+  const date = parseServerDate(value)
+  if (!date) return ''
   const now = new Date()
   if (date.toDateString() === now.toDateString()) {
-    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+    return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
   }
   const yesterday = new Date(now)
   yesterday.setDate(now.getDate() - 1)
   if (date.toDateString() === yesterday.toDateString()) return 'Yesterday'
-  return date.toLocaleDateString('en-US')
+  return date.toLocaleDateString()
 }
 
 type SyncRequest = {
@@ -75,10 +78,15 @@ export const runtime = 'edge'
 const MYLINE_VIEW_KEY = 'myline:last_view'
 const THREAD_PAGE_SIZE = 50
 
-function formatMoney(value: any) {
+function formatMoney(value: any, currency?: string | null) {
   const num = Number(value)
   if (Number.isNaN(num)) return value ?? ''
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num)
+  const code = (currency || 'USD').toUpperCase()
+  try {
+    return new Intl.NumberFormat(undefined, { style: 'currency', currency: code }).format(num)
+  } catch {
+    return `${code} ${num.toFixed(2)}`
+  }
 }
 
 function getThreadReadKey(threadId: number) {
@@ -106,6 +114,8 @@ export default function MyLineThreadPage() {
   const [nextBefore, setNextBefore] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
   const [notice, setNotice] = useState('')
+  const [hydrated, setHydrated] = useState(false)
+  const [storedTarget, setStoredTarget] = useState<StoredThreadTarget | null>(null)
   const [accountsOpen, setAccountsOpen] = useState(false)
   const [accounts, setAccounts] = useState<any[]>([])
   const [accountsLoading, setAccountsLoading] = useState(false)
@@ -114,11 +124,13 @@ export default function MyLineThreadPage() {
   const [notifications, setNotifications] = useState<EtherNotification[]>([])
   const [syncRequests, setSyncRequests] = useState<SyncRequest[]>([])
   const [threadUnreadCount, setThreadUnreadCount] = useState(0)
+  const [messageAlignPulseId, setMessageAlignPulseId] = useState<number | null>(null)
   const [counterpartProfile, setCounterpartProfile] = useState<EtherThreadParticipant | null>(null)
   const counterpartProfileCache = useRef<Map<number, EtherThreadParticipant>>(new Map())
   const accountMenuRef = useRef<HTMLDivElement | null>(null)
   const accountMenuTriggerRef = useRef<HTMLButtonElement | null>(null)
   const bottomRef = useRef<HTMLDivElement | null>(null)
+  const lastMessageTapRef = useRef<{ id: number; at: number } | null>(null)
 
   const unreadNotifications = useMemo(
     () => notifications.filter((note) => !note.read_at).length,
@@ -126,6 +138,10 @@ export default function MyLineThreadPage() {
   )
 
   const etherBadgeCount = unreadNotifications + syncRequests.length + threadUnreadCount
+
+  useEffect(() => {
+    setHydrated(true)
+  }, [])
 
   useEffect(() => {
     if (!me) return
@@ -241,19 +257,21 @@ export default function MyLineThreadPage() {
         const balances = await Promise.all(
           list.map(async (acct: any) => {
             try {
-              const balanceRes = await api.get(`/accounts/${acct.id}/balance?currency=USD`)
-              return { id: acct.id, balance: Number(balanceRes.data?.balance ?? 0) }
+              const currency = (acct.currency || 'USD').toUpperCase()
+              const balanceRes = await api.get(`/accounts/${acct.id}/balance?currency=${currency}`)
+              return { id: acct.id, balance: Number(balanceRes.data?.balance ?? 0), currency }
             } catch {
-              return { id: acct.id, balance: 0 }
+              return { id: acct.id, balance: 0, currency: (acct.currency || 'USD').toUpperCase() }
             }
           })
         )
-        const balanceMap = new Map(balances.map((item) => [item.id, item.balance]))
+        const balanceMap = new Map(balances.map((item) => [item.id, item]))
         setAccounts(
           list.map((acct: any) => ({
             id: acct.id,
             name: acct.name,
-            balance: balanceMap.get(acct.id) ?? 0,
+            balance: balanceMap.get(acct.id)?.balance ?? 0,
+            currency: balanceMap.get(acct.id)?.currency ?? (acct.currency || 'USD'),
           }))
         )
         setAccountsLoaded(true)
@@ -367,6 +385,10 @@ export default function MyLineThreadPage() {
 
   const myProfileId = useMemo(() => toProfileId(profile?.id ?? null), [profile?.id])
   const myUserId = useMemo(() => toProfileId(me?.id), [me?.id])
+  useEffect(() => {
+    if (!hydrated) return
+    setStoredTarget(getStoredThreadTarget(threadId, myProfileId ?? undefined))
+  }, [hydrated, threadId, myProfileId])
   const participantFromThread = useMemo(() => {
     if (!thread?.participants?.length) return null
     if (!myProfileId && !myUserId) return thread.participants[0] ?? null
@@ -397,7 +419,6 @@ export default function MyLineThreadPage() {
     if (!myProfileId && !myUserId) return ids[0] ?? null
     return ids.find((id) => id !== myProfileId && id !== myUserId) ?? null
   }, [thread?.participants, myProfileId, myUserId])
-  const storedTarget = useMemo(() => getStoredThreadTarget(threadId, myProfileId), [threadId, myProfileId])
   const storedTargetProfile = useMemo(
     () =>
       storedTarget
@@ -543,6 +564,36 @@ export default function MyLineThreadPage() {
     } finally {
       setSending(false)
     }
+  }
+
+  async function alignMessage(messageId: number) {
+    setMessageAlignPulseId(messageId)
+    window.setTimeout(() => setMessageAlignPulseId((prev) => (prev === messageId ? null : prev)), 420)
+    setMessages((prev) =>
+      prev.map((message) => {
+        if (message.id !== messageId) return message
+        const nextAligned = !message.aligned_by_me
+        const nextCount = (message.align_count ?? 0) + (nextAligned ? 1 : -1)
+        return { ...message, aligned_by_me: nextAligned, align_count: Math.max(0, nextCount) }
+      })
+    )
+    try {
+      await api.post(`/ether/messages/${messageId}/align`)
+    } catch (e: any) {
+      setNotice(e?.response?.data?.detail ?? e?.message ?? 'Align failed')
+      await loadThreadFast()
+    }
+  }
+
+  function handleMessageTap(messageId: number) {
+    const now = Date.now()
+    const lastTap = lastMessageTapRef.current
+    if (lastTap && lastTap.id === messageId && now - lastTap.at < 320) {
+      lastMessageTapRef.current = null
+      void alignMessage(messageId)
+      return
+    }
+    lastMessageTapRef.current = { id: messageId, at: now }
   }
 
   function handleProfileClick(profileId?: number | null) {
@@ -704,7 +755,9 @@ export default function MyLineThreadPage() {
                       }}
                     >
                       <div style={{ fontWeight: 600, fontSize: 12 }}>{acct.name}</div>
-                      <div style={{ fontSize: 12, opacity: 0.8 }}>{formatMoney(acct.balance)}</div>
+                      <div style={{ fontSize: 12, opacity: 0.8 }}>
+                        {formatMoney(acct.balance, acct.currency)} • {(acct.currency || 'USD').toUpperCase()}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -754,7 +807,7 @@ export default function MyLineThreadPage() {
               <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.08, opacity: 0.65 }}>
                 Conversation
               </div>
-              {conversationProfileId ? (
+              {hydrated && conversationProfileId ? (
                 <button
                   type="button"
                   onClick={() => {
@@ -876,7 +929,12 @@ export default function MyLineThreadPage() {
                       }}
                     >
                       <div
+                        onDoubleClick={() => {
+                          void alignMessage(message.id)
+                        }}
+                        onTouchEnd={() => handleMessageTap(message.id)}
                         style={{
+                          position: 'relative',
                           padding: '12px 16px',
                           borderRadius: 18,
                           border: '1px solid rgba(140, 92, 78, 0.3)',
@@ -895,6 +953,41 @@ export default function MyLineThreadPage() {
                         }}
                       >
                         <div style={{ fontSize: 15, lineHeight: 1.55 }}>{message.content}</div>
+                        {(message.align_count ?? 0) > 0 ? (
+                          <div
+                            style={{
+                              position: 'absolute',
+                              left: -8,
+                              bottom: -12,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 6,
+                              padding: '4px 8px',
+                              borderRadius: 999,
+                              border: '1px solid rgba(140, 92, 78, 0.35)',
+                              background: 'rgba(244, 231, 223, 0.96)',
+                              boxShadow: '0 10px 20px rgba(12, 10, 12, 0.16)',
+                              fontSize: 11,
+                              fontWeight: 600,
+                              color: '#8f5646',
+                              textShadow: '0 0 10px rgba(182, 121, 103, 0.45)',
+                              pointerEvents: 'none',
+                            }}
+                          >
+                            <span
+                              className={messageAlignPulseId === message.id ? 'align-heart-pulse' : ''}
+                              style={{ display: 'inline-flex', alignItems: 'center' }}
+                            >
+                              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                                <path
+                                  d="M12 20.4s-6.4-4-8.2-7.1C2.3 10.6 3.4 8.6 5.6 8.1c1.7-.4 3.2.4 4.1 1.5l.3.4.3-.4c.9-1.1 2.4-1.9 4.1-1.5 2.2.5 3.3 2.5 1.8 5.2-1.8 3.1-8.2 7.1-8.2 7.1z"
+                                  fill="currentColor"
+                                />
+                              </svg>
+                            </span>
+                            <span>{message.align_count ?? 0}</span>
+                          </div>
+                        ) : null}
                       </div>
                       <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 11, opacity: 0.7 }}>
                         {!isMe && conversationProfileId ? (

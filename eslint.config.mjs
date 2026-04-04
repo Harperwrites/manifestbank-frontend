@@ -6,10 +6,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const compat = new FlatCompat({ baseDirectory: __dirname });
 
-export default [
+const config = [
+  {
+    ignores: [".next/**", ".next*/**", "out/**", "build/**", "next-env.d.ts", ".vercel/**", "test-results/**"],
+  },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
-    ignores: [".next/**", "out/**", "build/**", "next-env.d.ts"],
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-unused-vars": "off",
@@ -20,3 +22,5 @@ export default [
     },
   },
 ];
+
+export default config;

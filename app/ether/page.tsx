@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/app/providers'
 import { api } from '@/lib/api'
+import { parseServerDate } from '@/lib/time'
 import { Button, Card, Container, Pill } from '@/app/components/ui'
 import InstallAppButton from '@/app/components/InstallAppButton'
 import { validateUsername } from '@/app/lib/username'
@@ -48,16 +49,16 @@ type EtherComment = {
 
 function formatMessageTimestamp(value?: string | null) {
   if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return ''
+  const date = parseServerDate(value)
+  if (!date) return ''
   const now = new Date()
   if (date.toDateString() === now.toDateString()) {
-    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+    return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
   }
   const yesterday = new Date(now)
   yesterday.setDate(now.getDate() - 1)
   if (date.toDateString() === yesterday.toDateString()) return 'Yesterday'
-  return date.toLocaleDateString('en-US')
+  return date.toLocaleDateString()
 }
 
 type EtherNotification = {
@@ -129,7 +130,7 @@ function EtherNavbar({
   onAvatarSelect: (file: File) => void
 }) {
   const router = useRouter()
-  const { me, isLoading, refreshMe } = useAuth()
+  const { me, isLoading } = useAuth()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const settingsRef = useRef<HTMLDivElement | null>(null)
   const [accountsOpen, setAccountsOpen] = useState(false)
@@ -154,6 +155,15 @@ function EtherNavbar({
   const [settingsBioNotice, setSettingsBioNotice] = useState('')
   const [settingsLinksNotice, setSettingsLinksNotice] = useState('')
   const [settingsUsernameNotice, setSettingsUsernameNotice] = useState('')
+  const [settingsUsernameConfirmed, setSettingsUsernameConfirmed] = useState(false)
+
+  function queueRefreshToast(message: string) {
+    if (typeof window === 'undefined') return
+    window.sessionStorage.setItem('toast:message', message)
+    window.sessionStorage.setItem('toast:persist', '1')
+    window.sessionStorage.setItem('scroll:top', '1')
+    window.location.reload()
+  }
 
   function pushToast(message: string) {
     if (typeof window === 'undefined') return
@@ -204,15 +214,16 @@ function EtherNavbar({
     const wasOpen = profileEditOpenedRef.current
     setSettingsBio(profile?.bio ?? '')
     setSettingsLinks(profile?.links ?? '')
-    setSettingsUsername(me?.username ?? '')
+    setSettingsUsername(profile?.display_name ?? '')
     setUsernameStatus('idle')
     if (!wasOpen) {
       setSettingsBioNotice('')
       setSettingsLinksNotice('')
       setSettingsUsernameNotice('')
+      setSettingsUsernameConfirmed(false)
     }
     profileEditOpenedRef.current = true
-  }, [settingsOpen, profileEditOpen, profile?.bio, profile?.links, me?.username])
+  }, [settingsOpen, profileEditOpen, profile?.bio, profile?.links, profile?.display_name])
 
   useEffect(() => {
     if (!profileEditOpen) {
@@ -253,19 +264,21 @@ function EtherNavbar({
         const list = Array.isArray(res.data) ? res.data : []
         const balances = await Promise.all(
           list.map(async (acct: any) => {
+            const currency = (acct.currency || 'USD').toUpperCase()
             try {
-              const balanceRes = await api.get(`/accounts/${acct.id}/balance?currency=USD`)
-              return { id: acct.id, balance: Number(balanceRes.data?.balance ?? 0) }
+              const balanceRes = await api.get(`/accounts/${acct.id}/balance?currency=${currency}`)
+              return { id: acct.id, balance: Number(balanceRes.data?.balance ?? 0), currency }
             } catch {
-              return { id: acct.id, balance: 0 }
+              return { id: acct.id, balance: 0, currency }
             }
           })
         )
-        const balanceMap = new Map(balances.map((item) => [item.id, item.balance]))
+        const balanceMap = new Map(balances.map((item) => [item.id, item]))
         setAccounts(
           list.map((acct: any) => ({
             ...acct,
-            balance: balanceMap.get(acct.id) ?? 0,
+            balance: balanceMap.get(acct.id)?.balance ?? 0,
+            currency: balanceMap.get(acct.id)?.currency ?? (acct.currency || 'USD'),
           }))
         )
         setAccountsLoaded(true)
@@ -274,10 +287,15 @@ function EtherNavbar({
       .finally(() => setAccountsLoading(false))
   }, [accountsOpen, accountsLoaded, accountsLoading])
 
-  function formatMoney(value: any) {
+  function formatMoney(value: any, currency?: string | null) {
     const num = Number(value)
     if (Number.isNaN(num)) return value ?? ''
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num)
+    const code = (currency || 'USD').toUpperCase()
+    try {
+      return new Intl.NumberFormat(undefined, { style: 'currency', currency: code }).format(num)
+    } catch {
+      return `${code} ${num.toFixed(2)}`
+    }
   }
 
   async function checkUsernameAvailability(value: string) {
@@ -288,21 +306,11 @@ function EtherNavbar({
       setSettingsUsernameNotice(validation.reason ?? 'Enter a valid username.')
       return
     }
-    if (me?.username && trimmed.toLowerCase() === me.username.toLowerCase()) {
+    if (profile?.display_name && trimmed.toLowerCase() === profile.display_name.toLowerCase()) {
       setUsernameStatus('current')
       return
     }
-    setUsernameStatus('checking')
-    try {
-      const res = await api.get('/auth/username-available', { params: { username: trimmed } })
-      const available = Boolean(res.data?.available)
-      setUsernameStatus(available ? 'available' : 'taken')
-      if (!available && res.data?.reason) {
-        setSettingsUsernameNotice(res.data.reason)
-      }
-    } catch {
-      setUsernameStatus('invalid')
-    }
+    setUsernameStatus('available')
   }
 
   async function saveUsername() {
@@ -310,23 +318,24 @@ function EtherNavbar({
     const validation = validateUsername(trimmed)
     if (!validation.ok) {
       setUsernameStatus('invalid')
-      setSettingsUsernameNotice(validation.reason ?? 'Enter a valid username.')
+      setSettingsUsernameNotice(validation.reason ?? 'Enter a valid Ether name.')
+      return
+    }
+    if (!settingsUsernameConfirmed) {
+      setSettingsUsernameNotice(
+        'Confirm that you understand this changes your Ether name only.'
+      )
       return
     }
     setSettingsBusy(true)
     setSettingsUsernameNotice('')
     try {
-      await api.patch('/auth/username', { username: trimmed })
       await updateSettings({ display_name: trimmed })
-      await refreshMe()
-      setUsernameStatus('current')
-      setSettingsUsernameNotice('Username updated.')
+      queueRefreshToast('Ether name updated.')
     } catch (e: any) {
-      const msg = e?.response?.data?.detail ?? e?.message ?? 'Username update failed'
+      const msg = e?.response?.data?.detail ?? e?.message ?? 'Ether name update failed'
       setSettingsUsernameNotice(msg)
-      if (e?.response?.status === 400) {
-        setUsernameStatus('taken')
-      }
+      setUsernameStatus('invalid')
     } finally {
       setSettingsBusy(false)
     }
@@ -428,16 +437,18 @@ function EtherNavbar({
                         <div
                           key={account.id}
                           style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            gap: 10,
+                            display: 'grid',
+                            gap: 4,
                             fontSize: 13,
-                            paddingBottom: 6,
+                            paddingBottom: 8,
                             borderBottom: '1px solid rgba(95, 74, 62, 0.12)',
                           }}
                         >
                           <div style={{ fontWeight: 600 }}>{account.name}</div>
-                          <div style={{ opacity: 0.8 }}>{formatMoney(account.balance)}</div>
+                          <div style={{ opacity: 0.8 }}>
+                            {formatMoney(account.balance, account.currency)} •{' '}
+                            {(account.currency || 'USD').toUpperCase()}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -515,7 +526,7 @@ function EtherNavbar({
               ) : me ? (
                 <>
                 <span className="ether-nav-signed" style={{ opacity: 0.9, wordBreak: 'break-word' }}>
-                  Signed in as <b>{me.username ?? me.email}</b>
+                  Signed in as <b>{profile?.display_name ?? me.username ?? me.email}</b>
                 </span>
                 </>
               ) : (
@@ -765,15 +776,16 @@ function EtherNavbar({
               </div>
 
               <div style={{ display: 'grid', gap: 6 }}>
-                <label style={{ fontSize: 12, opacity: 0.7 }}>Username</label>
+                <label style={{ fontSize: 12, opacity: 0.7 }}>Ether display name</label>
                 <input
+                  data-testid="ether-display-name-input"
                   value={settingsUsername}
                   onChange={(e) => {
                     setSettingsUsername(e.target.value)
                     setUsernameStatus('idle')
                   }}
                   onBlur={(e) => checkUsernameAvailability(e.target.value)}
-                  placeholder="Choose a username"
+                  placeholder="Choose an Ether name"
                   maxLength={21}
                   style={{
                     padding: '8px 10px',
@@ -787,26 +799,39 @@ function EtherNavbar({
                   {usernameStatus === 'checking'
                     ? 'Checking availability…'
                     : usernameStatus === 'available'
-                    ? 'Username available.'
+                    ? 'Ether name available.'
                     : usernameStatus === 'taken'
-                    ? 'Username already in use.'
+                    ? 'Ether name already in use.'
                     : usernameStatus === 'current'
-                    ? 'Current username.'
+                    ? 'Current Ether name.'
                     : usernameStatus === 'invalid'
-                    ? 'Enter a valid username.'
-                    : ' '}
+                    ? 'Enter a valid Ether name.'
+                    : 'Visible in The Ether only. This does not change your ManifestBank dashboard username.'}
                 </div>
+                <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 11, opacity: 0.82 }}>
+                  <input
+                    data-testid="ether-display-name-confirm"
+                    type="checkbox"
+                    checked={settingsUsernameConfirmed}
+                    onChange={(e) => setSettingsUsernameConfirmed(e.target.checked)}
+                    style={{ marginTop: 2 }}
+                  />
+                  <span>
+                    I understand this changes my Ether name only. It will be visible in The Ether and will not
+                    change my ManifestBank dashboard username.
+                  </span>
+                </label>
                 <Button
                   variant="outline"
+                  data-testid="ether-display-name-save"
                   onClick={saveUsername}
                   disabled={
                     settingsBusy ||
                     usernameStatus === 'checking' ||
-                    usernameStatus === 'taken' ||
                     usernameStatus === 'invalid'
                   }
                 >
-                  {settingsBusy ? 'Saving…' : 'Save username'}
+                  {settingsBusy ? 'Saving…' : 'Save Ether name'}
                 </Button>
                 {settingsUsernameNotice ? (
                   <div
@@ -1037,20 +1062,22 @@ export default function EtherPage() {
         const list = Array.isArray(res.data) ? res.data : []
         const balances = await Promise.all(
           list.map(async (acct: any) => {
+            const currency = (acct.currency || 'USD').toUpperCase()
             try {
-              const balanceRes = await api.get(`/accounts/${acct.id}/balance?currency=USD`)
-              return { id: acct.id, balance: Number(balanceRes.data?.balance ?? 0) }
+              const balanceRes = await api.get(`/accounts/${acct.id}/balance?currency=${currency}`)
+              return { id: acct.id, balance: Number(balanceRes.data?.balance ?? 0), currency }
             } catch {
-              return { id: acct.id, balance: 0 }
+              return { id: acct.id, balance: 0, currency }
             }
           })
         )
-        const balanceMap = new Map(balances.map((item) => [item.id, item.balance]))
+        const balanceMap = new Map(balances.map((item) => [item.id, item]))
         setManifestAccounts(
           list.map((acct: any) => ({
             id: acct.id,
             name: acct.name,
-            balance: balanceMap.get(acct.id) ?? 0,
+            balance: balanceMap.get(acct.id)?.balance ?? 0,
+            currency: balanceMap.get(acct.id)?.currency ?? (acct.currency || 'USD'),
           }))
         )
         setManifestAccountsLoaded(true)
@@ -1131,10 +1158,15 @@ export default function EtherPage() {
     }
   }, [etherStickyOpen])
 
-  function formatMoney(value: any) {
+  function formatMoney(value: any, currency?: string | null) {
     const num = Number(value)
     if (Number.isNaN(num)) return value ?? ''
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num)
+    const code = (currency || 'USD').toUpperCase()
+    try {
+      return new Intl.NumberFormat(undefined, { style: 'currency', currency: code }).format(num)
+    } catch {
+      return `${code} ${num.toFixed(2)}`
+    }
   }
 
   async function load(silent = false) {
@@ -2229,10 +2261,20 @@ export default function EtherPage() {
                   ) : manifestAccounts.length ? (
                     <div style={{ display: 'grid', gap: 8 }}>
                       {manifestAccounts.map((acct) => (
-                        <div key={acct.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                          <span style={{ fontSize: 12, color: '#5d3d32' }}>{acct.name ?? 'Account'}</span>
+                        <div
+                          key={acct.id}
+                          style={{
+                            display: 'grid',
+                            gap: 4,
+                            borderBottom: '1px solid rgba(93, 61, 50, 0.12)',
+                            paddingBottom: 8,
+                          }}
+                        >
+                          <span style={{ fontSize: 12, color: '#5d3d32', fontWeight: 600 }}>
+                            {acct.name ?? 'Account'}
+                          </span>
                           <span style={{ fontWeight: 700, fontSize: 12, color: '#3b2b24' }}>
-                            {formatMoney(acct.balance)}
+                            {formatMoney(acct.balance, acct.currency)} • {(acct.currency || 'USD').toUpperCase()}
                           </span>
                         </div>
                       ))}
@@ -3205,6 +3247,8 @@ export default function EtherPage() {
                                     ? 'Commented on your post'
                                     : note.kind === 'comment_align'
                                     ? 'Aligned with a comment on your post'
+                                    : note.kind === 'message_align'
+                                    ? 'Aligned with your message'
                                     : note.kind === 'sync_approved'
                                     ? 'Accepted your sync request'
                                     : 'Activity on your post'}
@@ -3832,6 +3876,7 @@ export default function EtherPage() {
           <Card title="Share a manifestation" tone="soft" right={<Pill>{kind}</Pill>}>
             <div style={{ display: 'grid', gap: 10 }}>
               <select
+                data-testid="ether-kind-select"
                 value={kind}
                 onChange={(e) => setKind(e.target.value)}
                 style={{
@@ -3848,6 +3893,7 @@ export default function EtherPage() {
                 <option value="tips">Manifestation Tips</option>
               </select>
               <textarea
+                data-testid="ether-content-input"
                 placeholder="Share your vision or your win..."
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
@@ -3904,6 +3950,7 @@ export default function EtherPage() {
                   <input
                     key={postImageInputKey}
                     id="ether-post-image"
+                    data-testid="ether-post-image-input"
                     type="file"
                     accept="image/*"
                     style={{ display: 'none' }}
@@ -3916,7 +3963,7 @@ export default function EtherPage() {
                     }}
                   />
                 </div>
-                <Button variant="solid" onClick={post} disabled={loading}>
+                <Button variant="solid" onClick={post} disabled={loading} data-testid="ether-post-button">
                   {loading ? 'Posting…' : 'Post to The Ether™'}
                 </Button>
               </div>
@@ -4086,6 +4133,7 @@ export default function EtherPage() {
                           <div style={{ position: 'relative' }}>
                             <button
                               type="button"
+                              data-testid={`ether-post-options-${post.id}`}
                               onClick={() =>
                                 setPostMenuOpenId((prev) => (prev === post.id ? null : post.id))
                               }
@@ -4127,6 +4175,7 @@ export default function EtherPage() {
                               >
                                 <button
                                   type="button"
+                                  data-testid={`ether-delete-post-${post.id}`}
                                   onClick={() => requestDeletePost(post.id)}
                                   style={{
                                     width: '100%',
@@ -4166,6 +4215,7 @@ export default function EtherPage() {
                       {post.liked_by_me ? (
                         <button
                           type="button"
+                          data-testid={`ether-align-post-${post.id}`}
                           onClick={() => like(post.id)}
                           style={{
                             borderRadius: 999,
@@ -4198,6 +4248,7 @@ export default function EtherPage() {
                       ) : (
                         <button
                           type="button"
+                          data-testid={`ether-align-post-${post.id}`}
                           onClick={() => like(post.id)}
                           style={{
                             borderRadius: 999,
@@ -4231,6 +4282,7 @@ export default function EtherPage() {
                       )}
                       <Button
                         variant="outline"
+                        data-testid={`ether-comments-toggle-${post.id}`}
                         onClick={() => {
                           if (typeof window !== 'undefined') {
                             window.sessionStorage.setItem(
@@ -4347,6 +4399,7 @@ export default function EtherPage() {
                                 <div style={{ marginTop: 6, display: 'flex', gap: 8, alignItems: 'center' }}>
                                   <button
                                     type="button"
+                                    data-testid={`ether-align-comment-${comment.id}`}
                                     onClick={() => alignComment(post.id, comment.id)}
                                     disabled={commentLoading[post.id]}
                                     style={{
@@ -4413,6 +4466,7 @@ export default function EtherPage() {
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                           <input
                             type="text"
+                            data-testid={`ether-comment-input-${post.id}`}
                             placeholder="Write a comment..."
                             value={commentDrafts[post.id] ?? ''}
                             onChange={(e) =>
@@ -4429,6 +4483,7 @@ export default function EtherPage() {
                           />
                           <Button
                             variant="solid"
+                            data-testid={`ether-comment-submit-${post.id}`}
                             onClick={() => submitComment(post.id)}
                             disabled={commentLoading[post.id]}
                           >
@@ -4550,6 +4605,7 @@ export default function EtherPage() {
               </button>
               <button
                 type="button"
+                data-testid="ether-confirm-delete-button"
                 onClick={confirmDeletePost}
                 disabled={confirmDeleting}
                 style={{

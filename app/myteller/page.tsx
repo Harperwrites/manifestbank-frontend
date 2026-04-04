@@ -4,7 +4,11 @@ import type React from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Navbar from '@/app/components/Navbar'
 import { api } from '@/lib/api'
+import { formatLocalDate } from '@/lib/time'
 import { useAuth } from '@/app/providers'
+import TellerStarterPrompt from '@/app/components/TellerStarterPrompt'
+import TellerMarkdown from '@/app/components/TellerMarkdown'
+import { sendTellerChat } from '@/app/lib/tellerStream'
 
 type ChatMessage = {
   id: string
@@ -33,194 +37,49 @@ export default function MyTellerPage() {
   const [personaMsg, setPersonaMsg] = useState('')
   const [tellerStatus, setTellerStatus] = useState<'live' | 'stub' | 'unknown'>('unknown')
   const [introAsMessage, setIntroAsMessage] = useState(false)
-  const [shortMode, setShortMode] = useState(true)
+  const [shortMode, setShortMode] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<ChatThread | null>(null)
   const [deleteError, setDeleteError] = useState('')
   const [renameTarget, setRenameTarget] = useState<ChatThread | null>(null)
   const [renameTitle, setRenameTitle] = useState('')
   const [renameError, setRenameError] = useState('')
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
+  const retryHints = ['Fortune is thinking…', 'Stay with me — still working.']
+  const [retryHintIndex, setRetryHintIndex] = useState(0)
 
   const introPrompt =
-    'Welcome back. Take one slow breath. What would feel already done for you today?'
+    'Hi — I’m Fortune, your ManifestBank™ Teller. How can I support your abundance practice or nervous‑system alignment today?'
+  const upgradeReason = 'ManifestBank™ Signature required to start a new Teller session or send Teller messages.'
 
   const isVerified = Boolean(me?.email_verified)
   const isPremium = Boolean(me?.is_premium)
 
-  if (!me) {
-    return (
-      <div style={{ minHeight: '100vh', background: '#f8f4f1' }}>
-        <Navbar />
-        <div style={{ maxWidth: 720, margin: '0 auto', padding: '40px 20px' }}>Loading…</div>
-      </div>
-    )
-  }
-
-  if (!isVerified) {
-    return (
-      <div style={{ minHeight: '100vh', background: '#f8f4f1' }}>
-        <Navbar />
-        <div style={{ maxWidth: 720, margin: '0 auto', padding: '40px 20px' }}>
-          <div
-            style={{
-              background: 'rgba(255,255,255,0.85)',
-              borderRadius: 18,
-              padding: 24,
-              border: '1px solid rgba(95, 74, 62, 0.2)',
-              boxShadow: '0 14px 40px rgba(12, 10, 12, 0.12)',
-            }}
-          >
-            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 22, fontWeight: 600 }}>
-              Verify your email to access My Teller
-            </div>
-            <p style={{ marginTop: 8, opacity: 0.75 }}>
-              Please verify your email address to continue. Once verified, My Teller will unlock for Signature
-              members.
-            </p>
-            <button
-              type="button"
-              onClick={() => (window.location.href = '/verify-email?next=/myteller')}
-              style={{
-                marginTop: 14,
-                padding: '10px 16px',
-                borderRadius: 999,
-                border: 'none',
-                background: 'linear-gradient(135deg, #b67967, #c6927c)',
-                color: '#fff',
-                fontWeight: 700,
-                cursor: 'pointer',
-              }}
-            >
-              Verify email
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (!isPremium) {
-    return (
-      <div style={{ minHeight: '100vh', background: '#f8f4f1' }}>
-        <Navbar />
-        <div style={{ maxWidth: 720, margin: '0 auto', padding: '40px 20px' }}>
-          <div
-            style={{
-              background: 'rgba(255,255,255,0.85)',
-              borderRadius: 18,
-              padding: 24,
-              border: '1px solid rgba(95, 74, 62, 0.2)',
-              boxShadow: '0 14px 40px rgba(12, 10, 12, 0.12)',
-            }}
-          >
-            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 22, fontWeight: 600 }}>
-              ManifestBank™ Signature required
-            </div>
-            <p style={{ marginTop: 8, opacity: 0.75 }}>
-              My Teller is a Signature feature. Upgrade to ManifestBank™ Signature to continue.
-            </p>
-            <button
-              type="button"
-              onClick={() =>
-                window.dispatchEvent(
-                  new CustomEvent('paywall:open', { detail: { reason: 'Upgrade to ManifestBank™ Signature.' } })
-                )
-              }
-              style={{
-                marginTop: 14,
-                padding: '10px 16px',
-                borderRadius: 999,
-                border: 'none',
-                background: 'linear-gradient(135deg, #b67967, #c6927c)',
-                color: '#fff',
-                fontWeight: 700,
-                cursor: 'pointer',
-              }}
-            >
-              Upgrade to Manifest Signature
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   function renderAssistantContent(text: string) {
-    const lines = text.split('\n')
-    const elements: React.ReactNode[] = []
-    let listItems: React.ReactNode[] = []
-
-    const flushList = () => {
-      if (listItems.length) {
-        elements.push(
-          <ul key={`list-${elements.length}`} style={{ margin: '6px 0 6px 18px', padding: 0 }}>
-            {listItems}
-          </ul>
-        )
-        listItems = []
-      }
-    }
-
-    const inlineFormat = (value: string) => {
-      const html = value
-        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.+?)\*/g, '<em>$1</em>')
-      return <span dangerouslySetInnerHTML={{ __html: html }} />
-    }
-
-    lines.forEach((raw, idx) => {
-      const line = raw.trim()
-      if (!line) {
-        flushList()
-        elements.push(<div key={`spacer-${idx}`} style={{ height: 6 }} />)
-        return
-      }
-      if (line.startsWith('- ') || line.startsWith('• ')) {
-        const itemText = line.replace(/^[-•]\s+/, '')
-        listItems.push(
-          <li key={`li-${idx}`} style={{ marginBottom: 4 }}>
-            {inlineFormat(itemText)}
-          </li>
-        )
-        return
-      }
-      flushList()
-      if (line.startsWith('### ')) {
-        elements.push(
-          <div key={`h3-${idx}`} style={{ fontSize: 14, fontWeight: 700, marginTop: 6 }}>
-            {inlineFormat(line.replace(/^###\s+/, ''))}
-          </div>
-        )
-        return
-      }
-      if (line.startsWith('## ')) {
-        elements.push(
-          <div key={`h2-${idx}`} style={{ fontSize: 15, fontWeight: 700, marginTop: 6 }}>
-            {inlineFormat(line.replace(/^##\s+/, ''))}
-          </div>
-        )
-        return
-      }
-      if (line.startsWith('# ')) {
-        elements.push(
-          <div key={`h1-${idx}`} style={{ fontSize: 16, fontWeight: 700, marginTop: 6 }}>
-            {inlineFormat(line.replace(/^#\s+/, ''))}
-          </div>
-        )
-        return
-      }
-      elements.push(
-        <div key={`p-${idx}`} style={{ marginBottom: 4 }}>
-          {inlineFormat(line)}
-        </div>
-      )
-    })
-
-    flushList()
-    return <div style={{ whiteSpace: 'pre-wrap' }}>{elements}</div>
+    return <TellerMarkdown content={text} />
   }
 
   useEffect(() => {
+    if (!isVerified) return
+    if (!isPremium) {
+      const placeholder: ChatThread = {
+        id: 'new',
+        title: 'New Session',
+        updated_at: new Date().toISOString(),
+        messages: [
+          {
+            id: 'intro',
+            role: 'assistant',
+            content: introPrompt,
+            created_at: new Date().toISOString(),
+          },
+        ],
+      }
+      setThreads([placeholder])
+      setActiveId('new')
+      setLoading(false)
+      setError('')
+      return
+    }
     let active = true
     setLoading(true)
     setError('')
@@ -230,10 +89,21 @@ export default function MyTellerPage() {
         if (!active) return
         const list = Array.isArray(res.data) ? res.data : []
         const normalized = list.map((t) => ({ ...t, messages: [] })) as ChatThread[]
-        setThreads(normalized)
-        if (normalized.length > 0) {
-          setActiveId(normalized[0].id)
+        const placeholder: ChatThread = {
+          id: 'new',
+          title: 'New Session',
+          updated_at: new Date().toISOString(),
+          messages: [
+            {
+              id: 'intro',
+              role: 'assistant',
+              content: introPrompt,
+              created_at: new Date().toISOString(),
+            },
+          ],
         }
+        setThreads([placeholder, ...normalized])
+        setActiveId('new')
       })
       .catch((err) => {
         if (!active) return
@@ -266,13 +136,34 @@ export default function MyTellerPage() {
     return () => {
       active = false
     }
-  }, [])
+  }, [introPrompt, isPremium, isVerified, me?.role])
+
+  useEffect(() => {
+    if (!loading) return
+    setRetryHintIndex(0)
+    const id = window.setInterval(() => {
+      setRetryHintIndex((prev) => (prev + 1) % retryHints.length)
+    }, 3000)
+    return () => window.clearInterval(id)
+  }, [loading])
+
 
   async function loadMessages(threadId: string | number) {
     const res = await api.get(`/teller/threads/${threadId}/messages`)
     const items = Array.isArray(res.data) ? res.data : []
+    const withIntro =
+      items.length === 0
+        ? [
+            {
+              id: 'intro',
+              role: 'assistant',
+              content: introPrompt,
+              created_at: new Date().toISOString(),
+            },
+          ]
+        : items
     setThreads((prev) =>
-      prev.map((t) => (t.id === threadId ? { ...t, messages: items } : t))
+      prev.map((t) => (t.id === threadId ? { ...t, messages: withIntro } : t))
     )
   }
 
@@ -282,9 +173,11 @@ export default function MyTellerPage() {
   )
 
   useEffect(() => {
-    if (!activeId) return
+    if (!activeId || activeId === 'new') return
+    const current = threads.find((thread) => thread.id === activeId)
+    if (current?.messages?.length) return
     loadMessages(activeId).catch(() => {})
-  }, [activeId])
+  }, [activeId, threads])
 
   useEffect(() => {
     if (activeThread?.messages?.length) {
@@ -299,94 +192,142 @@ export default function MyTellerPage() {
   }, [activeThread?.messages?.length, loading, introAsMessage])
 
   async function handleNewThread() {
-    try {
-      const res = await api.post('/teller/threads', { title: 'New Teller Session' })
-      const thread = res.data
-      if (thread?.id) {
-        const normalized: ChatThread = { ...thread, messages: [] }
-        setThreads((prev) => [normalized, ...prev])
-        setActiveId(thread.id)
-      }
-    } catch (err: any) {
-      if (err?.response?.status === 402) {
-        window.dispatchEvent(
-          new CustomEvent('paywall:open', { detail: { reason: err?.response?.data?.detail } })
-        )
-      } else {
-        setError('Unable to create a new session.')
-      }
+    if (!isPremium) {
+      window.dispatchEvent(new CustomEvent('paywall:open', { detail: { reason: upgradeReason } }))
+      return
     }
+    const placeholder: ChatThread = {
+      id: 'new',
+      title: 'New Session',
+      updated_at: new Date().toISOString(),
+      messages: [
+        {
+          id: 'intro',
+          role: 'assistant',
+          content: introPrompt,
+          created_at: new Date().toISOString(),
+        },
+      ],
+    }
+    setThreads((prev) => [placeholder, ...prev.filter((t) => t.id !== 'new')])
+    setActiveId('new')
   }
 
   async function handleSend() {
+    if (!isPremium) {
+      window.dispatchEvent(new CustomEvent('paywall:open', { detail: { reason: upgradeReason } }))
+      return
+    }
     if (loading) return
     const trimmed = draft.trim()
     if (!trimmed) return
     setLoading(true)
     setDraft('')
     setError('')
+    const targetThreadId = activeThread?.id ?? 'new'
     const optimisticUserMessage: ChatMessage = {
       id: `temp-${Date.now()}`,
       role: 'user',
       content: trimmed,
       created_at: new Date().toISOString(),
     }
-    if (activeThread) {
+    const appendFallbackAssistant = (fallbackContent = 'I’m here. Please try again.') => {
       setThreads((prev) =>
         prev.map((t) =>
-          t.id === activeThread.id ? { ...t, messages: [...t.messages, optimisticUserMessage] } : t
+          t.id === targetThreadId
+            ? {
+                ...t,
+                messages: [
+                  ...t.messages,
+                  {
+                    id: `forced-fallback-${Date.now()}`,
+                    role: 'assistant',
+                    content: fallbackContent,
+                    created_at: new Date().toISOString(),
+                  },
+                ],
+              }
+            : t
         )
       )
     }
+
+    setThreads((prev) => {
+      const target = prev.find((t) => t.id === targetThreadId)
+      if (target) {
+        return prev.map((t) =>
+          t.id === targetThreadId ? { ...t, messages: [...t.messages, optimisticUserMessage] } : t
+        )
+      }
+      return [
+        {
+          id: targetThreadId,
+          title: 'New Session',
+          updated_at: new Date().toISOString(),
+          messages: [optimisticUserMessage],
+        },
+        ...prev,
+      ]
+    })
+
     try {
-      const res = await api.post('/teller/chat', {
-        thread_id: activeThread?.id ?? null,
+      if (typeof window !== 'undefined') {
+        window.sessionStorage.setItem(
+          'mb_open_task',
+          JSON.stringify({
+            actionId: Date.now(),
+            title: 'Send a Teller Note',
+            bureau: 'Emotional Reserve',
+            actionType: 'teller_message',
+          })
+        )
+        window.dispatchEvent(new Event('mb_open_task_set'))
+      }
+      const response = await sendTellerChat({
+        thread_id: activeThread?.id && activeThread.id !== 'new' ? activeThread.id : null,
         message: trimmed,
         short_mode: shortMode,
       })
-      const data = res.data
-      let introBubbleWasAdded = false
-      if (!activeThread?.messages?.length) {
-        setIntroAsMessage(true)
-        introBubbleWasAdded = true
-      }
-      if (data?.thread) {
-        const introBubble = introBubbleWasAdded
-          ? [
-              {
-                id: 'intro',
-                role: 'assistant',
-                content: introPrompt,
-                created_at: new Date().toISOString(),
-              },
-            ]
-          : []
+      const resolvedThreadId = String(response.thread.id)
+      setThreads((prev) => {
+        const current = prev.find((t) => t.id === targetThreadId || t.id === resolvedThreadId)
+        const existingMessages = current?.messages ?? []
+        const cleanedMessages = existingMessages.filter(
+          (message) => message.id !== optimisticUserMessage.id && message.id !== 'intro'
+        )
         const updatedThread: ChatThread = {
-          id: data.thread.id,
-          title: data.thread.title,
-          updated_at: data.thread.updated_at,
-          messages: [...introBubble, data.user_message, data.assistant_message],
+          id: resolvedThreadId,
+          title: response.thread.title,
+          updated_at: response.thread.updated_at,
+          messages: [...cleanedMessages, response.user_message, response.assistant_message],
         }
-        setThreads((prev) => {
-          const existing = prev.filter((t) => t.id !== updatedThread.id)
-          return [updatedThread, ...existing]
-        })
-        setActiveId(updatedThread.id)
-        await loadMessages(updatedThread.id)
+        return [updatedThread, ...prev.filter((t) => t.id !== targetThreadId && t.id !== resolvedThreadId)]
+      })
+      setActiveId(resolvedThreadId)
+      if (typeof window !== 'undefined') {
+        window.sessionStorage.setItem('mb_teller_thread', resolvedThreadId)
+        window.dispatchEvent(new Event('mb_task_completed_check'))
       }
+      window.dispatchEvent(new Event('accounts:refresh'))
     } catch (err: any) {
       const status = err?.response?.status
       if (status === 402) {
         window.dispatchEvent(
           new CustomEvent('paywall:open', { detail: { reason: err?.response?.data?.detail } })
         )
-      } else if (status === 409) {
-        setError('Please wait for the Teller to respond.')
       } else {
-        setError(err?.response?.data?.detail ?? 'Unable to send message.')
+        setError('')
+        appendFallbackAssistant()
       }
     } finally {
       setLoading(false)
+    }
+  }
+
+  function handleDraftKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault()
+      void handleSend()
     }
   }
 
@@ -453,13 +394,62 @@ export default function MyTellerPage() {
     }
   }
 
+  const gate =
+    !me ? (
+      <div style={{ minHeight: '100vh', background: '#f8f4f1' }}>
+        <Navbar showAccountsDropdown />
+        <div style={{ maxWidth: 720, margin: '0 auto', padding: '40px 20px' }}>Loading…</div>
+      </div>
+    ) : !isVerified ? (
+      <div style={{ minHeight: '100vh', background: '#f8f4f1' }}>
+        <Navbar showAccountsDropdown />
+        <div style={{ maxWidth: 720, margin: '0 auto', padding: '40px 20px' }}>
+          <div
+            style={{
+              background: 'rgba(255,255,255,0.85)',
+              borderRadius: 18,
+              padding: 24,
+              border: '1px solid rgba(95, 74, 62, 0.2)',
+              boxShadow: '0 14px 40px rgba(12, 10, 12, 0.12)',
+            }}
+          >
+            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 22, fontWeight: 600 }}>
+              Verify your email to access My Teller
+            </div>
+            <p style={{ marginTop: 8, opacity: 0.75 }}>
+              Please verify your email address to continue. Once verified, My Teller will unlock for Signature
+              members.
+            </p>
+            <button
+              type="button"
+              onClick={() => (window.location.href = '/verify-email?next=/myteller')}
+              style={{
+                marginTop: 14,
+                padding: '10px 16px',
+                borderRadius: 999,
+                border: 'none',
+                background: 'linear-gradient(135deg, #b67967, #c6927c)',
+                color: '#fff',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              Verify email
+            </button>
+          </div>
+        </div>
+      </div>
+    ) : null
+
+  if (gate) return gate
+
   return (
     <main className="mb-page-offset">
-      <Navbar />
-      <div className="teller-shell" style={{ maxWidth: 1400, margin: '0 auto', padding: '28px 24px 80px' }}>
+      <Navbar showAccountsDropdown />
+      <div data-testid="teller-page" className="teller-shell" style={{ maxWidth: 1400, margin: '0 auto', padding: '28px 24px 80px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <div>
-            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 32, fontWeight: 600 }}>My Teller</div>
+            <h1 data-testid="teller-page-title" style={{ fontFamily: 'var(--font-serif)', fontSize: 32, fontWeight: 600, margin: 0 }}>My Teller</h1>
             <div style={{ opacity: 0.7, marginTop: 6 }}>
               Your personal ManifestBank™ teller. Every movement is confirmed before execution.
             </div>
@@ -490,9 +480,22 @@ export default function MyTellerPage() {
             ) : null}
           </div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            {!isPremium ? (
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: '#7a4b3e',
+                  textShadow: '0 0 8px rgba(182, 121, 103, 0.35)',
+                }}
+              >
+                Manifest Signature unlocks Teller sessions and message sending.
+              </div>
+            ) : null}
             <button
               type="button"
               onClick={handleNewThread}
+              data-testid="teller-new-session-button"
               style={{
                 padding: '4px 12px',
                 borderRadius: 999,
@@ -546,6 +549,7 @@ export default function MyTellerPage() {
           }}
         >
           <div
+            data-testid="teller-thread-history"
             style={{
               borderRadius: 18,
               border: '1px solid rgba(140, 92, 78, 0.3)',
@@ -556,7 +560,21 @@ export default function MyTellerPage() {
               gap: 10,
             }}
           >
-            <div style={{ fontWeight: 700 }}>Chat History</div>
+            <details>
+              <summary
+                data-testid="teller-thread-history-toggle"
+                style={{
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  listStyle: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <span>Chat History</span>
+                <span style={{ fontSize: 12, opacity: 0.7 }}>▾</span>
+              </summary>
             {error ? (
               <div
                 style={{
@@ -569,12 +587,15 @@ export default function MyTellerPage() {
               </div>
             ) : null}
             {loading ? <div style={{ fontSize: 12, opacity: 0.7 }}>Loading…</div> : null}
-            {threads.length === 0 ? (
+            {threads.filter((t) => t.id !== 'new').length === 0 ? (
               <div style={{ fontSize: 12, opacity: 0.7 }}>No sessions yet.</div>
             ) : (
-              threads.map((thread) => (
+              threads
+                .filter((thread) => thread.id !== 'new')
+                .map((thread) => (
                 <div
                   key={thread.id}
+                  data-testid={`teller-thread-${thread.id}`}
                   onClick={() => setActiveId(thread.id)}
                   role="button"
                   tabIndex={0}
@@ -586,6 +607,7 @@ export default function MyTellerPage() {
                   }}
                   style={{
                     textAlign: 'left',
+                    minWidth: 0,
                     borderRadius: 12,
                     border: '1px solid rgba(95, 74, 62, 0.2)',
                     background: thread.id === activeId ? 'rgba(182, 121, 103, 0.15)' : 'transparent',
@@ -593,13 +615,33 @@ export default function MyTellerPage() {
                     cursor: 'pointer',
                   }}
                 >
-                  <div style={{ fontWeight: 600, fontSize: 13 }}>{thread.title}</div>
-                  <div style={{ fontSize: 11, opacity: 0.6 }}>
-                    {new Date(thread.updated_at).toLocaleDateString('en-US')}
+                  <div
+                    style={{
+                      fontWeight: 600,
+                      fontSize: 13,
+                      minWidth: 0,
+                      maxWidth: '100%',
+                      overflowWrap: 'anywhere',
+                      wordBreak: 'break-word',
+                    }}
+                  >
+                    {thread.title}
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8, gap: 6 }}>
+                  <div style={{ fontSize: 11, opacity: 0.6 }}>
+                    {formatLocalDate(thread.updated_at)}
+                  </div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'flex-end',
+                      marginTop: 8,
+                      gap: 6,
+                      flexWrap: 'wrap',
+                    }}
+                  >
                     <button
                       type="button"
+                      data-testid={`teller-thread-rename-${thread.id}`}
                       onClick={(e) => {
                         e.stopPropagation()
                         setRenameTarget(thread)
@@ -619,6 +661,7 @@ export default function MyTellerPage() {
                     </button>
                     <button
                       type="button"
+                      data-testid={`teller-thread-delete-${thread.id}`}
                       onClick={(e) => {
                         e.stopPropagation()
                         setDeleteTarget(thread)
@@ -639,6 +682,7 @@ export default function MyTellerPage() {
                 </div>
               ))
             )}
+            </details>
           </div>
 
           <div style={{ display: 'grid', gap: 18 }}>
@@ -781,6 +825,10 @@ export default function MyTellerPage() {
                 </label>
               </div>
               <div
+                data-testid="teller-response-region"
+                role="log"
+                aria-live="polite"
+                aria-label="Teller conversation"
                 style={{
                   borderRadius: 14,
                   border: '1px solid rgba(95, 74, 62, 0.2)',
@@ -815,6 +863,7 @@ export default function MyTellerPage() {
                   <>
                     {introAsMessage ? (
                       <div
+                        data-testid="teller-intro-bubble"
                         style={{
                           alignSelf: 'flex-start',
                           background: 'rgba(95, 74, 62, 0.08)',
@@ -831,8 +880,12 @@ export default function MyTellerPage() {
                     {activeThread?.messages.map((msg) => (
                       <div
                         key={msg.id}
+                        data-testid={msg.role === 'assistant' ? 'teller-assistant-message' : 'teller-user-message'}
                         style={{
                           alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                          justifySelf: msg.role === 'user' ? 'end' : 'start',
+                          marginLeft: msg.role === 'user' ? 'auto' : undefined,
+                          marginRight: msg.role === 'user' ? 0 : undefined,
                           background:
                             msg.role === 'user'
                               ? 'linear-gradient(135deg, rgba(182, 121, 103, 0.22), rgba(214, 164, 146, 0.18))'
@@ -843,6 +896,7 @@ export default function MyTellerPage() {
                           maxWidth: '85%',
                           fontSize: 14,
                           lineHeight: 1.6,
+                          textAlign: msg.role === 'user' ? 'right' : 'left',
                           boxShadow:
                             msg.role === 'user'
                               ? '0 6px 16px rgba(118, 72, 56, 0.18)'
@@ -855,7 +909,7 @@ export default function MyTellerPage() {
                       >
                         {msg.role === 'assistant' ? renderAssistantContent(msg.content) : msg.content}
                         {msg.role === 'assistant' ? (
-                          <div style={{ marginTop: 6, fontSize: 10, opacity: 0.55 }}>
+                          <div data-testid="teller-assistant-signature" style={{ marginTop: 6, fontSize: 10, opacity: 0.55 }}>
                             <span style={{ fontStyle: 'italic' }}>Fortune</span> - Teller at ManifestBank™
                           </div>
                         ) : null}
@@ -863,6 +917,8 @@ export default function MyTellerPage() {
                     ))}
                     {loading ? (
                       <div
+                        data-testid="teller-loading-indicator"
+                        aria-live="polite"
                         style={{
                           alignSelf: 'flex-start',
                           background: 'rgba(95, 74, 62, 0.08)',
@@ -874,7 +930,7 @@ export default function MyTellerPage() {
                           opacity: 0.8,
                         }}
                       >
-                        Fortune is thinking…
+                        {retryHints[retryHintIndex]}
                       </div>
                     ) : null}
                     <div ref={messagesEndRef} />
@@ -886,12 +942,20 @@ export default function MyTellerPage() {
                 )}
               </div>
               <div style={{ display: 'grid', gap: 8 }}>
+                <TellerStarterPrompt enabled={isPremium} />
+                <label htmlFor="teller-draft-input" style={{ fontSize: 12, fontWeight: 600, color: '#3b2b24' }}>
+                  Message Fortune
+                </label>
                 <textarea
+                  id="teller-draft-input"
+                  data-testid="teller-draft-input"
                   value={loading ? '' : draft}
                   onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={handleDraftKeyDown}
                   disabled={loading}
                   rows={3}
                   placeholder="Tell your Teller what you want to do..."
+                  aria-label="Message Fortune"
                   style={{
                     borderRadius: 12,
                     border: '1px solid rgba(95, 74, 62, 0.25)',
@@ -904,8 +968,9 @@ export default function MyTellerPage() {
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                   <button
                     type="button"
+                    data-testid="teller-send-button"
                     onClick={handleSend}
-                    aria-label="Send"
+                    aria-label="Send message"
                     disabled={loading}
                     style={{
                       width: 40,
@@ -933,6 +998,7 @@ export default function MyTellerPage() {
 
         {deleteTarget ? (
           <div
+            data-testid="teller-delete-modal"
             onClick={() => setDeleteTarget(null)}
             style={{
               position: 'fixed',
@@ -968,6 +1034,7 @@ export default function MyTellerPage() {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
                 <button
                   type="button"
+                  data-testid="teller-delete-cancel-button"
                   onClick={() => setDeleteTarget(null)}
                   style={{
                     padding: '6px 12px',
@@ -984,6 +1051,7 @@ export default function MyTellerPage() {
                 </button>
                 <button
                   type="button"
+                  data-testid="teller-delete-confirm-button"
                   onClick={confirmDelete}
                   style={{
                     padding: '6px 12px',
@@ -1005,6 +1073,7 @@ export default function MyTellerPage() {
 
         {renameTarget ? (
           <div
+            data-testid="teller-rename-modal"
             onClick={() => setRenameTarget(null)}
             style={{
               position: 'fixed',
@@ -1032,6 +1101,7 @@ export default function MyTellerPage() {
             >
               <div style={{ fontWeight: 700, fontSize: 16 }}>Rename session</div>
               <input
+                data-testid="teller-rename-input"
                 value={renameTitle}
                 onChange={(e) => setRenameTitle(e.target.value)}
                 placeholder="Session title"
@@ -1049,6 +1119,7 @@ export default function MyTellerPage() {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
                 <button
                   type="button"
+                  data-testid="teller-rename-cancel-button"
                   onClick={() => setRenameTarget(null)}
                   style={{
                     padding: '6px 12px',
@@ -1065,6 +1136,7 @@ export default function MyTellerPage() {
                 </button>
                 <button
                   type="button"
+                  data-testid="teller-rename-save-button"
                   onClick={confirmRename}
                   style={{
                     padding: '6px 12px',

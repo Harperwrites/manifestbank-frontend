@@ -5,6 +5,8 @@ import './globals.css'
 import { AuthProvider } from './providers'
 import PwaRegister from './components/PwaRegister'
 import DevPaywallButton from './components/DevPaywallButton'
+import MyTellerWidget from './components/MyTellerWidget'
+import OpenTaskToast from './components/OpenTaskToast'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://manifestbank.app'),
@@ -15,7 +17,6 @@ export const metadata: Metadata = {
   description:
     'ManifestBank™ is a digital self-organization, reflection, and awareness platform designed to help users clarify intentions and align identity with conscious action.',
   manifest: '/manifestbank-v2.json?v=20260117b',
-  themeColor: '#b67967',
   openGraph: {
     title: 'ManifestBank™',
     description:
@@ -51,6 +52,10 @@ export const metadata: Metadata = {
   },
 }
 
+export const viewport = {
+  themeColor: '#b67967',
+}
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
@@ -71,6 +76,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <AuthProvider>
+          <OpenTaskToast />
           <Script
             id="manifestbank-org"
             type="application/ld+json"
@@ -100,6 +106,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           />
           {children}
           <DevPaywallButton />
+          <MyTellerWidget />
           <footer
             style={{
               marginTop: 48,

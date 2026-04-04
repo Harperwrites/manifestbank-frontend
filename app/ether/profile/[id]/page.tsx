@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
+import { parseServerDate } from '@/lib/time'
 import { Button, Card, Container, Pill } from '@/app/components/ui'
 
 export const runtime = 'edge'
@@ -45,16 +46,16 @@ type EtherComment = {
 
 function formatMessageTimestamp(value?: string | null) {
   if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return ''
+  const date = parseServerDate(value)
+  if (!date) return ''
   const now = new Date()
   if (date.toDateString() === now.toDateString()) {
-    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+    return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
   }
   const yesterday = new Date(now)
   yesterday.setDate(now.getDate() - 1)
   if (date.toDateString() === yesterday.toDateString()) return 'Yesterday'
-  return date.toLocaleDateString('en-US')
+  return date.toLocaleDateString()
 }
 
 const IMAGE_FALLBACK =
@@ -612,6 +613,7 @@ export default function EtherProfilePage() {
                     {profile.id !== meProfileId ? (
                       isSynced ? (
                         <span
+                          data-testid="ether-profile-sync-status"
                           style={{
                             display: 'inline-flex',
                             alignItems: 'center',
@@ -653,6 +655,7 @@ export default function EtherProfilePage() {
                       ) : (
                         <button
                           type="button"
+                          data-testid="ether-profile-sync-button"
                           onClick={async () => {
                             setSyncing(true)
                             try {
@@ -1265,6 +1268,7 @@ export default function EtherProfilePage() {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
                 <button
                   type="button"
+                  data-testid="ether-profile-confirm-cancel"
                   onClick={() => setConfirmAction(null)}
                   style={{
                     borderRadius: 999,
@@ -1278,6 +1282,7 @@ export default function EtherProfilePage() {
                 </button>
                 <button
                   type="button"
+                  data-testid="ether-profile-confirm-submit"
                   onClick={async () => {
                     if (confirmAction === 'unsync') {
                       await doUnsync()

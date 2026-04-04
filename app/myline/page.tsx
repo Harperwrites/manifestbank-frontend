@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
+import { parseServerDate } from '@/lib/time'
 import { useAuth } from '@/app/providers'
 import EtherNavbar from '@/app/components/EtherNavbar'
 import { Container } from '@/app/components/ui'
@@ -32,16 +33,16 @@ type EtherThread = {
 
 function formatMessageTimestamp(value?: string | null) {
   if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return ''
+  const date = parseServerDate(value)
+  if (!date) return ''
   const now = new Date()
   if (date.toDateString() === now.toDateString()) {
-    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+    return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
   }
   const yesterday = new Date(now)
   yesterday.setDate(now.getDate() - 1)
   if (date.toDateString() === yesterday.toDateString()) return 'Yesterday'
-  return date.toLocaleDateString('en-US')
+  return date.toLocaleDateString()
 }
 
 type EtherMessage = {
@@ -87,10 +88,15 @@ export const runtime = 'edge'
 
 const MYLINE_VIEW_KEY = 'myline:last_view'
 
-function formatMoney(value: any) {
+function formatMoney(value: any, currency?: string | null) {
   const num = Number(value)
   if (Number.isNaN(num)) return value ?? ''
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num)
+  const code = (currency || 'USD').toUpperCase()
+  try {
+    return new Intl.NumberFormat(undefined, { style: 'currency', currency: code }).format(num)
+  } catch {
+    return `${code} ${num.toFixed(2)}`
+  }
 }
 
 function getThreadReadKey(threadId: number) {
@@ -553,19 +559,21 @@ export default function MyLinePage() {
         const balances = await Promise.all(
           list.map(async (acct: any) => {
             try {
-              const balanceRes = await api.get(`/accounts/${acct.id}/balance?currency=USD`)
-              return { id: acct.id, balance: Number(balanceRes.data?.balance ?? 0) }
+              const currency = (acct.currency || 'USD').toUpperCase()
+              const balanceRes = await api.get(`/accounts/${acct.id}/balance?currency=${currency}`)
+              return { id: acct.id, balance: Number(balanceRes.data?.balance ?? 0), currency }
             } catch {
-              return { id: acct.id, balance: 0 }
+              return { id: acct.id, balance: 0, currency: (acct.currency || 'USD').toUpperCase() }
             }
           })
         )
-        const balanceMap = new Map(balances.map((item) => [item.id, item.balance]))
+        const balanceMap = new Map(balances.map((item) => [item.id, item]))
         setAccounts(
           list.map((acct: any) => ({
             id: acct.id,
             name: acct.name,
-            balance: balanceMap.get(acct.id) ?? 0,
+            balance: balanceMap.get(acct.id)?.balance ?? 0,
+            currency: balanceMap.get(acct.id)?.currency ?? (acct.currency || 'USD'),
           }))
         )
         setAccountsLoaded(true)
@@ -1348,7 +1356,9 @@ export default function MyLinePage() {
                         }}
                       >
                         <div style={{ fontWeight: 600, fontSize: 12 }}>{acct.name}</div>
-                        <div style={{ fontSize: 12, opacity: 0.8 }}>{formatMoney(acct.balance)}</div>
+                        <div style={{ fontSize: 12, opacity: 0.8 }}>
+                          {formatMoney(acct.balance, acct.currency)} • {(acct.currency || 'USD').toUpperCase()}
+                        </div>
                       </div>
                     ))}
                   </div>
