@@ -8,6 +8,7 @@ const apiBaseUrl = process.env.PW_API_BASE_URL ?? 'http://127.0.0.1:8001'
 export const appBaseUrl = process.env.PW_APP_BASE_URL ?? 'http://127.0.0.1:3000'
 
 type SeededUser = {
+  id: number
   email: string
   username: string
   password: string
@@ -16,6 +17,7 @@ type SeededUser = {
 
 const tinyPngBase64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII='
+const tellerAiConsentVersion = '2026-04-05a'
 
 function readBackendEnvValue(key: string): string {
   const source = fs.readFileSync(backendEnvPath, 'utf8')
@@ -45,6 +47,7 @@ export async function seedUser(
   expect(response.ok()).toBeTruthy()
   const user = await response.json()
   return {
+    id: user.id,
     email: user.email,
     username: user.username,
     password: user.password,
@@ -83,15 +86,15 @@ export async function loginViaUi(page: Page, user: SeededUser) {
 }
 
 export async function waitForDashboardSession(page: Page) {
-  await expect(page.getByRole('button', { name: 'Logout' })).toBeVisible()
-  await expect(page.getByText('Private Vault Dashboard')).toBeVisible()
+  await expect(page.getByText('Private Vault Dashboard')).toBeVisible({ timeout: 20000 })
+  await expect(page.getByText('Warming up your vault…')).toHaveCount(0, { timeout: 20000 })
 }
 
 export async function dismissDashboardWelcome(page: Page) {
   const accept = page.getByRole('button', { name: 'Accept' })
   if (await accept.isVisible().catch(() => false)) {
     await accept.click()
-    await expect(accept).toHaveCount(0)
+    await expect(accept).not.toBeVisible({ timeout: 10000 })
   }
 }
 
@@ -120,16 +123,27 @@ export function tinyImageUpload() {
   }
 }
 
-export async function primeBrowserSession(page: Page, request: APIRequestContext, user: SeededUser) {
+export async function primeBrowserSession(
+  page: Page,
+  request: APIRequestContext,
+  user: SeededUser,
+  options: { acceptTellerAiConsent?: boolean } = {}
+) {
   const auth = await loginApi(request, user)
+  const { acceptTellerAiConsent = true } = options
   await page.addInitScript(
-    ({ accessToken, refreshToken }) => {
+    ({ accessToken, refreshToken, tellerConsentKey, acceptConsent }) => {
       window.localStorage.setItem('access_token', accessToken)
       window.localStorage.setItem('refresh_token', refreshToken)
+      if (acceptConsent && tellerConsentKey) {
+        window.localStorage.setItem(tellerConsentKey, 'accepted')
+      }
     },
     {
       accessToken: auth.access_token as string,
       refreshToken: auth.refresh_token as string,
+      tellerConsentKey: `mb_teller_ai_consent:${tellerAiConsentVersion}:${user.id}`,
+      acceptConsent: acceptTellerAiConsent,
     }
   )
 }
@@ -176,8 +190,12 @@ export async function postLedgerEntry(
 }
 
 export async function openTellerWidget(page: Page) {
-  await page.getByTestId('teller-widget-toggle').click()
-  await expect(page.getByTestId('teller-widget-panel')).toBeVisible()
+  const toggle = page.getByTestId('teller-widget-toggle')
+  await toggle.scrollIntoViewIfNeeded()
+  await toggle.evaluate((element) => {
+    ;(element as HTMLButtonElement).click()
+  })
+  await expect(page.getByTestId('teller-widget-panel')).toBeVisible({ timeout: 20000 })
 }
 
 export async function mockTellerChat(

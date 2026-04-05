@@ -9,6 +9,7 @@ type OpenTask = {
   title: string
   bureau: string
   actionType?: string | null
+  openedAt?: string
 }
 
 type CompletionToast = {
@@ -23,6 +24,30 @@ type CreditReportItem = {
   primary_bureau: string
   points: number
   action_type?: string | null
+  completed_at: string
+}
+
+function getCompletionStorageKey(userId: number | null | undefined) {
+  return `mb_task_completion_toasts:${userId ?? 'anon'}`
+}
+
+function getShownCompletionKeys(userId: number | null | undefined): Set<string> {
+  if (typeof window === 'undefined') return new Set()
+  const raw = window.sessionStorage.getItem(getCompletionStorageKey(userId))
+  if (!raw) return new Set()
+  try {
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? new Set(parsed.filter((item) => typeof item === 'string')) : new Set()
+  } catch {
+    return new Set()
+  }
+}
+
+function markCompletionShown(userId: number | null | undefined, key: string) {
+  if (typeof window === 'undefined') return
+  const next = getShownCompletionKeys(userId)
+  next.add(key)
+  window.sessionStorage.setItem(getCompletionStorageKey(userId), JSON.stringify(Array.from(next)))
 }
 
 function getStoredOpenTask(): OpenTask | null {
@@ -43,7 +68,6 @@ export default function OpenTaskToast() {
   const [mounted, setMounted] = useState(false)
   const [openTask, setOpenTask] = useState<OpenTask | null>(() => getStoredOpenTask())
   const [completion, setCompletion] = useState<CompletionToast | null>(null)
-  const [checkedCompleted, setCheckedCompleted] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     setMounted(true)
@@ -55,7 +79,6 @@ export default function OpenTaskToast() {
       window.sessionStorage.removeItem('mb_open_task')
       setOpenTask(null)
       setCompletion(null)
-      setCheckedCompleted(new Set())
     }
     const token = window.localStorage.getItem('access_token') || window.sessionStorage.getItem('access_token')
     if (!token) {
@@ -99,14 +122,19 @@ export default function OpenTaskToast() {
   }, [me])
 
   useEffect(() => {
-    if (!openTask) return
+    if (!openTask || !me) return
     let active = true
+    const openedAtMs = Date.parse(openTask.openedAt ?? '')
+    const minimumCompletedAt = Number.isFinite(openedAtMs) ? openedAtMs : Date.now()
     const interval = window.setInterval(async () => {
       try {
         const res = await api.get('/credit/report')
         const items: CreditReportItem[] = Array.isArray(res.data?.items) ? res.data.items : []
         const match = items.find((item: CreditReportItem) => {
-          if (checkedCompleted.has(item.action_id)) return false
+          const completionKey = `${item.action_id}:${item.completed_at}`
+          if (getShownCompletionKeys(me.id).has(completionKey)) return false
+          const completedAtMs = Date.parse(item.completed_at)
+          if (!Number.isFinite(completedAtMs) || completedAtMs < minimumCompletedAt) return false
           if (item.action_id === openTask.actionId) return true
           if (openTask.actionType && item.action_type) return item.action_type === openTask.actionType
           return item.title === openTask.title
@@ -121,7 +149,7 @@ export default function OpenTaskToast() {
             if (assistant.length === 0) return
           }
         }
-        setCheckedCompleted((prev) => new Set(prev).add(match.action_id))
+        markCompletionShown(me.id, `${match.action_id}:${match.completed_at}`)
         setOpenTask(null)
         window.sessionStorage.removeItem('mb_open_task')
         setCompletion({
@@ -137,7 +165,7 @@ export default function OpenTaskToast() {
       active = false
       window.clearInterval(interval)
     }
-  }, [openTask])
+  }, [me, openTask])
 
   // completion toast stays until closed by user
 
@@ -192,7 +220,7 @@ export default function OpenTaskToast() {
         <div
           style={{
             position: 'fixed',
-            top: 140,
+            top: openTask ? 140 : 96,
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 99999,

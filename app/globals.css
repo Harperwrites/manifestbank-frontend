@@ -50,6 +50,16 @@ a {
   color: inherit;
 }
 
+.mb-affirmations-link .mb-affirmations-heart-fill {
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.mb-affirmations-link:hover .mb-affirmations-heart-fill,
+.mb-affirmations-link:focus-visible .mb-affirmations-heart-fill {
+  opacity: 0.9;
+}
+
 ::selection {
   background: rgba(182, 121, 103, 0.2);
 }

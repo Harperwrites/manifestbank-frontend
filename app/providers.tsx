@@ -50,24 +50,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [legalChecked, setLegalChecked] = useState(false)
   const [legalSubmitting, setLegalSubmitting] = useState(false)
   const [legalError, setLegalError] = useState('')
+  const [legalDocOpen, setLegalDocOpen] = useState<'terms' | 'privacy' | null>(null)
+  const [legalTermsText, setLegalTermsText] = useState('')
+  const [legalPrivacyText, setLegalPrivacyText] = useState('')
+  const [legalContentLoading, setLegalContentLoading] = useState(false)
+  const [legalContentError, setLegalContentError] = useState('')
   const [devPaywallOpen, setDevPaywallOpen] = useState(false)
   const [devPaywallReason, setDevPaywallReason] = useState('')
   const [tierCompareOpen, setTierCompareOpen] = useState(false)
   const legalReadOnlyPath =
     pathname === '/terms' || pathname === '/privacy' || pathname === '/conditions'
-  const [legalDocOpen, setLegalDocOpen] = useState<null | 'terms' | 'privacy'>(null)
-  const [legalTermsText, setLegalTermsText] = useState('')
-  const [legalPrivacyText, setLegalPrivacyText] = useState('')
-  const [legalContentLoading, setLegalContentLoading] = useState(false)
-  const [legalContentError, setLegalContentError] = useState('')
 
   function parseLegal(text: string) {
     const lines = text.split('\n')
-    return {
-      title: lines[0] ?? '',
-      effective: lines[1] ?? '',
-      body: lines.slice(2).join('\n').trim(),
-    }
+    const title = lines[0] ?? ''
+    const effective = lines[1] ?? ''
+    const body = lines.slice(2).join('\n').trim()
+    return { title, effective, body }
   }
 
   function getStoredToken() {
@@ -182,7 +181,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await refreshMe()
       setIsLoading(false)
     })()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -209,6 +207,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLegalSubmitting(false)
       setLegalError('')
       setLegalDocOpen(null)
+      setLegalTermsText('')
+      setLegalPrivacyText('')
+      setLegalContentLoading(false)
+      setLegalContentError('')
       return
     }
     let active = true
@@ -230,32 +232,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [me])
 
   useEffect(() => {
-    if (!legalDocOpen) return
-    if ((legalDocOpen === 'terms' && legalTermsText) || (legalDocOpen === 'privacy' && legalPrivacyText)) return
-    let active = true
-    ;(async () => {
-      setLegalContentLoading(true)
-      setLegalContentError('')
-      try {
-        const res = await api.get('/legal/content')
-        if (!active) return
-        setLegalTermsText(typeof res.data?.termsText === 'string' ? res.data.termsText : '')
-        setLegalPrivacyText(typeof res.data?.privacyText === 'string' ? res.data.privacyText : '')
-      } catch (err: any) {
-        if (!active) return
-        const detail =
-          err?.response?.data?.detail ?? err?.response?.data?.message ?? err?.message ?? 'Unable to load document.'
-        setLegalContentError(detail)
-      } finally {
-        if (active) setLegalContentLoading(false)
-      }
-    })()
-    return () => {
-      active = false
-    }
-  }, [legalDocOpen, legalPrivacyText, legalTermsText])
-
-  useEffect(() => {
     let active = true
     if (typeof window === 'undefined') return
     api
@@ -268,6 +244,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       active = false
     }
   }, [])
+
+  useEffect(() => {
+    if (!legalDocOpen) return
+    if (legalTermsText && legalPrivacyText) return
+
+    let active = true
+    setLegalContentLoading(true)
+    setLegalContentError('')
+
+    ;(async () => {
+      try {
+        const res = await api.get('/legal/content')
+        if (!active) return
+        setLegalTermsText(typeof res.data?.termsText === 'string' ? res.data.termsText : '')
+        setLegalPrivacyText(typeof res.data?.privacyText === 'string' ? res.data.privacyText : '')
+      } catch (err: any) {
+        if (!active) return
+        const detail =
+          err?.response?.data?.detail ??
+          err?.response?.data?.message ??
+          err?.message ??
+          'Unable to load legal document'
+        setLegalContentError(detail)
+      } finally {
+        if (active) setLegalContentLoading(false)
+      }
+    })()
+
+    return () => {
+      active = false
+    }
+  }, [legalDocOpen, legalTermsText, legalPrivacyText])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -429,6 +437,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     () => ({ me, isLoading, refreshMe, loginWithToken, logout }),
     [me, isLoading]
   )
+  const legalDocText = legalDocOpen === 'terms' ? legalTermsText : legalPrivacyText
+  const parsedLegalDoc = legalDocText ? parseLegal(legalDocText) : null
 
   return (
     <AuthContext.Provider value={value}>
@@ -499,16 +509,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 I agree to the{' '}
                 <button
                   type="button"
-                  onClick={() => setLegalDocOpen('terms')}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    setLegalDocOpen('terms')
+                  }}
+                  onMouseDown={(event) => event.stopPropagation()}
                   style={{
+                    appearance: 'none',
                     border: 'none',
                     background: 'transparent',
-                    cursor: 'pointer',
                     padding: 0,
                     color: 'inherit',
                     textDecoration: 'underline',
                     textUnderlineOffset: 2,
                     fontSize: 'inherit',
+                    cursor: 'pointer',
                   }}
                 >
                   Terms &amp; Conditions
@@ -516,16 +531,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 and{' '}
                 <button
                   type="button"
-                  onClick={() => setLegalDocOpen('privacy')}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    setLegalDocOpen('privacy')
+                  }}
+                  onMouseDown={(event) => event.stopPropagation()}
                   style={{
+                    appearance: 'none',
                     border: 'none',
                     background: 'transparent',
-                    cursor: 'pointer',
                     padding: 0,
                     color: 'inherit',
                     textDecoration: 'underline',
                     textUnderlineOffset: 2,
                     fontSize: 'inherit',
+                    cursor: 'pointer',
                   }}
                 >
                   Privacy Policy
@@ -578,101 +598,112 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 style={{
                   position: 'fixed',
                   inset: 0,
-                  background: 'rgba(20, 12, 8, 0.55)',
+                  background: 'rgba(20, 12, 8, 0.52)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  zIndex: 2147483648,
-                  padding: 20,
+                  zIndex: 2147483647,
+                  padding: 24,
                 }}
               >
                 <div
                   onClick={(event) => event.stopPropagation()}
                   style={{
-                    width: 'min(760px, 100%)',
-                    maxHeight: 'min(82vh, 900px)',
-                    overflowY: 'auto',
-                    background:
-                      'linear-gradient(135deg, rgba(199, 140, 122, 0.96), rgba(236, 214, 201, 0.98)), radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.7), transparent 52%), radial-gradient(circle at 78% 10%, rgba(255, 255, 255, 0.45), transparent 58%)',
-                    borderRadius: 22,
-                    border: '1px solid rgba(95, 74, 62, 0.3)',
-                    padding: '24px 22px 20px',
-                    boxShadow: '0 28px 70px rgba(0,0,0,0.35)',
+                    width: 'min(820px, 100%)',
+                    maxHeight: 'min(78vh, 820px)',
+                    overflow: 'auto',
+                    background: 'rgba(252, 247, 243, 0.98)',
+                    borderRadius: 24,
+                    border: '1px solid rgba(95, 74, 62, 0.18)',
+                    boxShadow: '0 28px 70px rgba(0,0,0,0.3)',
+                    padding: '24px 24px 22px',
                     color: '#2b1b16',
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
-                    <div style={{ fontFamily: 'var(--font-serif)', fontSize: 22, fontWeight: 600 }}>
-                      {legalDocOpen === 'terms' ? 'Terms & Conditions' : 'Privacy Policy'}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      justifyContent: 'space-between',
+                      gap: 16,
+                    }}
+                  >
+                    <div>
+                      <div
+                        style={{ fontFamily: 'var(--font-serif)', fontSize: 22, fontWeight: 600 }}
+                      >
+                        {legalDocOpen === 'terms' ? 'Terms & Conditions' : 'Privacy Policy'}
+                      </div>
+                      <div style={{ marginTop: 4, fontSize: 13, opacity: 0.72 }}>
+                        Review before accepting.
+                      </div>
                     </div>
                     <button
                       type="button"
                       onClick={() => setLegalDocOpen(null)}
-                      style={{ border: 'none', background: 'transparent', cursor: 'pointer', opacity: 0.7 }}
+                      style={{
+                        border: 'none',
+                        background: 'transparent',
+                        cursor: 'pointer',
+                        fontSize: 26,
+                        lineHeight: 1,
+                        color: '#5f4a3e',
+                      }}
+                      aria-label="Close legal document preview"
                     >
-                      Close
+                      ×
                     </button>
                   </div>
-                  {legalContentLoading ? (
-                    <div style={{ marginTop: 16 }}>Loading…</div>
-                  ) : legalContentError ? (
-                    <div style={{ marginTop: 16, color: '#5a1f1f' }}>{legalContentError}</div>
-                  ) : (() => {
-                      const raw = legalDocOpen === 'terms' ? legalTermsText : legalPrivacyText
-                      const parsed = raw ? parseLegal(raw) : null
-                      if (!parsed) {
-                        return <div style={{ marginTop: 16 }}>Legal document unavailable.</div>
-                      }
-                      return (
-                        <>
-                          <div
-                            style={{
-                              marginTop: 14,
-                              padding: '14px 16px',
-                              borderRadius: 16,
-                              background: 'rgba(255, 255, 255, 0.7)',
-                              border: '1px solid rgba(95, 74, 62, 0.18)',
-                            }}
-                          >
-                            <div style={{ fontWeight: 700 }}>{parsed.title}</div>
-                            <div style={{ marginTop: 4, fontSize: 13, fontWeight: 600 }}>{parsed.effective}</div>
-                          </div>
-                          <div
-                            style={{
-                              marginTop: 16,
-                              whiteSpace: 'pre-wrap',
-                              lineHeight: 1.6,
-                              fontSize: 14,
-                              background: 'rgba(255, 255, 255, 0.62)',
-                              border: '1px solid rgba(95, 74, 62, 0.16)',
-                              borderRadius: 18,
-                              padding: '16px 16px 18px',
-                            }}
-                          >
-                            {parsed.body}
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setLegalDocOpen(null)}
-                            style={{
-                              marginTop: 16,
-                              border: 'none',
-                              background: 'transparent',
-                              cursor: 'pointer',
-                              padding: 0,
-                              color: '#6f4a3a',
-                              textDecoration: 'underline',
-                              textUnderlineOffset: 2,
-                              fontSize: 13,
-                              fontWeight: 700,
-                              textShadow: '0 0 8px rgba(182, 121, 103, 0.22)',
-                            }}
-                          >
-                            Close this pop up to agree.
-                          </button>
-                        </>
-                      )
-                    })()}
+                  <div
+                    style={{
+                      marginTop: 18,
+                      whiteSpace: 'pre-wrap',
+                      lineHeight: 1.58,
+                      fontSize: 14,
+                    }}
+                  >
+                    {legalContentLoading ? (
+                      <div>Loading…</div>
+                    ) : legalContentError ? (
+                      <div>Unable to load legal document: {legalContentError}</div>
+                    ) : parsedLegalDoc ? (
+                      <>
+                        <div
+                          style={{
+                            fontFamily: 'var(--font-serif)',
+                            fontSize: 24,
+                            fontWeight: 600,
+                            lineHeight: 1.2,
+                          }}
+                        >
+                          {parsedLegalDoc.title}
+                        </div>
+                        <div style={{ marginTop: 8, fontWeight: 600 }}>
+                          {parsedLegalDoc.effective}
+                        </div>
+                        <div style={{ marginTop: 16 }}>{parsedLegalDoc.body}</div>
+                      </>
+                    ) : (
+                      <div>Legal document unavailable.</div>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 18 }}>
+                    <button
+                      type="button"
+                      onClick={() => setLegalDocOpen(null)}
+                      style={{
+                        padding: '10px 16px',
+                        borderRadius: 999,
+                        border: '1px solid rgba(95, 74, 62, 0.24)',
+                        background: 'rgba(255,255,255,0.72)',
+                        color: '#4a2f26',
+                        cursor: 'pointer',
+                        fontWeight: 700,
+                      }}
+                    >
+                      Exit
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : null}

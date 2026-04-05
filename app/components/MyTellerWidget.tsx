@@ -2,7 +2,9 @@
 
 import type React from 'react'
 import { useEffect, useRef, useState } from 'react'
+import TellerAiConsentModal from '@/app/components/TellerAiConsentModal'
 import { useAuth } from '@/app/providers'
+import { acceptTellerAiConsent, hasAcceptedTellerAiConsent } from '@/app/lib/tellerAiConsent'
 import { api } from '@/lib/api'
 import TellerStarterPrompt from '@/app/components/TellerStarterPrompt'
 import TellerMarkdown from '@/app/components/TellerMarkdown'
@@ -25,6 +27,9 @@ export default function MyTellerWidget() {
   const [threadId, setThreadId] = useState<string | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [draft, setDraft] = useState('')
+  const [aiConsentAccepted, setAiConsentAccepted] = useState(false)
+  const [aiConsentOpen, setAiConsentOpen] = useState(false)
+  const [openAfterConsent, setOpenAfterConsent] = useState(false)
   const endRef = useRef<HTMLDivElement | null>(null)
   const retryHints = ['Fortune is thinking…', 'Stay with me — still working.']
   const [retryHintIndex, setRetryHintIndex] = useState(0)
@@ -39,7 +44,6 @@ export default function MyTellerWidget() {
   useEffect(() => {
     if (!open) return
     loadCurrentSession()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   useEffect(() => {
@@ -64,6 +68,21 @@ export default function MyTellerWidget() {
     setMessages([])
     setDraft('')
     setError('')
+  }, [isVerified, me])
+
+  useEffect(() => {
+    if (!me || !isVerified) {
+      setAiConsentAccepted(false)
+      setAiConsentOpen(false)
+      setOpenAfterConsent(false)
+      return
+    }
+    const sync = () => {
+      setAiConsentAccepted(hasAcceptedTellerAiConsent(me.id))
+    }
+    sync()
+    window.addEventListener('mb_teller_ai_consent_accepted', sync)
+    return () => window.removeEventListener('mb_teller_ai_consent_accepted', sync)
   }, [isVerified, me])
 
   if (!me || !isVerified) return null
@@ -123,6 +142,10 @@ export default function MyTellerWidget() {
   }
 
   async function handleSend() {
+    if (!aiConsentAccepted) {
+      setAiConsentOpen(true)
+      return
+    }
     if (!isPremium) {
       window.dispatchEvent(new CustomEvent('paywall:open', { detail: { reason: upgradeReason } }))
       return
@@ -196,6 +219,23 @@ export default function MyTellerWidget() {
         alignItems: 'flex-end',
       }}
     >
+      <TellerAiConsentModal
+        open={aiConsentOpen}
+        onAccept={() => {
+          if (!me) return
+          acceptTellerAiConsent(me.id)
+          setAiConsentAccepted(true)
+          setAiConsentOpen(false)
+          if (openAfterConsent) {
+            setOpen(true)
+            setOpenAfterConsent(false)
+          }
+        }}
+        onExit={() => {
+          setAiConsentOpen(false)
+          setOpenAfterConsent(false)
+        }}
+      />
       {open ? (
         <div
           data-testid="teller-widget-panel"
@@ -236,6 +276,10 @@ export default function MyTellerWidget() {
               <button
                 type="button"
                 onClick={async () => {
+                  if (!aiConsentAccepted) {
+                    setAiConsentOpen(true)
+                    return
+                  }
                   if (!isPremium) {
                     window.dispatchEvent(new CustomEvent('paywall:open', { detail: { reason: upgradeReason } }))
                     return
@@ -396,6 +440,7 @@ export default function MyTellerWidget() {
                 data-testid="teller-widget-send-button"
                 onClick={handleSend}
                 aria-label="Send message"
+                disabled={!aiConsentAccepted}
                 style={{
                   padding: '8px 12px',
                   borderRadius: 10,
@@ -404,7 +449,8 @@ export default function MyTellerWidget() {
                   color: '#fff',
                   fontWeight: 700,
                   fontSize: 12,
-                  cursor: 'pointer',
+                  cursor: aiConsentAccepted ? 'pointer' : 'not-allowed',
+                  opacity: aiConsentAccepted ? 1 : 0.6,
                 }}
               >
                 Send
@@ -417,7 +463,14 @@ export default function MyTellerWidget() {
       <button
         type="button"
         data-testid="teller-widget-toggle"
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={() => {
+          if (!open && !aiConsentAccepted) {
+            setOpenAfterConsent(true)
+            setAiConsentOpen(true)
+            return
+          }
+          setOpen((prev) => !prev)
+        }}
         style={{
           textDecoration: 'none',
           padding: '12px 18px',

@@ -6,6 +6,10 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAuth } from '@/app/providers'
 import InstallAppButton from '@/app/components/InstallAppButton'
+import MyAffirmationsIcon from '@/app/components/MyAffirmationsIcon'
+import MyJournalIcon from '@/app/components/MyJournalIcon'
+import MyChecksSignatureIcon from '@/app/components/MyChecksSignatureIcon'
+import MyStatementsIcon from '@/app/components/MyStatementsIcon'
 import { api } from '@/lib/api'
 import { PREMIUM_CTA } from '@/app/lib/premium'
 import { validateUsername } from '@/app/lib/username'
@@ -527,10 +531,16 @@ export default function Navbar({
                 role="menuitem"
                 onClick={() => setTreasureOpen(false)}
               >
-                My Journal
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                  <span aria-hidden="true" style={{ width: 18, height: 18, display: 'inline-flex' }}>
+                    <MyJournalIcon size={18} />
+                  </span>
+                  <span>My Journal</span>
+                </span>
               </Link>
               <Link
                 href="/myaffirmations"
+                className="mb-affirmations-link"
                 style={{
                   textDecoration: 'none',
                   fontWeight: 600,
@@ -540,7 +550,12 @@ export default function Navbar({
                 role="menuitem"
                 onClick={() => setTreasureOpen(false)}
               >
-                My Affirmations
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                  <span aria-hidden="true" style={{ width: 18, height: 18, display: 'inline-flex' }}>
+                    <MyAffirmationsIcon size={18} />
+                  </span>
+                  <span>My Affirmations</span>
+                </span>
               </Link>
               <Link
                 href="/mystatments"
@@ -553,7 +568,12 @@ export default function Navbar({
                 role="menuitem"
                 onClick={() => setTreasureOpen(false)}
               >
-                My Statements
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                  <span aria-hidden="true" style={{ width: 18, height: 18, display: 'inline-flex' }}>
+                    <MyStatementsIcon size={18} />
+                  </span>
+                  <span>My Statements</span>
+                </span>
               </Link>
               <Link
                 href="/mychecks"
@@ -566,7 +586,12 @@ export default function Navbar({
                 role="menuitem"
                 onClick={() => setTreasureOpen(false)}
               >
-                My Checks
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                  <span aria-hidden="true" style={{ width: 18, height: 18, display: 'inline-flex' }}>
+                    <MyChecksSignatureIcon size={18} />
+                  </span>
+                  <span>My Checks</span>
+                </span>
               </Link>
               <Link
                 href="/mycredit"
