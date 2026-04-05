@@ -6,8 +6,10 @@ import Navbar from '@/app/components/Navbar'
 import { api } from '@/lib/api'
 import { formatLocalDate } from '@/lib/time'
 import { useAuth } from '@/app/providers'
+import TellerAiConsentModal from '@/app/components/TellerAiConsentModal'
 import TellerStarterPrompt from '@/app/components/TellerStarterPrompt'
 import TellerMarkdown from '@/app/components/TellerMarkdown'
+import { acceptTellerAiConsent, hasAcceptedTellerAiConsent } from '@/app/lib/tellerAiConsent'
 import { sendTellerChat } from '@/app/lib/tellerStream'
 
 type ChatMessage = {
@@ -43,6 +45,8 @@ export default function MyTellerPage() {
   const [renameTarget, setRenameTarget] = useState<ChatThread | null>(null)
   const [renameTitle, setRenameTitle] = useState('')
   const [renameError, setRenameError] = useState('')
+  const [aiConsentAccepted, setAiConsentAccepted] = useState(false)
+  const [aiConsentOpen, setAiConsentOpen] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
   const retryHints = ['Fortune is thinking…', 'Stay with me — still working.']
   const [retryHintIndex, setRetryHintIndex] = useState(0)
@@ -57,6 +61,22 @@ export default function MyTellerPage() {
   function renderAssistantContent(text: string) {
     return <TellerMarkdown content={text} />
   }
+
+  useEffect(() => {
+    if (!me || !isVerified) {
+      setAiConsentAccepted(false)
+      setAiConsentOpen(false)
+      return
+    }
+    const sync = () => {
+      const accepted = hasAcceptedTellerAiConsent(me.id)
+      setAiConsentAccepted(accepted)
+      setAiConsentOpen(!accepted)
+    }
+    sync()
+    window.addEventListener('mb_teller_ai_consent_accepted', sync)
+    return () => window.removeEventListener('mb_teller_ai_consent_accepted', sync)
+  }, [isVerified, me])
 
   useEffect(() => {
     if (!isVerified) return
@@ -192,6 +212,10 @@ export default function MyTellerPage() {
   }, [activeThread?.messages?.length, loading, introAsMessage])
 
   async function handleNewThread() {
+    if (!aiConsentAccepted) {
+      setAiConsentOpen(true)
+      return
+    }
     if (!isPremium) {
       window.dispatchEvent(new CustomEvent('paywall:open', { detail: { reason: upgradeReason } }))
       return
@@ -214,6 +238,10 @@ export default function MyTellerPage() {
   }
 
   async function handleSend() {
+    if (!aiConsentAccepted) {
+      setAiConsentOpen(true)
+      return
+    }
     if (!isPremium) {
       window.dispatchEvent(new CustomEvent('paywall:open', { detail: { reason: upgradeReason } }))
       return
@@ -271,18 +299,6 @@ export default function MyTellerPage() {
     })
 
     try {
-      if (typeof window !== 'undefined') {
-        window.sessionStorage.setItem(
-          'mb_open_task',
-          JSON.stringify({
-            actionId: Date.now(),
-            title: 'Send a Teller Note',
-            bureau: 'Emotional Reserve',
-            actionType: 'teller_message',
-          })
-        )
-        window.dispatchEvent(new Event('mb_open_task_set'))
-      }
       const response = await sendTellerChat({
         thread_id: activeThread?.id && activeThread.id !== 'new' ? activeThread.id : null,
         message: trimmed,
@@ -446,6 +462,18 @@ export default function MyTellerPage() {
   return (
     <main className="mb-page-offset">
       <Navbar showAccountsDropdown />
+      <TellerAiConsentModal
+        open={Boolean(me && isVerified && aiConsentOpen)}
+        onAccept={() => {
+          if (!me) return
+          acceptTellerAiConsent(me.id)
+          setAiConsentAccepted(true)
+          setAiConsentOpen(false)
+        }}
+        onExit={() => {
+          window.location.href = '/dashboard'
+        }}
+      />
       <div data-testid="teller-page" className="teller-shell" style={{ maxWidth: 1400, margin: '0 auto', padding: '28px 24px 80px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <div>
@@ -781,8 +809,18 @@ export default function MyTellerPage() {
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ fontWeight: 700 }}>Conversation</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flexWrap: 'wrap', flex: 1 }}>
+                  <div style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>Conversation</div>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      lineHeight: 1.4,
+                      color: 'rgba(59, 43, 36, 0.78)',
+                      minWidth: 0,
+                    }}
+                  >
+                    Fortune is evolving in real time while providing early access in order to continuously improve intelligence.
+                  </div>
                   {me?.role === 'admin' ? (
                     <span
                       style={{
@@ -952,7 +990,7 @@ export default function MyTellerPage() {
                   value={loading ? '' : draft}
                   onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={handleDraftKeyDown}
-                  disabled={loading}
+                  disabled={loading || !aiConsentAccepted}
                   rows={3}
                   placeholder="Tell your Teller what you want to do..."
                   aria-label="Message Fortune"
@@ -985,9 +1023,9 @@ export default function MyTellerPage() {
                       display: 'inline-flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      opacity: loading ? 0.6 : 1,
-                    }}
-                  >
+                    opacity: loading || !aiConsentAccepted ? 0.6 : 1,
+                  }}
+                >
                     ↑
                   </button>
                 </div>

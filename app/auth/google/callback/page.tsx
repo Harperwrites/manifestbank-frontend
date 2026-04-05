@@ -2,7 +2,6 @@
 
 import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { api } from '@/lib/api'
 import { useAuth } from '@/app/providers'
 
 function GoogleCallbackContent() {
@@ -15,6 +14,7 @@ function GoogleCallbackContent() {
     const token = params.get('token')
     const next = params.get('next') || '/dashboard'
     const keep = params.get('keep')
+    const loginCreditAwarded = params.get('login_credit_awarded') === '1'
     if (!token) {
       setMessage('Missing login token. Please try again.')
       return
@@ -22,13 +22,8 @@ function GoogleCallbackContent() {
     ;(async () => {
       try {
         await loginWithToken(token, keep !== '0')
-        try {
-          const creditRes = await api.post('/credit/daily-login')
-          if (typeof window !== 'undefined' && creditRes.data?.awarded) {
-            window.localStorage.setItem('mb_login_credit_toast', '1')
-          }
-        } catch {
-          // ignore
+        if (typeof window !== 'undefined' && loginCreditAwarded) {
+          window.localStorage.setItem('mb_login_credit_toast', '1')
         }
         router.replace(next)
       } catch {

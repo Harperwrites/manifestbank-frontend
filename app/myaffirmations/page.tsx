@@ -3,6 +3,10 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import MyAffirmationsIcon from '@/app/components/MyAffirmationsIcon'
+import MyJournalIcon from '@/app/components/MyJournalIcon'
+import MyChecksSignatureIcon from '@/app/components/MyChecksSignatureIcon'
+import MyStatementsIcon from '@/app/components/MyStatementsIcon'
 import Navbar from '@/app/components/Navbar'
 import { api } from '@/lib/api'
 import { formatLocalDate } from '@/lib/time'
@@ -664,15 +668,26 @@ export default function MyAffirmationsPage() {
                   role="menuitem"
                   onClick={() => setTreasureChipOpen(false)}
                 >
-                  My Journal
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                    <span aria-hidden="true" style={{ width: 18, height: 18, display: 'inline-flex' }}>
+                      <MyJournalIcon size={18} />
+                    </span>
+                    <span>My Journal</span>
+                  </span>
                 </Link>
                 <Link
                   href="/myaffirmations"
+                  className="mb-affirmations-link"
                   style={{ textDecoration: 'none', fontWeight: 600, color: '#4a2f26' }}
                   role="menuitem"
                   onClick={() => setTreasureChipOpen(false)}
                 >
-                  Affirmations
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                    <span aria-hidden="true" style={{ width: 18, height: 18, display: 'inline-flex' }}>
+                      <MyAffirmationsIcon size={18} />
+                    </span>
+                    <span>Affirmations</span>
+                  </span>
                 </Link>
                 <Link
                   href="/mystatments"
@@ -680,7 +695,12 @@ export default function MyAffirmationsPage() {
                   role="menuitem"
                   onClick={() => setTreasureChipOpen(false)}
                 >
-                  My Statements
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                    <span aria-hidden="true" style={{ width: 18, height: 18, display: 'inline-flex' }}>
+                      <MyStatementsIcon size={18} />
+                    </span>
+                    <span>My Statements</span>
+                  </span>
                 </Link>
                 <Link
                   href="/mychecks"
@@ -688,7 +708,12 @@ export default function MyAffirmationsPage() {
                   role="menuitem"
                   onClick={() => setTreasureChipOpen(false)}
                 >
-                  My Checks
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                    <span aria-hidden="true" style={{ width: 18, height: 18, display: 'inline-flex' }}>
+                      <MyChecksSignatureIcon size={18} />
+                    </span>
+                    <span>My Checks</span>
+                  </span>
                 </Link>
                 <Link
                   href="/mycredit"

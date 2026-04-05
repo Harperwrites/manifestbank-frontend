@@ -4,6 +4,10 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import AccountsPanel from '../components/AccountsPanel'
+import MyAffirmationsIcon from '../components/MyAffirmationsIcon'
+import MyJournalIcon from '../components/MyJournalIcon'
+import MyChecksSignatureIcon from '../components/MyChecksSignatureIcon'
+import MyStatementsIcon from '../components/MyStatementsIcon'
 import Navbar from '../components/Navbar'
 import { api } from '../../lib/api'
 import { Button, Card, Container, Metric, Pill } from '../components/ui'
@@ -1130,16 +1134,7 @@ export default function DashboardPage() {
     if (flag) {
       setLoginCreditToast(true)
       window.localStorage.removeItem('mb_login_credit_toast')
-      return
     }
-    ;(async () => {
-      try {
-        const res = await api.post('/credit/daily-login')
-        if (res.data?.awarded) setLoginCreditToast(true)
-      } catch {
-        // ignore
-      }
-    })()
   }, [])
 
   const didInitCurrency = useRef(false)
@@ -1168,7 +1163,6 @@ export default function DashboardPage() {
       Promise.all([loadSummary(), loadPortfolio()]).catch(() => {})
     }
     window.addEventListener('accounts:refresh', handleRefresh)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     return () => {
       window.clearTimeout(warmTimer)
       window.removeEventListener('accounts:refresh', handleRefresh)
@@ -1582,15 +1576,26 @@ export default function DashboardPage() {
                   role="menuitem"
                   onClick={() => setTreasureChipOpen(false)}
                 >
-                  My Journal
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                    <span aria-hidden="true" style={{ width: 18, height: 18, display: 'inline-flex' }}>
+                      <MyJournalIcon size={18} />
+                    </span>
+                    <span>My Journal</span>
+                  </span>
                 </Link>
                 <Link
                   href="/myaffirmations"
+                  className="mb-affirmations-link"
                   style={{ textDecoration: 'none', fontWeight: 600, color: '#4a2f26' }}
                   role="menuitem"
                   onClick={() => setTreasureChipOpen(false)}
                 >
-                  My Affirmations
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                    <span aria-hidden="true" style={{ width: 18, height: 18, display: 'inline-flex' }}>
+                      <MyAffirmationsIcon size={18} />
+                    </span>
+                    <span>My Affirmations</span>
+                  </span>
                 </Link>
                 <Link
                   href="/mystatments"
@@ -1598,7 +1603,12 @@ export default function DashboardPage() {
                   role="menuitem"
                   onClick={() => setTreasureChipOpen(false)}
                 >
-                  My Statements
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                    <span aria-hidden="true" style={{ width: 18, height: 18, display: 'inline-flex' }}>
+                      <MyStatementsIcon size={18} />
+                    </span>
+                    <span>My Statements</span>
+                  </span>
                 </Link>
                 <Link
                   href="/mychecks"
@@ -1606,7 +1616,12 @@ export default function DashboardPage() {
                   role="menuitem"
                   onClick={() => setTreasureChipOpen(false)}
                 >
-                  My Checks
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                    <span aria-hidden="true" style={{ width: 18, height: 18, display: 'inline-flex' }}>
+                      <MyChecksSignatureIcon size={18} />
+                    </span>
+                    <span>My Checks</span>
+                  </span>
                 </Link>
                 <Link
                   href="/mycredit"
@@ -2000,6 +2015,22 @@ export default function DashboardPage() {
               <div style={{ display: 'grid', gap: 6, justifyItems: 'end' }}>
                 <div style={{ display: 'grid', gap: 4, justifyItems: 'end' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span
+                      style={{
+                        padding: '2px 7px',
+                        borderRadius: 999,
+                        background: 'linear-gradient(135deg, rgba(182, 121, 103, 0.98), rgba(211, 164, 144, 0.98))',
+                        color: '#fff',
+                        fontSize: 10,
+                        fontWeight: 800,
+                        letterSpacing: '0.08em',
+                        textTransform: 'uppercase',
+                        boxShadow: '0 0 10px rgba(182, 121, 103, 0.28)',
+                        fontStyle: 'italic',
+                      }}
+                    >
+                      New
+                    </span>
                     <span style={{ fontSize: 12, opacity: 0.7 }}>⇄</span>
                     <div style={{ position: 'relative' }}>
                       <select

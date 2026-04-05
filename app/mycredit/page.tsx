@@ -316,10 +316,10 @@ export default function MyCreditPage() {
   const [navReady, setNavReady] = useState(false)
 
   const [animated, setAnimated] = useState({
-    composite: 700,
-    iab: 700,
-    emotional: 700,
-    ctb: 700,
+    composite: 0,
+    iab: 0,
+    emotional: 0,
+    ctb: 0,
   })
 
   const scores = summary?.scores
@@ -393,7 +393,6 @@ export default function MyCreditPage() {
     if (!actions.length && !loading) {
       loadActionsWithExclusions()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [todos, dismissedIds])
 
   useEffect(() => {
@@ -735,11 +734,12 @@ export default function MyCreditPage() {
             right: 20,
             bottom: 22,
             zIndex: 99999,
-            background: 'rgba(255,255,255,0.96)',
-            border: '1px solid rgba(140, 92, 78, 0.35)',
-            borderRadius: 14,
-            padding: '10px 14px',
-            boxShadow: '0 14px 30px rgba(34, 20, 14, 0.18)',
+            background: 'linear-gradient(135deg, rgba(255, 251, 247, 0.98), rgba(245, 233, 224, 0.96))',
+            border: '1px solid rgba(182, 121, 103, 0.42)',
+            borderRadius: 16,
+            padding: '11px 15px',
+            boxShadow:
+              '0 16px 34px rgba(34, 20, 14, 0.18), 0 0 22px rgba(182, 121, 103, 0.26), 0 0 38px rgba(226, 185, 163, 0.2)',
             color: '#5a3629',
             maxWidth: 'min(90vw, 360px)',
             display: 'flex',
@@ -748,7 +748,24 @@ export default function MyCreditPage() {
             fontSize: 12,
           }}
         >
-          <span>{capToast}</span>
+          <span
+            aria-hidden="true"
+            style={{
+              width: 22,
+              height: 22,
+              borderRadius: 999,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'linear-gradient(135deg, rgba(182, 121, 103, 0.22), rgba(226, 185, 163, 0.34))',
+              boxShadow: '0 0 14px rgba(182, 121, 103, 0.35)',
+              fontSize: 12,
+              flexShrink: 0,
+            }}
+          >
+            ✦
+          </span>
+          <span style={{ textShadow: '0 0 10px rgba(255, 244, 213, 0.4)' }}>{capToast}</span>
           <button
             type="button"
             onClick={() => {
@@ -763,7 +780,8 @@ export default function MyCreditPage() {
               background: 'transparent',
               cursor: 'pointer',
               fontSize: 14,
-              opacity: 0.7,
+              opacity: 0.72,
+              color: '#7a4d3d',
             }}
           >
             ×
@@ -1009,6 +1027,7 @@ export default function MyCreditPage() {
                                   title: action.title,
                                   bureau: action.primary_bureau,
                                   actionType: action.action_type ?? 'unknown',
+                                  openedAt: new Date().toISOString(),
                                 })
                               )
                               window.dispatchEvent(new Event('mb_open_task_set'))
@@ -1091,6 +1110,7 @@ export default function MyCreditPage() {
                                     title: todo.title,
                                     bureau: todo.action_type,
                                     actionType: todo.action_type ?? 'unknown',
+                                    openedAt: new Date().toISOString(),
                                   })
                                 )
                                 window.dispatchEvent(new Event('mb_open_task_set'))
