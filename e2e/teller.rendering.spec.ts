@@ -68,21 +68,23 @@ test('my teller widget renders core controls and returns responses', async ({ pa
   await expect(page.getByTestId('teller-widget-loading-indicator')).toHaveCount(0)
 })
 
-test('teller never leaves a blank assistant message when the stream returns no visible content', async ({ page, request }) => {
+test('teller shows an error state instead of inventing a fallback assistant reply when the stream returns no visible content', async ({ page, request }) => {
   const user = await seedUser(request)
   await primeBrowserSession(page, request, user)
   await mockBlankTellerStream(page)
 
   await page.goto('/myteller')
   await sendPageTellerMessage(page, 'Support me through a hard money week.')
-  await expect(page.getByTestId('teller-assistant-message').last()).toContainText('I’m here. Please try again.')
+  await expect(page.getByText('Unable to send message.')).toBeVisible()
+  await expect(page.getByTestId('teller-response-region')).not.toContainText('I’m here. Please try again.')
 
   await page.goto('/dashboard')
   await waitForDashboardSession(page)
   await dismissDashboardWelcome(page)
   await openTellerWidget(page)
   await sendWidgetTellerMessage(page, 'Support me through a hard money week.')
-  await expect(page.getByTestId('teller-widget-assistant-message').last()).toContainText('I’m here. Please try again.')
+  await expect(page.getByTestId('teller-widget-error')).toContainText('Unable to send message.')
+  await expect(page.getByTestId('teller-widget-response-region')).not.toContainText('I’m here. Please try again.')
 })
 
 test('greeting prompts render on the page and widget', async ({ page, request }) => {
