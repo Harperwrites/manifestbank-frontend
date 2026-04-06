@@ -94,7 +94,7 @@ export async function dismissDashboardWelcome(page: Page) {
   const accept = page.getByRole('button', { name: 'Accept' })
   if (await accept.isVisible().catch(() => false)) {
     await accept.click()
-    await expect(accept).not.toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('$999 Welcome Deposit')).toHaveCount(0, { timeout: 15000 })
   }
 }
 
@@ -200,10 +200,11 @@ export async function openTellerWidget(page: Page) {
 
 export async function mockTellerChat(
   page: Page,
-  assistantContent: string,
+  assistantContent: string | string[],
   options: { delayMs?: number; threadId?: number | string; title?: string } = {}
 ) {
   const { delayMs = 0, threadId = 9991, title = 'Mock Teller Session' } = options
+  const assistantQueue = Array.isArray(assistantContent) ? [...assistantContent] : [assistantContent]
   let threadTitle = title
   let assistantMessageId = 4002
   let userMessageId = 4001
@@ -288,6 +289,7 @@ export async function mockTellerChat(
     if (delayMs) {
       await new Promise((resolve) => setTimeout(resolve, delayMs))
     }
+    const nextAssistantContent = assistantQueue.length > 1 ? assistantQueue.shift() ?? assistantQueue[0] : assistantQueue[0]
     const createdAt = new Date().toISOString()
     const userMessage = {
       id: userMessageId++,
@@ -300,7 +302,7 @@ export async function mockTellerChat(
       id: assistantMessageId++,
       thread_id: threadId,
       role: 'assistant' as const,
-      content: assistantContent,
+      content: nextAssistantContent,
       created_at: createdAt,
     }
     messages = [...messages, userMessage, assistantMessage]
@@ -325,6 +327,7 @@ export async function mockTellerChat(
     if (delayMs) {
       await new Promise((resolve) => setTimeout(resolve, delayMs))
     }
+    const nextAssistantContent = assistantQueue.length > 1 ? assistantQueue.shift() ?? assistantQueue[0] : assistantQueue[0]
     const createdAt = new Date().toISOString()
     const userMessage = {
       id: userMessageId++,
@@ -337,7 +340,7 @@ export async function mockTellerChat(
       id: assistantMessageId++,
       thread_id: threadId,
       role: 'assistant' as const,
-      content: assistantContent,
+      content: nextAssistantContent,
       created_at: createdAt,
     }
     messages = [...messages, userMessage, assistantMessage]
@@ -352,7 +355,7 @@ export async function mockTellerChat(
         },
       }),
       JSON.stringify({ type: 'user_message', message: userMessage }),
-      JSON.stringify({ type: 'delta', delta: assistantContent }),
+      JSON.stringify({ type: 'delta', delta: nextAssistantContent }),
       JSON.stringify({ type: 'assistant_message', message: assistantMessage }),
       JSON.stringify({ type: 'done' }),
     ].join('\n')

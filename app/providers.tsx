@@ -47,6 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [notificationToasts, setNotificationToasts] = useState<NotificationToast[]>([])
   const [notificationsPrimed, setNotificationsPrimed] = useState(false)
   const [legalRequired, setLegalRequired] = useState(false)
+  const [legalHasPriorAcceptance, setLegalHasPriorAcceptance] = useState(false)
   const [legalChecked, setLegalChecked] = useState(false)
   const [legalSubmitting, setLegalSubmitting] = useState(false)
   const [legalError, setLegalError] = useState('')
@@ -203,6 +204,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!me) {
       setLegalRequired(false)
+      setLegalHasPriorAcceptance(false)
       setLegalChecked(false)
       setLegalSubmitting(false)
       setLegalError('')
@@ -220,9 +222,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!active) return
         const termsAccepted = Boolean(res.data?.termsAccepted)
         const privacyAccepted = Boolean(res.data?.privacyAccepted)
+        setLegalHasPriorAcceptance(Boolean(res.data?.hasPriorAcceptance))
         setLegalRequired(!(termsAccepted && privacyAccepted))
       } catch {
         if (!active) return
+        setLegalHasPriorAcceptance(false)
         setLegalRequired(true)
       }
     })()
@@ -484,11 +488,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }}
           >
             <div style={{ fontFamily: 'var(--font-serif)', fontSize: 22, fontWeight: 600 }}>
-              Accept Terms to Continue
+              {legalHasPriorAcceptance
+                ? "We've updated our Terms & Conditions and Privacy Policy"
+                : 'Accept Terms to Continue'}
             </div>
             <p style={{ marginTop: 8, opacity: 0.8 }}>
-              Please review and accept the ManifestBank™ Terms &amp; Conditions and Privacy
-              Policy to continue using the app.
+              {legalHasPriorAcceptance
+                ? 'Please review and accept the latest ManifestBank™ Terms & Conditions and Privacy Policy to continue using the app.'
+                : 'Please review and accept the ManifestBank™ Terms & Conditions and Privacy Policy to continue using the app.'}
             </p>
             <label
               style={{

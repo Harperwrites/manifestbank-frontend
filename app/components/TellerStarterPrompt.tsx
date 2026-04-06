@@ -3,20 +3,20 @@
 import { useEffect, useMemo, useState } from 'react'
 
 const PROMPTS = [
-  'Script My Ideal Day',
-  'Make a ManifestBank Deposit',
-  'Script New Opportunities',
-  'Expand My Wealth Identity',
-  'Write a Future Success Story',
-  'Rewire My Mindset',
-  'Attract the Right Connections',
-  'Find the Win Today',
-  'Identify the next aligned action toward my future',
-  'Set Today’s Energetic Intention',
-  'Meet My Future Self',
-  'Reset My Energy',
-  'Spot Hidden Opportunities',
-  'Upgrade My Beliefs',
+  'I want to make a deposit.',
+  'Deposit and the account name',
+  'Transfer money...',
+  'Create a new account',
+  'Put 2,000 in savings',
+  'Give me affirmations',
+  'Add 500 to travel account',
+  'Drop $1,000 into rent',
+  'Give me a script for a smooth day.',
+  'Deposit 300 checking',
+  'withdraw 900',
+  "I'd like to make a withdrawal",
+  'Withdraw $4,000 from my Wealth Builder account',
+  'New account for rent',
 ]
 
 export default function TellerStarterPrompt({ enabled = true }: { enabled?: boolean }) {

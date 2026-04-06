@@ -8,9 +8,10 @@ import {
   waitForDashboardSession,
 } from './helpers'
 
-test('new-user legal modal opens inline previews before acceptance', async ({ page, request }) => {
-  const user = await seedUser(request)
-
+async function mockLegalFlow(
+  page: Parameters<typeof test>[0]['page'],
+  options: { hasPriorAcceptance: boolean }
+) {
   await page.route('**/legal/consent', async (route) => {
     await route.fulfill({
       status: 200,
@@ -23,6 +24,7 @@ test('new-user legal modal opens inline previews before acceptance', async ({ pa
         termsCurrentVersion: 'current',
         privacyCurrentVersion: 'current',
         needsReaccept: true,
+        hasPriorAcceptance: options.hasPriorAcceptance,
       }),
     })
   })
@@ -55,11 +57,18 @@ test('new-user legal modal opens inline previews before acceptance', async ({ pa
       }),
     })
   })
+}
+
+test('new-user legal modal opens inline previews before acceptance', async ({ page, request }) => {
+  const user = await seedUser(request)
+
+  await mockLegalFlow(page, { hasPriorAcceptance: false })
 
   await page.goto(`${appBaseUrl}/auth`)
   await loginViaUi(page, user)
 
   await expect(page.getByText('Accept Terms to Continue')).toBeVisible()
+  await expect(page.getByText("We've updated our Terms & Conditions and Privacy Policy")).toHaveCount(0)
 
   await page.getByRole('button', { name: 'Terms & Conditions' }).click()
   await expect(page.getByText('Review before accepting.')).toBeVisible()
@@ -76,6 +85,36 @@ test('new-user legal modal opens inline previews before acceptance', async ({ pa
   await page.getByRole('button', { name: 'Accept and Continue' }).click()
 
   await expect(page.getByText('Accept Terms to Continue')).toHaveCount(0)
+  await expect(page.getByText('Private Vault Dashboard')).toBeVisible()
+})
+
+test('existing users who accepted older legal versions see the updated re-accept copy', async ({
+  page,
+  request,
+}) => {
+  const user = await seedUser(request)
+
+  await mockLegalFlow(page, { hasPriorAcceptance: true })
+
+  await page.goto(`${appBaseUrl}/auth`)
+  await loginViaUi(page, user)
+
+  await expect(page.getByText("We've updated our Terms & Conditions and Privacy Policy")).toBeVisible()
+  await expect(page.getByText('Accept Terms to Continue')).toHaveCount(0)
+  await expect(
+    page.getByText(
+      'Please review and accept the latest ManifestBank™ Terms & Conditions and Privacy Policy to continue using the app.'
+    )
+  ).toBeVisible()
+
+  await page.getByRole('button', { name: 'Terms & Conditions' }).click()
+  await expect(page.getByText('ManifestBank™ Terms & Conditions', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Exit' }).click()
+
+  await page.getByRole('checkbox').check()
+  await page.getByRole('button', { name: 'Accept and Continue' }).click()
+
+  await expect(page.getByText("We've updated our Terms & Conditions and Privacy Policy")).toHaveCount(0)
   await expect(page.getByText('Private Vault Dashboard')).toBeVisible()
 })
 

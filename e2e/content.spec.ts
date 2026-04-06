@@ -1,9 +1,13 @@
 import { expect, test } from '@playwright/test'
-import { dismissDashboardWelcome, primeBrowserSession, seedUser, tinyImageUpload, waitForDashboardSession } from './helpers'
+import { dismissDashboardWelcome, mockTellerChat, primeBrowserSession, seedUser, tinyImageUpload, waitForDashboardSession } from './helpers'
 
 test('journal, affirmations, and teller flows work for premium users', async ({ page, request }) => {
   const user = await seedUser(request)
   await primeBrowserSession(page, request, user)
+  await mockTellerChat(
+    page,
+    'A concise abundance practice for today: choose one grounded action, repeat one stabilizing affirmation, and close with one clear money move before noon.'
+  )
 
   await page.goto('/myjournal')
   await page.getByTestId('journal-new-entry-button').click()

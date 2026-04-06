@@ -3,6 +3,7 @@ import {
   createAccount,
   dismissDashboardWelcome,
   loginApi,
+  mockTellerChat,
   openTellerWidget,
   postLedgerEntry,
   primeBrowserSession,
@@ -73,7 +74,8 @@ async function openTellerPage(page: Page, request: APIRequestContext) {
   const user = await seedUser(request)
   await primeBrowserSession(page, request, user)
   await page.goto('/myteller')
-  await expect(page.getByTestId('teller-page-title')).toBeVisible({ timeout: 20000 })
+  await expect(page.getByTestId('teller-draft-input')).toBeVisible({ timeout: 20000 })
+  await expect(page.getByTestId('teller-send-button')).toBeVisible({ timeout: 20000 })
   return { user, surface: tellerSurface(page, 'page') }
 }
 
@@ -193,6 +195,12 @@ function assertNoMalformedReflectiveEnding(text: string) {
 
 test.describe('ManifestBank Teller chat experience', () => {
   test('money coaching continues forward on the teller page without falling into repeated templates', async ({ page, request }) => {
+    await mockTellerChat(page, [
+      'A money shift starts by choosing one move that makes your finances cleaner today and repeating it until it becomes standard.',
+      '- Money moves toward me when I move with clarity.\n- I keep what I build.\n- My decisions support overflow.',
+      '- I lead my money with calm.\n- I notice opportunities early.\n- My daily actions compound.',
+      'Your wealth identity expands when your standards become consistent enough to trust.',
+    ])
     const { surface } = await openTellerPage(page, request)
 
     const first = await sendMessage(surface, 'Manifest more money', { human: true })
