@@ -200,14 +200,8 @@ export async function streamTellerChat(
 
   if (!sawAssistantContent) {
     await onEvent({
-      type: 'assistant_message',
-      message: {
-        id: `fallback-${Date.now()}`,
-        thread_id: lastThread?.id ?? payload.thread_id ?? 'new',
-        role: 'assistant',
-        content: 'I’m here. Please try again.',
-        created_at: new Date().toISOString(),
-      },
+      type: 'error',
+      detail: 'Unable to complete the Teller reply.',
     })
     await onEvent({ type: 'done' })
   }

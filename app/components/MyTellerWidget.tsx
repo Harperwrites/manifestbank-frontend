@@ -162,18 +162,6 @@ export default function MyTellerWidget() {
       created_at: new Date().toISOString(),
     }
     setMessages((prev) => [...prev, optimistic])
-    const ensureAssistantVisible = () => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `forced-fallback-${Date.now()}`,
-          role: 'assistant',
-          content: 'I’m here. Please try again.',
-          created_at: new Date().toISOString(),
-        },
-      ])
-    }
-
     try {
       const response = await sendTellerChat({
         thread_id: threadId,
@@ -191,9 +179,8 @@ export default function MyTellerWidget() {
       if (status === 402) {
         window.dispatchEvent(new CustomEvent('paywall:open', { detail: { reason: err?.response?.data?.detail } }))
       } else {
-        setError('')
+        setError(err?.response?.data?.detail ?? 'Unable to send message.')
       }
-      ensureAssistantVisible()
     } finally {
       setLoading(false)
     }

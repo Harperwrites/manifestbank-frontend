@@ -259,27 +259,6 @@ export default function MyTellerPage() {
       content: trimmed,
       created_at: new Date().toISOString(),
     }
-    const appendFallbackAssistant = (fallbackContent = 'I’m here. Please try again.') => {
-      setThreads((prev) =>
-        prev.map((t) =>
-          t.id === targetThreadId
-            ? {
-                ...t,
-                messages: [
-                  ...t.messages,
-                  {
-                    id: `forced-fallback-${Date.now()}`,
-                    role: 'assistant',
-                    content: fallbackContent,
-                    created_at: new Date().toISOString(),
-                  },
-                ],
-              }
-            : t
-        )
-      )
-    }
-
     setThreads((prev) => {
       const target = prev.find((t) => t.id === targetThreadId)
       if (target) {
@@ -332,8 +311,7 @@ export default function MyTellerPage() {
           new CustomEvent('paywall:open', { detail: { reason: err?.response?.data?.detail } })
         )
       } else {
-        setError('')
-        appendFallbackAssistant()
+        setError(err?.response?.data?.detail ?? 'Unable to send message.')
       }
     } finally {
       setLoading(false)
