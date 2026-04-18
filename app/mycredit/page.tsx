@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type React from 'react'
 import Navbar from '@/app/components/Navbar'
@@ -806,7 +807,7 @@ export default function MyCreditPage() {
           />
         </div>
         <div style={{ justifySelf: 'end' }}>
-          <a
+          <Link
             href="/mycreditreport"
             data-testid="credit-view-report-link"
             className="credit-shimmer-pill"
@@ -820,7 +821,7 @@ export default function MyCreditPage() {
             }}
           >
             View Report
-          </a>
+          </Link>
         </div>
         </section>
 

@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { useAuth } from '@/app/providers'
@@ -25,6 +26,12 @@ export default function AuthPage() {
   const [resetMsg, setResetMsg] = useState('')
   const [msg, setMsg] = useState<string>('')
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const requestedMode = new URLSearchParams(window.location.search).get('mode')
+    setMode(requestedMode === 'register' ? 'register' : 'login')
+  }, [])
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -340,13 +347,13 @@ export default function AuthPage() {
               />
               <span>
                 I agree to the{' '}
-                <a href="/terms" style={{ textDecoration: 'underline', color: 'inherit' }}>
+                <Link href="/terms" style={{ textDecoration: 'underline', color: 'inherit' }}>
                   Terms &amp; Conditions
-                </a>{' '}
+                </Link>{' '}
                 and{' '}
-                <a href="/privacy" style={{ textDecoration: 'underline', color: 'inherit' }}>
+                <Link href="/privacy" style={{ textDecoration: 'underline', color: 'inherit' }}>
                   Privacy Policy
-                </a>
+                </Link>
                 .
               </span>
             </label>

@@ -303,7 +303,6 @@ export default function LedgerPanel({
 
   useEffect(() => {
     load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accountId, currency, isPremium])
 
   useEffect(() => {

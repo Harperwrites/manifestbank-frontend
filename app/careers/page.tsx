@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import Navbar from '@/app/components/Navbar'
 
 export default function CareersPage() {
@@ -113,7 +114,7 @@ export default function CareersPage() {
         <p>ManifestBank™ is a place for builders who move with intention.</p>
 
         <div style={{ marginTop: 26 }}>
-          <a
+          <Link
             href="/careers/open-roles"
             style={{
               display: 'inline-flex',
@@ -129,7 +130,7 @@ export default function CareersPage() {
             }}
           >
             Join our team!
-          </a>
+          </Link>
         </div>
       </section>
     </main>

@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
@@ -226,6 +227,30 @@ export default function Navbar({
 
   // Keep the treasure menu anchored to the open position without reflow wiggle.
 
+  const brandInline = (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+      <span
+        style={{
+          width: 34,
+          height: 34,
+          borderRadius: 10,
+          overflow: 'hidden',
+          flex: '0 0 auto',
+        }}
+      >
+        <Image
+          src="/manifestbank-app-logo-latest.png"
+          alt="ManifestBank™"
+          width={34}
+          height={34}
+          sizes="34px"
+          style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+        />
+      </span>
+      <span>ManifestBank™</span>
+    </span>
+  )
+
   return (
     <>
       <style>{`
@@ -299,7 +324,7 @@ export default function Navbar({
                 gap: 6,
               }}
             >
-              ManifestBank™
+              {brandInline}
               <span style={{ fontSize: 14, opacity: 0.7 }}>▾</span>
             </button>
             {accountsOpen && portalReady
@@ -383,9 +408,11 @@ export default function Navbar({
               textDecoration: 'none',
               fontFamily: 'var(--font-serif)',
               fontSize: 18,
+              display: 'inline-flex',
+              alignItems: 'center',
             }}
           >
-            ManifestBank™
+            {brandInline}
           </Link>
         )}
         <InstallAppButton />
@@ -465,61 +492,62 @@ export default function Navbar({
         {portalError ? (
           <div style={{ fontSize: 12, color: '#7a2e2e' }}>{portalError}</div>
         ) : null}
-        <div ref={treasureRef} style={{ position: 'relative' }}>
-          <button
-            type="button"
-            onClick={() =>
-              setTreasureOpen((open) => {
-                const next = !open
-                if (next && treasureRef.current) {
-                  setTreasureMenuRect(treasureRef.current.getBoundingClientRect())
-                }
-                return next
-              })
-            }
-            style={{
-              padding: 0,
-              border: 'none',
-              background: 'transparent',
-              cursor: 'pointer',
-              fontWeight: 600,
-              color: 'rgba(95, 74, 62, 0.9)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              textShadow: '0 0 22px rgba(182, 121, 103, 0.8)',
-            }}
-            aria-haspopup="menu"
-            aria-expanded={treasureOpen}
-          >
-            My Treasure Chest
-            <span style={{ fontSize: 12, opacity: 0.7 }}>▾</span>
-          </button>
-          {treasureOpen ? (
-            <div
-              ref={treasureMenuRef}
-              className="treasure-menu"
+        {!isLoading && me ? (
+          <div ref={treasureRef} style={{ position: 'relative' }}>
+            <button
+              type="button"
+              onClick={() =>
+                setTreasureOpen((open) => {
+                  const next = !open
+                  if (next && treasureRef.current) {
+                    setTreasureMenuRect(treasureRef.current.getBoundingClientRect())
+                  }
+                  return next
+                })
+              }
               style={{
-                position: 'absolute',
-                top: '100%',
-                left: 0,
-                marginTop: 8,
-                minWidth: 200,
-                maxWidth: 'calc(100vw - 24px)',
-                borderRadius: 12,
-                border: '1px solid rgba(140, 92, 78, 0.45)',
-                background: 'rgba(252, 245, 240, 1)',
-                opacity: 1,
-                backdropFilter: 'none',
-                backgroundImage: 'none',
-                boxShadow: '0 24px 60px rgba(12, 10, 12, 0.4)',
-                padding: 10,
-                display: 'grid',
-                gap: 8,
-                zIndex: 200000,
+                padding: 0,
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                fontWeight: 600,
+                color: 'rgba(95, 74, 62, 0.9)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                textShadow: '0 0 22px rgba(182, 121, 103, 0.8)',
               }}
-              role="menu"
+              aria-haspopup="menu"
+              aria-expanded={treasureOpen}
             >
+              My Treasure Chest
+              <span style={{ fontSize: 12, opacity: 0.7 }}>▾</span>
+            </button>
+            {treasureOpen ? (
+              <div
+                ref={treasureMenuRef}
+                className="treasure-menu"
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  marginTop: 8,
+                  minWidth: 200,
+                  maxWidth: 'calc(100vw - 24px)',
+                  borderRadius: 12,
+                  border: '1px solid rgba(140, 92, 78, 0.45)',
+                  background: 'rgba(252, 245, 240, 1)',
+                  opacity: 1,
+                  backdropFilter: 'none',
+                  backgroundImage: 'none',
+                  boxShadow: '0 24px 60px rgba(12, 10, 12, 0.4)',
+                  padding: 10,
+                  display: 'grid',
+                  gap: 8,
+                  zIndex: 200000,
+                }}
+                role="menu"
+              >
               <Link
                 href="/myjournal"
                 style={{
@@ -680,9 +708,10 @@ export default function Navbar({
                   </span>
                 </span>
               </Link>
-            </div>
-          ) : null}
-        </div>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
         {isLoading ? (
           <span style={{ opacity: 0.75 }}>Loading…</span>
         ) : me ? (
@@ -744,9 +773,15 @@ export default function Navbar({
             ) : null}
           </div>
         ) : (
-          <Link href="/auth" style={{ textDecoration: 'none' }}>
-            Login
-          </Link>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Link href="/auth" style={{ textDecoration: 'none' }}>
+              Login
+            </Link>
+            <span style={{ opacity: 0.45 }}>/</span>
+            <Link href="/auth?mode=register" style={{ textDecoration: 'none' }}>
+              Register
+            </Link>
+          </div>
         )}
         </div>
       </div>
