@@ -15,6 +15,7 @@
 
 # next.js
 /.next/
+/.next.stale-*/
 /.next-dev/
 /out/
 
@@ -24,6 +25,7 @@
 # misc
 .DS_Store
 *.pem
+/test-results/
 
 # debug
 npm-debug.log*
