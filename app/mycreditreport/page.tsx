@@ -216,7 +216,15 @@ export default function MyCreditReportPage() {
                 </div>
                 <div style={{ fontSize: 12, opacity: 0.7, textAlign: 'right' }}>
                   <div>{formatLocalDateTime(item.completed_at)}</div>
-                  <div style={{ fontWeight: 700, color: '#6b3b2c' }}>+{item.points} pts</div>
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      color: item.points < 0 ? '#9f3a33' : '#6b3b2c',
+                    }}
+                  >
+                    {item.points > 0 ? '+' : ''}
+                    {item.points} pts
+                  </div>
                 </div>
               </div>
             ))}
