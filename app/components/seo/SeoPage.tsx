@@ -4,6 +4,7 @@ import Script from 'next/script'
 import type { CSSProperties } from 'react'
 import Navbar from '@/app/components/Navbar'
 import { Button, Card, Container, Pill } from '@/app/components/ui'
+import HeroCornerLogo from '@/app/components/HeroCornerLogo'
 import {
   SITE_URL,
   buildMetadata,
@@ -39,43 +40,6 @@ function supportingHeroLine(entry: SeoPageEntry): string {
   }
 
   return 'Built for clarity, reflection, and a more intentional relationship with wealth.'
-}
-
-function TopCenterMark() {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'center',
-        marginTop: -24,
-        marginBottom: 8,
-        pointerEvents: 'none',
-      }}
-    >
-      <div
-        style={{
-          width: 172,
-          height: 172,
-          borderRadius: 48,
-          overflow: 'hidden',
-          opacity: 0.92,
-        }}
-      >
-        <Image
-          src="/manifestbank-app-logo-latest.png"
-          alt=""
-          width={172}
-          height={172}
-          sizes="172px"
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'contain',
-          }}
-        />
-      </div>
-    </div>
-  )
 }
 
 export function RelatedLinks({
@@ -254,10 +218,8 @@ export default function SeoPage({ entry }: { entry: SeoPageEntry }) {
       <SeoSchema entry={entry} />
       <main>
         <Navbar />
-        <div style={{ height: 72 }} />
         <Container>
           <Breadcrumbs entry={entry} />
-          <TopCenterMark />
           <section
             style={{
               position: 'relative',
@@ -273,6 +235,7 @@ export default function SeoPage({ entry }: { entry: SeoPageEntry }) {
               alignItems: 'flex-end',
             }}
           >
+            <HeroCornerLogo />
             <div
               style={{
                 position: 'absolute',

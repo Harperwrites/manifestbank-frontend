@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   },
   description:
     'ManifestBank™ is a digital self-organization, reflection, and awareness platform designed to help users clarify intentions and align identity with conscious action.',
-  manifest: '/manifestbank-v2.json?v=20260117b',
+  manifest: '/manifestbank-v2.json?v=20260423a',
   openGraph: {
     title: 'ManifestBank™',
     description:
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     type: 'website',
     images: [
       {
-        url: '/ManifestBank%20Square%20App%20Logo.png?v=20260118a',
+        url: '/manifestbank-icon-512.png?v=20260423a',
         width: 512,
         height: 512,
         alt: 'ManifestBank™',
@@ -38,17 +38,20 @@ export const metadata: Metadata = {
     title: 'ManifestBank™',
     description:
       'ManifestBank™ is a digital self-organization, reflection, and awareness platform designed to help users clarify intentions and align identity with conscious action.',
-    images: ['/ManifestBank%20Square%20App%20Logo.png?v=20260118a'],
+    images: ['/manifestbank-icon-512.png?v=20260423a'],
   },
   alternates: {
     canonical: '/',
   },
   icons: {
     icon: [
-      { url: '/manifestbank-icon-192.png?v=20260117b', sizes: '192x192', type: 'image/png' },
-      { url: '/ManifestBank%20Square%20App%20Logo.png?v=20260118a', type: 'image/png' },
+      { url: '/favicon.ico', sizes: '48x48', type: 'image/x-icon' },
+      { url: '/manifestbank-favicon-32.png?v=20260423a', sizes: '32x32', type: 'image/png' },
+      { url: '/manifestbank-icon-192.png?v=20260423a', sizes: '192x192', type: 'image/png' },
+      { url: '/manifestbank-icon-512.png?v=20260423a', sizes: '512x512', type: 'image/png' },
     ],
-    apple: '/ManifestBank%20Square%20App%20Logo.png?v=20260118a',
+    apple: '/manifestbank-apple-touch-icon.png?v=20260423a',
+    shortcut: '/favicon.ico',
   },
 }
 
@@ -71,8 +74,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           name="google-site-verification"
           content="3Hy_gzBFWnWxPd4WgTZwn0qUl1oRzN_blbZS-jCH0Bs"
         />
-        <link rel="icon" href="/manifestbank-icon-192.png?v=20260117b" />
-        <link rel="apple-touch-icon" href="/ManifestBank%20Square%20App%20Logo.png?v=20260118a" />
+        <link rel="icon" href="/favicon.ico" sizes="48x48" type="image/x-icon" />
+        <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+        <link rel="apple-touch-icon" href="/manifestbank-apple-touch-icon.png?v=20260423a" />
       </head>
       <body>
         <AuthProvider>
@@ -87,7 +91,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 '@type': 'Organization',
                 name: 'ManifestBank™',
                 url: 'https://manifestbank.app',
-                logo: 'https://manifestbank.app/ManifestBank%20Square%20App%20Logo.png?v=20260118a',
+                logo: 'https://manifestbank.app/manifestbank-icon-512.png?v=20260423a',
               }),
             }}
           />

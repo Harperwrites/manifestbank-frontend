@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 import Script from 'next/script'
 import Navbar from '@/app/components/Navbar'
 import { Button, Card, Container, Pill } from '@/app/components/ui'
+import HeroCornerLogo from '@/app/components/HeroCornerLogo'
 import { SITE_URL, type SeoPageEntry } from '@/app/lib/seo-content'
 
 type SeoIndexPageProps = {
@@ -41,43 +42,6 @@ export function buildIndexMetadata({
       description,
     },
   }
-}
-
-function TopCenterMark() {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'center',
-        marginTop: -24,
-        marginBottom: 8,
-        pointerEvents: 'none',
-      }}
-    >
-      <div
-        style={{
-          width: 172,
-          height: 172,
-          borderRadius: 48,
-          overflow: 'hidden',
-          opacity: 0.92,
-        }}
-      >
-        <Image
-          src="/manifestbank-app-logo-latest.png"
-          alt=""
-          width={172}
-          height={172}
-          sizes="172px"
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'contain',
-          }}
-        />
-      </div>
-    </div>
-  )
 }
 
 export default function SeoIndexPage({
@@ -138,7 +102,6 @@ export default function SeoIndexPage({
       />
       <main>
         <Navbar />
-        <div style={{ height: 72 }} />
         <Container>
           <nav aria-label="Breadcrumb" style={{ marginBottom: 22 }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, color: 'var(--ink-soft)', fontSize: 14 }}>
@@ -149,7 +112,6 @@ export default function SeoIndexPage({
               <span>{title}</span>
             </div>
           </nav>
-          <TopCenterMark />
 
           <section
             style={{
@@ -166,6 +128,7 @@ export default function SeoIndexPage({
               alignItems: 'flex-end',
             }}
           >
+            <HeroCornerLogo />
             <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
               <Image
                 src="/manifestbank-hero-landing-idea.png"

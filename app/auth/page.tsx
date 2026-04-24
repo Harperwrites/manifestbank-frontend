@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { useAuth } from '@/app/providers'
 import { validateUsername } from '@/app/lib/username'
+import DefaultDashboardRedirect from '@/app/components/DefaultDashboardRedirect'
 
 type Mode = 'login' | 'register'
 
@@ -107,6 +108,7 @@ export default function AuthPage() {
 
   return (
     <main style={{ maxWidth: 420, margin: '4px auto', padding: 16 }}>
+      <DefaultDashboardRedirect />
       <div
         style={{
           padding: '16px 20px 24px',

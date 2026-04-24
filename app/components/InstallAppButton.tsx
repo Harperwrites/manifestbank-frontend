@@ -14,7 +14,7 @@ function isIOS() {
 function isSafari() {
   if (typeof window === 'undefined') return false
   const ua = navigator.userAgent
-  const isSafariBrowser = /Safari/i.test(ua) && !/Chrome|Chromium|Edg|OPR|Brave/i.test(ua)
+  const isSafariBrowser = /Safari/i.test(ua) && !/Chrome|Chromium|CriOS|Edg|EdgiOS|OPR|Brave|FxiOS/i.test(ua)
   return isSafariBrowser
 }
 
@@ -96,8 +96,6 @@ export default function InstallAppButton() {
 
   if (!mounted || isStandalone()) return null
 
-  const microcopy = 'Works offline • No App Store needed • Instant install'
-
   const iosModal =
     iosOpen && mounted
       ? createPortal(
@@ -159,14 +157,24 @@ export default function InstallAppButton() {
                 </button>
               </div>
               <div style={{ marginTop: 8, fontSize: 13, opacity: 0.8 }}>
-                On Apple Safari, installation is manual:
+                {ios
+                  ? safari
+                    ? 'On iPhone and iPad Safari, installation is manual:'
+                    : 'On iPhone and iPad, app install is completed through Safari:'
+                  : 'On Mac Safari, installation is manual:'}
               </div>
               <ol style={{ marginTop: 10, paddingLeft: 18, fontSize: 13, color: '#5f3f35' }}>
-                {ios ? (
+                {ios && safari ? (
                   <>
                     <li>Tap the Share button.</li>
                     <li>Select “Add to Home Screen”.</li>
                     <li>Tap “Add” to install.</li>
+                  </>
+                ) : ios ? (
+                  <>
+                    <li>Open this page in Safari.</li>
+                    <li>Tap the Share button.</li>
+                    <li>Select “Add to Home Screen”, then tap “Add”.</li>
                   </>
                 ) : (
                   <>
@@ -214,7 +222,7 @@ export default function InstallAppButton() {
       : null
 
   return (
-    <div style={{ display: 'grid', gap: 4 }}>
+    <div style={{ position: 'relative' }}>
       <button
         type="button"
         onClick={async () => {
@@ -248,60 +256,40 @@ export default function InstallAppButton() {
           setCanInstall(false)
         }}
         style={{
-          padding: '8px 14px',
+          padding: '9px 16px',
           borderRadius: 999,
-          border: '1px solid rgba(182, 121, 103, 0.6)',
+          border: '1px solid rgba(182, 121, 103, 0.42)',
           background:
-            'linear-gradient(145deg, rgba(246, 230, 220, 0.95), rgba(220, 193, 179, 0.98))',
+            'linear-gradient(145deg, rgba(249, 241, 235, 0.95), rgba(232, 210, 198, 0.98))',
           cursor: 'pointer',
-          fontWeight: 700,
+          fontWeight: 600,
           fontSize: 12,
-          letterSpacing: 0.2,
-          color: '#5f3f35',
-          boxShadow: '0 10px 20px rgba(96, 62, 46, 0.2)',
+          letterSpacing: 0.18,
+          color: '#6b473b',
+          boxShadow: '0 8px 18px rgba(96, 62, 46, 0.12)',
+          whiteSpace: 'nowrap',
         }}
         aria-label="Install ManifestBank™ app"
       >
-        Install ManifestBank™ App
+        Get ManifestBank™ App
       </button>
-      <div style={{ fontSize: 11, opacity: 0.7 }}>{microcopy}</div>
-      {notice ? <div style={{ fontSize: 11, color: '#7b5144' }}>{notice}</div> : null}
-      {!ios && !safari && installStatus !== 'ready' ? (
-        <div style={{ fontSize: 11, opacity: 0.6 }}>
-          {installStatus === 'installed'
-            ? 'Already installed on this device.'
-            : installStatus === 'dismissed'
-            ? 'Install was dismissed. Try again later or use the browser menu.'
-            : 'Install prompt not available yet. Try from the homepage or after a hard refresh.'}
-        </div>
-      ) : null}
-      {!ios && !safari && installStatus !== 'ready' ? (
-        <button
-          type="button"
-          onClick={() => setShowDiagnostics((prev) => !prev)}
+      {notice ? (
+        <div
           style={{
-            border: 'none',
-            background: 'transparent',
-            padding: 0,
-            cursor: 'pointer',
+            position: 'absolute',
+            top: 'calc(100% + 8px)',
+            right: 0,
+            maxWidth: 220,
+            padding: '8px 10px',
+            borderRadius: 12,
+            border: '1px solid rgba(182, 121, 103, 0.22)',
+            background: 'rgba(255, 249, 245, 0.96)',
+            color: '#7b5144',
             fontSize: 11,
-            color: '#6f4a3a',
-            textDecoration: 'underline',
-            textUnderlineOffset: 2,
+            boxShadow: '0 14px 28px rgba(96, 62, 46, 0.12)',
           }}
         >
-          Why can’t I install?
-        </button>
-      ) : null}
-      {showDiagnostics && !ios && !safari ? (
-        <div style={{ fontSize: 11, opacity: 0.7 }}>
-          {isStandalone()
-            ? 'You’re already running the installed app.'
-            : ios || safari
-            ? 'Safari doesn’t support the install prompt. Use Share → Add to Home Screen (iOS) or File → Add to Dock (Mac).'
-            : canInstall
-            ? 'Install prompt is ready. Click Install ManifestBank™ App.'
-            : 'Chrome hasn’t offered the install prompt yet. Try the homepage, hard refresh, or clear site data.'}
+          {notice}
         </div>
       ) : null}
 

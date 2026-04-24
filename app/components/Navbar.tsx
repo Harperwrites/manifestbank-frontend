@@ -239,7 +239,7 @@ export default function Navbar({
         }}
       >
         <Image
-          src="/manifestbank-app-logo-latest.png"
+          src="/manifestbank-glow-edge-logo.png"
           alt="ManifestBank™"
           width={34}
           height={34}
@@ -402,7 +402,7 @@ export default function Navbar({
           </div>
         ) : (
           <Link
-            href="/"
+            href={me ? '/dashboard' : '/'}
             style={{
               fontWeight: 600,
               textDecoration: 'none',
@@ -443,7 +443,7 @@ export default function Navbar({
             {portalLoading ? 'Opening…' : 'ManifestBank™ Signature Member'}
           </button>
         ) : null}
-          {!isLoading && !isPremium ? (
+          {!isLoading && me && !isPremium ? (
             <button
               type="button"
               onClick={() => {

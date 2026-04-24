@@ -1,10 +1,12 @@
 import type { Metadata } from 'next'
-import Image from 'next/image'
 import Navbar from '@/app/components/Navbar'
 import { Button, Card, Container, Pill } from '@/app/components/ui'
 import { getLinksByHref } from '@/app/lib/seo-content'
 import { RelatedLinks } from '@/app/components/seo/SeoPage'
 import Link from 'next/link'
+import Image from 'next/image'
+import HeroCornerLogo from '@/app/components/HeroCornerLogo'
+import DefaultDashboardRedirect from '@/app/components/DefaultDashboardRedirect'
 
 export const metadata: Metadata = {
   title: 'ManifestBank™',
@@ -13,43 +15,6 @@ export const metadata: Metadata = {
   alternates: {
     canonical: '/',
   },
-}
-
-function TopCenterMark() {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'center',
-        marginTop: -56,
-        marginBottom: 0,
-        pointerEvents: 'none',
-      }}
-    >
-      <div
-        style={{
-          width: 172,
-          height: 172,
-          borderRadius: 48,
-          overflow: 'hidden',
-          opacity: 0.92,
-        }}
-      >
-        <Image
-          src="/manifestbank-app-logo-latest.png"
-          alt=""
-          width={172}
-          height={172}
-          sizes="172px"
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'contain',
-          }}
-        />
-      </div>
-    </div>
-  )
 }
 
 export default function Home() {
@@ -62,10 +27,9 @@ export default function Home() {
 
   return (
     <main>
+      <DefaultDashboardRedirect />
       <Navbar />
-      <div className="mb-navbar-spacer" />
       <Container>
-        <TopCenterMark />
         <section
           style={{
             position: 'relative',
@@ -81,6 +45,7 @@ export default function Home() {
             alignItems: 'flex-end',
           }}
         >
+          <HeroCornerLogo />
           <div
             style={{
               position: 'absolute',
