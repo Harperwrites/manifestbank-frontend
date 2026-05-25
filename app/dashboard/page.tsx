@@ -17,6 +17,17 @@ import { CURRENCIES, getCurrencySymbol } from '@/lib/currencies'
 import { convertAmountLocal, convertAmountWithRates, getDefaultRates } from '@/lib/fx'
 import { formatLocalDate } from '@/lib/time'
 import { PREMIUM_TIER_NAME } from '@/app/lib/premium'
+import {
+  BALANCE_PREVIEW_CTA,
+  BALANCE_PREVIEW_NOTICE,
+  BALANCE_PREVIEW_TITLE,
+  formatPreviewCountdown,
+  getBalancePreviewNotificationKey,
+  getLatestLockedPreviewExpiry,
+  getSoonestPreviewExpiry,
+  isVisibleToUser,
+  type PreviewVisibility,
+} from '@/app/lib/balancePreview'
 
 function pretty(obj: any) {
   try {
@@ -53,6 +64,13 @@ type Account = {
   account_type: string
   name?: string | null
   currency?: string | null
+}
+
+type AccountBalancePreview = PreviewVisibility & {
+  id: number
+  label: string
+  balance: number
+  currency: string
 }
 
 type AlertItem = {
@@ -126,9 +144,7 @@ export default function DashboardPage() {
   const [summary, setSummary] = useState<any>(null)
   const [log, setLog] = useState<string>('Operations journal ready.')
   const [accounts, setAccounts] = useState<Account[]>([])
-  const [accountBalances, setAccountBalances] = useState<
-    { id: number; label: string; balance: number; currency: string }[]
-  >([])
+  const [accountBalances, setAccountBalances] = useState<AccountBalancePreview[]>([])
   const [portfolio, setPortfolio] = useState<PortfolioSummary>({
     totalAssetsUsd: '—',
     operatingCashUsd: '—',
@@ -236,6 +252,7 @@ export default function DashboardPage() {
   const [avatarDragging, setAvatarDragging] = useState(false)
   const avatarReuploadRef = useRef<HTMLInputElement | null>(null)
   const [balancesPeekOpen, setBalancesPeekOpen] = useState(false)
+  const [balancePreviewAlertDismissed, setBalancePreviewAlertDismissed] = useState(false)
   const [glanceCurrency, setGlanceCurrency] = useState('USD')
   const [verificationMsg, setVerificationMsg] = useState('')
   const [verificationSending, setVerificationSending] = useState(false)
@@ -386,6 +403,9 @@ export default function DashboardPage() {
             acct,
             nativeBalance,
             nativeCurrency,
+            preview_expires_at: nativeRes.data?.preview_expires_at ?? null,
+            is_preview_expired: Boolean(nativeRes.data?.is_preview_expired),
+            visible_to_user: nativeRes.data?.visible_to_user !== false,
           }
         })
       )
@@ -398,6 +418,9 @@ export default function DashboardPage() {
           label: item.acct.name ?? item.acct.account_type ?? `Account #${item.acct.id}`,
           balance: item.nativeBalance,
           currency: item.nativeCurrency,
+          preview_expires_at: item.preview_expires_at,
+          is_preview_expired: item.is_preview_expired,
+          visible_to_user: item.visible_to_user,
         }))
       )
       const key = `mb_glance_base_total:${me?.id || 'anon'}:USD`
@@ -1388,6 +1411,30 @@ export default function DashboardPage() {
   const depositSymbol = getCurrencySymbol(depositCurrency)
   const expenseSymbol = getCurrencySymbol(expenseCurrency)
   const transactionsLocked = !isVerified
+  const hasLockedBalancePreview = !isPremium && accountBalances.some((item) => !isVisibleToUser(item))
+  const previewStatusText = !isPremium
+    ? hasLockedBalancePreview
+      ? 'Balance preview locked'
+      : formatPreviewCountdown(getSoonestPreviewExpiry(accountBalances), Date.now())
+    : ''
+  const latestLockedPreviewExpiry = getLatestLockedPreviewExpiry(accountBalances)
+
+  useEffect(() => {
+    if (isPremium || typeof window === 'undefined' || !hasLockedBalancePreview) return
+    const key = getBalancePreviewNotificationKey('dashboard', latestLockedPreviewExpiry)
+    if (!key || window.localStorage.getItem(key) === 'dismissed') {
+      setBalancePreviewAlertDismissed(true)
+      return
+    }
+    setBalancePreviewAlertDismissed(false)
+  }, [hasLockedBalancePreview, isPremium, latestLockedPreviewExpiry])
+
+  function dismissDashboardBalancePreviewAlert() {
+    setBalancePreviewAlertDismissed(true)
+    if (typeof window === 'undefined') return
+    const key = getBalancePreviewNotificationKey('dashboard', latestLockedPreviewExpiry)
+    if (key) window.localStorage.setItem(key, 'dismissed')
+  }
 
   return (
     <main>
@@ -1912,6 +1959,81 @@ export default function DashboardPage() {
           </div>
         ) : null}
 
+        {!isPremium ? (
+          <div
+            data-testid="dashboard-balance-preview-notice"
+            style={{
+              marginTop: 16,
+              padding: '14px 16px',
+              borderRadius: 18,
+              border: '1px solid rgba(168, 131, 102, 0.28)',
+              background:
+                'linear-gradient(145deg, rgba(255,255,255,0.92), rgba(246,238,231,0.96)), radial-gradient(circle at top left, rgba(201, 161, 122, 0.18), transparent 48%)',
+              color: '#5c4336',
+              boxShadow: '0 18px 36px rgba(61, 42, 31, 0.08)',
+            }}
+          >
+            <div style={{ fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.68 }}>
+              Balance Preview Vault™ 🗝️
+            </div>
+            <div style={{ marginTop: 6, fontSize: 13, lineHeight: 1.65 }}>{BALANCE_PREVIEW_NOTICE}</div>
+            <div data-testid="dashboard-balance-preview-status" style={{ marginTop: 8, fontSize: 12, fontWeight: 700, color: '#7a4b3e' }}>
+              {previewStatusText}
+            </div>
+          </div>
+        ) : null}
+
+        {!isPremium && hasLockedBalancePreview && !balancePreviewAlertDismissed ? (
+          <div
+            data-testid="dashboard-balance-preview-alert"
+            style={{
+              marginTop: 16,
+              padding: '14px 16px',
+              borderRadius: 18,
+              border: '1px solid rgba(168, 131, 102, 0.35)',
+              background:
+                'linear-gradient(145deg, rgba(255,255,255,0.92), rgba(246,238,231,0.96)), radial-gradient(circle at top left, rgba(201, 161, 122, 0.18), transparent 48%)',
+              boxShadow: '0 18px 36px rgba(61, 42, 31, 0.12)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'start' }}>
+              <div>
+                <div style={{ fontFamily: 'var(--font-serif)', fontSize: 18, fontWeight: 600 }}>
+                  Balance Preview Locked 🗝️
+                </div>
+                <div style={{ marginTop: 6, fontSize: 13, lineHeight: 1.6, color: '#5c4336' }}>
+                  Your 12-hour Balance Preview Vault™ window has ended. Your balances are safely stored and ready to unlock anytime with ManifestBank™ Signature.
+                </div>
+              </div>
+              <button
+                type="button"
+                aria-label="Dismiss dashboard balance preview alert"
+                onClick={dismissDashboardBalancePreviewAlert}
+                style={{ border: 'none', background: 'transparent', cursor: 'pointer', opacity: 0.65, fontSize: 18 }}
+              >
+                ×
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => openSignaturePaywall('Unlock full history')}
+              style={{
+                marginTop: 12,
+                border: '1px solid rgba(95, 74, 62, 0.28)',
+                background: 'linear-gradient(135deg, rgba(182, 121, 103, 0.98), rgba(211, 164, 144, 0.98))',
+                color: '#fffaf6',
+                borderRadius: 999,
+                padding: '10px 14px',
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              Unlock Full History
+            </button>
+          </div>
+        ) : null}
+
         <section
           style={{
             marginTop: 24,
@@ -1963,6 +2085,7 @@ export default function DashboardPage() {
                   Balances at a Glance
                 </div>
                 <div
+                  data-testid="dashboard-total-balance"
                   style={{
                     fontSize: 26,
                     fontWeight: 600,
@@ -1971,7 +2094,7 @@ export default function DashboardPage() {
                     textShadow: '0 0 18px rgba(140, 82, 64, 0.75), 0 0 34px rgba(140, 82, 64, 0.45)',
                   }}
                 >
-                  {formatCurrencyAmount(portfolioRaw.totalAssets, aggregateDisplayCurrency)}
+                  {hasLockedBalancePreview ? 'Locked' : formatCurrencyAmount(portfolioRaw.totalAssets, aggregateDisplayCurrency)}
                 </div>
                 {null}
                 <div style={{ marginTop: 4, fontSize: 11, opacity: 0.6 }}>
@@ -2130,11 +2253,12 @@ export default function DashboardPage() {
                   accountBalances.map((item) => (
                     <div
                       key={item.id}
+                      data-testid={`dashboard-balance-row-${item.id}`}
                       style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}
                     >
                       <span style={{ fontSize: 12, fontWeight: 600 }}>{item.label}</span>
                       <span style={{ fontSize: 12, opacity: 0.8 }}>
-                        {formatCurrencyAmount(item.balance, item.currency)} •{' '}
+                        {isVisibleToUser(item) ? formatCurrencyAmount(item.balance, item.currency) : 'Locked'} •{' '}
                         {(item.currency || 'USD').toUpperCase()}
                       </span>
                     </div>
@@ -2157,10 +2281,14 @@ export default function DashboardPage() {
               {wealthBuilderLabel}
             </div>
             <div style={{ fontSize: 26, fontWeight: 600, marginTop: 6, fontFamily: 'var(--font-serif)' }}>
-              {wealthProgress === null ? '—' : `${percentFormatter.format(wealthProgress)}%`}
+              {hasLockedBalancePreview ? 'Locked' : wealthProgress === null ? '—' : `${percentFormatter.format(wealthProgress)}%`}
             </div>
             <div style={{ marginTop: 6, fontSize: 12, opacity: 0.65 }}>
-              {wealthTarget ? `Target ${moneyFormatter.format(wealthTarget)}` : 'No target set'}
+              {hasLockedBalancePreview
+                ? 'Progress snapshots unlock with Signature.'
+                : wealthTarget
+                  ? `Target ${moneyFormatter.format(wealthTarget)}`
+                  : 'No target set'}
             </div>
           </div>
         </section>
@@ -2183,27 +2311,70 @@ export default function DashboardPage() {
           className="fade-up fade-delay-2"
         >
           <Card title="Portfolio Balances" tone="soft">
-            <div style={{ display: 'grid', gap: 12 }}>
-              <BalanceRow
-                label={`Total Assets (${aggregateDisplayCurrency.toUpperCase()})`}
-                value={formatCurrencyAmount(portfolioRaw.totalAssets, aggregateDisplayCurrency)}
-              />
-              <BalanceRow
-                label="Operating Cash"
-                value={formatCurrencyAmount(portfolioRaw.operatingCash, aggregateDisplayCurrency)}
-              />
-              <BalanceRow
-                label="Alternative Holdings"
-                value={formatCurrencyAmount(portfolioRaw.alts, aggregateDisplayCurrency)}
-              />
-              <BalanceRow
-                label="Pending Transfers"
-                value={formatCurrencyAmount(portfolioRaw.pendingTransfers, aggregateDisplayCurrency)}
-              />
-            </div>
-            <div style={{ marginTop: 14, opacity: 0.7, fontSize: 12 }}>
-              Balances update after ledger close. Adjust targets in Treasury settings.
-            </div>
+            {hasLockedBalancePreview ? (
+              <div
+                data-testid="dashboard-balance-preview-locked-card"
+                style={{
+                  padding: 16,
+                  borderRadius: 18,
+                  border: '1px solid rgba(168, 131, 102, 0.35)',
+                  background:
+                    'linear-gradient(145deg, rgba(255,255,255,0.9), rgba(243,234,226,0.94)), radial-gradient(circle at top left, rgba(201, 161, 122, 0.22), transparent 48%)',
+                  boxShadow: '0 18px 36px rgba(61, 42, 31, 0.12)',
+                }}
+              >
+                <div style={{ fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.68 }}>
+                  Balance Preview Vault™ 🗝️
+                </div>
+                <div style={{ marginTop: 6, fontFamily: 'var(--font-serif)', fontSize: 20, fontWeight: 600 }}>
+                  {BALANCE_PREVIEW_TITLE}
+                </div>
+                <div style={{ marginTop: 8, fontSize: 13, lineHeight: 1.6, color: '#5c4336' }}>
+                  Free members can view newly posted balances for 12 hours. After that, balances are safely stored but locked from view until Signature unlocks the full history.
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openSignaturePaywall('Unlock full balance history with ManifestBank™ Signature.')}
+                  style={{
+                    marginTop: 14,
+                    border: '1px solid rgba(95, 74, 62, 0.28)',
+                    background: 'linear-gradient(135deg, rgba(182, 121, 103, 0.98), rgba(211, 164, 144, 0.98))',
+                    color: '#fffaf6',
+                    borderRadius: 999,
+                    padding: '10px 14px',
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {BALANCE_PREVIEW_CTA}
+                </button>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: 'grid', gap: 12 }}>
+                  <BalanceRow
+                    label={`Total Assets (${aggregateDisplayCurrency.toUpperCase()})`}
+                    value={formatCurrencyAmount(portfolioRaw.totalAssets, aggregateDisplayCurrency)}
+                  />
+                  <BalanceRow
+                    label="Operating Cash"
+                    value={formatCurrencyAmount(portfolioRaw.operatingCash, aggregateDisplayCurrency)}
+                  />
+                  <BalanceRow
+                    label="Alternative Holdings"
+                    value={formatCurrencyAmount(portfolioRaw.alts, aggregateDisplayCurrency)}
+                  />
+                  <BalanceRow
+                    label="Pending Transfers"
+                    value={formatCurrencyAmount(portfolioRaw.pendingTransfers, aggregateDisplayCurrency)}
+                  />
+                </div>
+                <div style={{ marginTop: 14, opacity: 0.7, fontSize: 12 }}>
+                  Balances update after ledger close. Adjust targets in Treasury settings.
+                </div>
+              </>
+            )}
           </Card>
 
         </section>

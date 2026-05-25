@@ -1,10 +1,15 @@
 'use client'
 
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { api } from '@/lib/api'
 import PremiumPaywall from '@/app/components/PremiumPaywall'
 import TierComparisonModal from '@/app/components/TierComparisonModal'
+import {
+  SIGNATURE_PROMO_CODE,
+  SIGNATURE_PROMO_DISCOUNTED_PRICE,
+  isSignaturePromoActive,
+} from '@/app/lib/premium'
 
 export type Me = {
   id: number
@@ -58,7 +63,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [legalContentError, setLegalContentError] = useState('')
   const [devPaywallOpen, setDevPaywallOpen] = useState(false)
   const [devPaywallReason, setDevPaywallReason] = useState('')
+  const [devPaywallCampaign, setDevPaywallCampaign] = useState<'signature50' | null>(null)
   const [tierCompareOpen, setTierCompareOpen] = useState(false)
+  const [signaturePromoOpen, setSignaturePromoOpen] = useState(false)
+  const lastPromoUserIdRef = useRef<number | null>(null)
   const legalReadOnlyPath =
     pathname === '/terms' || pathname === '/privacy' || pathname === '/conditions'
 
@@ -163,6 +171,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   function logout() {
+    if (typeof window !== 'undefined') {
+      const keysToRemove: string[] = []
+      for (let i = 0; i < window.sessionStorage.length; i += 1) {
+        const key = window.sessionStorage.key(i)
+        if (key && key.startsWith('signature50:')) keysToRemove.push(key)
+      }
+      keysToRemove.forEach((key) => window.sessionStorage.removeItem(key))
+    }
     localStorage.removeItem('access_token')
     sessionStorage.removeItem('access_token')
     localStorage.removeItem('refresh_token')
@@ -172,7 +188,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     delete api.defaults.headers.common.Authorization
     setMe(null)
     setDevPaywallOpen(false)
+    setDevPaywallCampaign(null)
     setTierCompareOpen(false)
+    setSignaturePromoOpen(false)
     // no router here; pages decide where to redirect
   }
 
@@ -316,13 +334,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof window === 'undefined') return
     function handlePaywallOpen(event: Event) {
-      const detail = (event as CustomEvent<{ reason?: string }>).detail
+      const detail = (event as CustomEvent<{ reason?: string; campaign?: 'signature50' | null }>).detail
       setDevPaywallReason(detail?.reason ?? 'Upgrade to ManifestBank™ Signature.')
+      setDevPaywallCampaign(detail?.campaign ?? null)
       setTierCompareOpen(true)
     }
     window.addEventListener('paywall:open', handlePaywallOpen)
     return () => window.removeEventListener('paywall:open', handlePaywallOpen)
   }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !me || me.is_premium || !isSignaturePromoActive()) {
+      setSignaturePromoOpen(false)
+      return
+    }
+    const userId = me.id
+    const sessionDismissKey = `signature50:dismissed:${userId}`
+    const firstLoginKey = `signature50:first-login-complete:${userId}`
+    if (window.sessionStorage.getItem(sessionDismissKey) === '1') {
+      setSignaturePromoOpen(false)
+      return
+    }
+
+    let timer: number | null = null
+    const hasCompletedFirstLoginPromo = window.localStorage.getItem(firstLoginKey) === '1'
+    const isFirstObservedLogin = lastPromoUserIdRef.current !== userId
+    lastPromoUserIdRef.current = userId
+
+    const openPromo = () => {
+      if (window.sessionStorage.getItem(sessionDismissKey) === '1') return
+      setSignaturePromoOpen(true)
+      window.localStorage.setItem(firstLoginKey, '1')
+    }
+
+    if (!hasCompletedFirstLoginPromo && isFirstObservedLogin) {
+      timer = window.setTimeout(openPromo, 4 * 60 * 1000)
+    } else {
+      openPromo()
+    }
+
+    return () => {
+      if (timer !== null) window.clearTimeout(timer)
+    }
+  }, [me])
 
   useEffect(() => {
     if (!toast || toastPersistent) return
@@ -452,15 +506,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         onClose={() => setTierCompareOpen(false)}
         onOpenPaywall={() => {
           setTierCompareOpen(false)
+          setDevPaywallCampaign(null)
           setDevPaywallOpen(true)
         }}
       />
       <PremiumPaywall
         open={devPaywallOpen}
-        onClose={() => setDevPaywallOpen(false)}
+        onClose={() => {
+          setDevPaywallOpen(false)
+          setDevPaywallCampaign(null)
+        }}
         reason={devPaywallReason}
         isVerified={Boolean(me?.email_verified)}
+        campaign={devPaywallCampaign}
       />
+      {signaturePromoOpen ? (
+        <SignaturePromoModal
+          onClose={() => {
+            if (typeof window !== 'undefined' && me?.id) {
+              window.sessionStorage.setItem(`signature50:dismissed:${me.id}`, '1')
+            }
+            setSignaturePromoOpen(false)
+          }}
+          onOpenPaywall={() => {
+            if (typeof window !== 'undefined' && me?.id) {
+              window.sessionStorage.setItem(`signature50:dismissed:${me.id}`, '1')
+            }
+            setSignaturePromoOpen(false)
+            setDevPaywallReason(
+              `Limited-time Signature offer: use ${SIGNATURE_PROMO_CODE} at checkout to bring the annual membership to ${SIGNATURE_PROMO_DISCOUNTED_PRICE}. Ends June 1, 2026 at 12:59 AM Eastern Time.`
+            )
+            setDevPaywallCampaign('signature50')
+            setDevPaywallOpen(true)
+          }}
+        />
+      ) : null}
       {children}
       {legalRequired && !legalReadOnlyPath ? (
         <div
@@ -872,6 +952,112 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         </div>
       ) : null}
     </AuthContext.Provider>
+  )
+}
+
+function SignaturePromoModal({
+  onClose,
+  onOpenPaywall,
+}: {
+  onClose: () => void
+  onOpenPaywall: () => void
+}) {
+  if (typeof document === 'undefined') return null
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(20, 12, 8, 0.68)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 2147483646,
+        padding: 20,
+      }}
+      onClick={onClose}
+    >
+      <div
+        onClick={(event) => event.stopPropagation()}
+        style={{
+          width: 'min(560px, 100%)',
+          borderRadius: 24,
+          background:
+            'linear-gradient(140deg, rgba(199, 140, 122, 0.98), rgba(236, 214, 201, 0.98)), radial-gradient(circle at 14% 18%, rgba(255, 255, 255, 0.7), transparent 50%), radial-gradient(circle at 84% 12%, rgba(255, 255, 255, 0.45), transparent 52%)',
+          border: '1px solid rgba(95, 74, 62, 0.28)',
+          boxShadow: '0 28px 70px rgba(0,0,0,0.35)',
+          padding: 24,
+          color: '#2c1a14',
+          fontFamily: 'var(--font-sans)',
+        }}
+      >
+        <div
+          style={{
+            fontSize: 12,
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            opacity: 0.7,
+            fontFamily: 'var(--font-sans)',
+          }}
+        >
+          Limited-Time Signature Offer
+        </div>
+        <div
+          style={{
+            marginTop: 8,
+            fontFamily: 'var(--font-serif)',
+            fontSize: 30,
+            fontWeight: 700,
+            lineHeight: 1.1,
+            letterSpacing: '-0.02em',
+          }}
+        >
+          50% Off Annual Signature Membership
+        </div>
+        <div style={{ marginTop: 12, fontSize: 15, lineHeight: 1.7, fontFamily: 'var(--font-sans)' }}>
+          For a limited time, unlock ManifestBank™ Signature annual membership for <strong>$36 total</strong>.
+          On the Stripe page, enter code <strong>{SIGNATURE_PROMO_CODE}</strong> to apply the offer.
+        </div>
+        <div style={{ marginTop: 14, fontSize: 14, opacity: 0.86, fontFamily: 'var(--font-sans)' }}>
+          Offer ends June 1, 2026 at 12:59 AM Eastern Time.
+        </div>
+        <div style={{ marginTop: 20, display: 'flex', gap: 12, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              borderRadius: 999,
+              border: '1px solid rgba(95, 74, 62, 0.28)',
+              background: 'rgba(255,255,255,0.74)',
+              color: '#4a2f25',
+              padding: '10px 16px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              fontFamily: 'var(--font-sans)',
+            }}
+          >
+            Maybe Later
+          </button>
+          <button
+            type="button"
+            onClick={onOpenPaywall}
+            style={{
+              borderRadius: 999,
+              border: 'none',
+              background: 'linear-gradient(135deg, #b67967, #c6927c)',
+              color: '#fff',
+              padding: '10px 18px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              boxShadow: '0 10px 22px rgba(12, 10, 12, 0.2)',
+              fontFamily: 'var(--font-sans)',
+            }}
+          >
+            View Signature Offer
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
 

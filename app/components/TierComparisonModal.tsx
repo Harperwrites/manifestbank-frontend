@@ -25,12 +25,21 @@ export default function TierComparisonModal({
     { label: 'Affirmation entries', free: true, freeNote: '10 total', signature: true, sigNote: 'Unlimited' },
     { label: 'Saved affirmations', free: false, freeNote: 'Not included', signature: true, sigNote: 'Unlimited' },
     { label: 'Statements', free: false, freeNote: 'Not included', signature: true, sigNote: 'Full access' },
+    {
+      label: 'Balance Preview Vault™ 🗝️',
+      free: true,
+      freeNote: '12-hour balance preview only',
+      signature: true,
+      sigNote: 'Full balance history unlocked',
+    },
     { label: 'Credit points per login', free: true, freeNote: '1 point', signature: true, sigNote: '2 points' },
     { label: 'Daily credit points cap', free: true, freeNote: '2 points', signature: true, sigNote: '5 points' },
     { label: 'My Teller', free: false, freeNote: 'Not included', signature: true, sigNote: 'Included' },
     { label: 'Beta access', free: false, freeNote: 'Not included', signature: true, sigNote: 'First in line for Beta releases' },
     { label: 'Currency flexibility', free: false, freeNote: 'Not included', signature: true, sigNote: 'Change your currency across supported features' },
   ]
+  const freeFeatures = [...features].sort((a, b) => Number(b.free) - Number(a.free))
+  const signatureFeatures = freeFeatures
 
   const handleFreeClick = () => {
     onClose()
@@ -178,7 +187,7 @@ export default function TierComparisonModal({
               </div>
             </div>
             <ul style={{ marginTop: 10, display: 'grid', gap: 8, listStyle: 'none', padding: 0 }}>
-              {features.map((item) => (
+              {freeFeatures.map((item) => (
                 <li key={`free-${item.label}`} style={{ display: 'grid', gridTemplateColumns: '16px 1fr', gap: 8 }}>
                   <span style={{ fontWeight: 700, color: item.free ? '#2f6b3f' : '#7a2e2e' }}>
                     {item.free ? '✓' : '✕'}
@@ -233,7 +242,7 @@ export default function TierComparisonModal({
               </div>
             </div>
             <ul style={{ position: 'relative', zIndex: 1, marginTop: 10, display: 'grid', gap: 8, listStyle: 'none', padding: 0 }}>
-              {features.map((item) => (
+              {signatureFeatures.map((item) => (
                 <li
                   key={`sig-${item.label}`}
                   style={{ display: 'grid', gridTemplateColumns: '16px 1fr', gap: 8 }}

@@ -6,6 +6,16 @@ import { useParams, useRouter } from 'next/navigation'
 import { api } from '../../../../lib/api'
 import { Button, Card, Container } from '../../../components/ui'
 import { formatLocalDate } from '@/lib/time'
+import { useAuth } from '@/app/providers'
+import {
+  BALANCE_PREVIEW_BODY,
+  BALANCE_PREVIEW_CTA,
+  BALANCE_PREVIEW_NOTICE,
+  BALANCE_PREVIEW_TITLE,
+  formatPreviewCountdown,
+  getSoonestPreviewExpiry,
+  isVisibleToUser,
+} from '@/app/lib/balancePreview'
 
 export const runtime = 'edge'
 
@@ -21,6 +31,9 @@ type LedgerEntry = {
   reference?: string | null
   memo?: string | null
   created_at: string
+  preview_expires_at?: string | null
+  is_preview_expired?: boolean
+  visible_to_user?: boolean
 }
 
 type Account = {
@@ -54,6 +67,7 @@ function formatEntryType(value: string) {
 }
 
 export default function AccountActivityPage() {
+  const { me } = useAuth()
   const router = useRouter()
   const params = useParams()
   const accountId = Number(params?.id)
@@ -62,6 +76,8 @@ export default function AccountActivityPage() {
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState('')
   const [selectedEntry, setSelectedEntry] = useState<LedgerEntry | null>(null)
+  const [nowTick, setNowTick] = useState(Date.now())
+  const isPremium = Boolean(me?.is_premium || me?.role === 'admin')
 
   useEffect(() => {
     if (!Number.isFinite(accountId)) return
@@ -98,6 +114,14 @@ export default function AccountActivityPage() {
     () => entries.filter((entry) => !(entry.entry_type === 'scheduled' && entry.status !== 'posted')),
     [entries]
   )
+  const hasLockedEntries = visibleEntries.some((entry) => entry.visible_to_user === false)
+  const previewStatus = formatPreviewCountdown(getSoonestPreviewExpiry(visibleEntries), nowTick)
+
+  useEffect(() => {
+    if (isPremium) return
+    const timer = window.setInterval(() => setNowTick(Date.now()), 60000)
+    return () => window.clearInterval(timer)
+  }, [isPremium])
 
   useEffect(() => {
     if (!selectedEntry) return
@@ -144,6 +168,27 @@ export default function AccountActivityPage() {
 
         <Card title="All Account History" tone="soft">
           {msg ? <div style={{ fontSize: 12, color: '#7a2e2e', marginBottom: 10 }}>{msg}</div> : null}
+          {!isPremium ? (
+            <div
+              data-testid="balance-preview-history-notice"
+              style={{
+                marginBottom: 14,
+                padding: '14px 16px',
+                borderRadius: 18,
+                border: '1px solid rgba(168, 131, 102, 0.35)',
+                background:
+                  'linear-gradient(145deg, rgba(255,255,255,0.92), rgba(246,238,231,0.96)), radial-gradient(circle at top left, rgba(201, 161, 122, 0.18), transparent 48%)',
+              }}
+            >
+              <div style={{ fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.68 }}>
+                Balance Preview Vault™ 🗝️
+              </div>
+              <div style={{ marginTop: 6, fontSize: 13, lineHeight: 1.6 }}>{BALANCE_PREVIEW_NOTICE}</div>
+              <div style={{ marginTop: 8, fontSize: 12, fontWeight: 700, color: '#7a4b3e' }}>
+                {hasLockedEntries ? 'Balance preview locked' : previewStatus}
+              </div>
+            </div>
+          ) : null}
           {loading ? (
             <div style={{ fontSize: 13, opacity: 0.75 }}>Loading entries…</div>
           ) : visibleEntries.length === 0 ? (
@@ -153,6 +198,7 @@ export default function AccountActivityPage() {
               {visibleEntries.map((entry) => (
                 <div
                   key={entry.id}
+                  data-testid={`activity-entry-${entry.id}`}
                   style={{
                     padding: 14,
                     borderRadius: 16,
@@ -164,8 +210,9 @@ export default function AccountActivityPage() {
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
                     <div style={{ fontWeight: 700 }}>
-                      {entry.direction === 'debit' ? '-' : '+'}
-                      {formatCurrency(entry.amount, entry.currency)}
+                      {entry.visible_to_user === false
+                        ? 'Locked'
+                        : `${entry.direction === 'debit' ? '-' : '+'}${formatCurrency(entry.amount, entry.currency)}`}
                     </div>
                     <div style={{ fontSize: 12, opacity: 0.7 }}>#{entry.id}</div>
                   </div>
@@ -235,9 +282,10 @@ export default function AccountActivityPage() {
                   <div style={{ marginTop: 14, display: 'grid', gap: 10, fontSize: 13 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
                       <div style={{ opacity: 0.7 }}>Amount</div>
-                      <div style={{ fontWeight: 600 }}>
-                        {selectedEntry.direction === 'debit' ? '-' : '+'}
-                        {formatCurrency(selectedEntry.amount, selectedEntry.currency)}
+                      <div data-testid="activity-entry-amount" style={{ fontWeight: 600 }}>
+                        {selectedEntry.visible_to_user === false
+                          ? 'Locked'
+                          : `${selectedEntry.direction === 'debit' ? '-' : '+'}${formatCurrency(selectedEntry.amount, selectedEntry.currency)}`}
                       </div>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
@@ -269,6 +317,44 @@ export default function AccountActivityPage() {
                       <div style={{ fontWeight: 600 }}>{selectedEntry.id}</div>
                     </div>
                   </div>
+                  {!isPremium && !isVisibleToUser(selectedEntry) ? (
+                    <div
+                      data-testid="balance-preview-locked-history-card"
+                      style={{
+                        marginTop: 16,
+                        padding: 14,
+                        borderRadius: 16,
+                        border: '1px solid rgba(168, 131, 102, 0.35)',
+                        background: 'rgba(255,255,255,0.76)',
+                      }}
+                    >
+                      <div style={{ fontFamily: 'var(--font-serif)', fontSize: 18, fontWeight: 600 }}>
+                        {BALANCE_PREVIEW_TITLE}
+                      </div>
+                      <div style={{ marginTop: 8, fontSize: 13, lineHeight: 1.6 }}>{BALANCE_PREVIEW_BODY}</div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          window.dispatchEvent(
+                            new CustomEvent('paywall:open', { detail: { reason: 'Unlock full balance history.' } })
+                          )
+                        }
+                        style={{
+                          marginTop: 12,
+                          border: '1px solid rgba(95, 74, 62, 0.28)',
+                          background: 'linear-gradient(135deg, rgba(182, 121, 103, 0.98), rgba(211, 164, 144, 0.98))',
+                          color: '#fffaf6',
+                          borderRadius: 999,
+                          padding: '10px 14px',
+                          fontSize: 12,
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {BALANCE_PREVIEW_CTA}
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               </div>,
               document.body

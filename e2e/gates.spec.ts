@@ -6,6 +6,8 @@ async function expectTierThenPaywall(page: Parameters<typeof test>[0]['page']) {
   await expect(page.getByTestId('tier-free-button').getByText('$0', { exact: true })).toBeVisible()
   await expect(page.getByTestId('tier-signature-button').getByText('*as low as $6/month', { exact: true })).toBeVisible()
   await expect(page.getByText('Saved affirmations — Not included')).toBeVisible()
+  await expect(page.getByText('Balance Preview Vault™ 🗝️ — 12-hour balance preview only')).toBeVisible()
+  await expect(page.getByText('Balance Preview Vault™ 🗝️ — Full balance history unlocked')).toBeVisible()
   await expect(page.getByText('Daily credit points cap — 5 points')).toBeVisible()
   await expect(page.getByText('My Teller — Not included')).toBeVisible()
   await expect(page.getByText('My Teller — Included')).toBeVisible()

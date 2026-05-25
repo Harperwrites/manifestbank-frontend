@@ -7,6 +7,14 @@ import { api } from '../../lib/api'
 import { Card, Button } from './ui'
 import { useAuth } from '@/app/providers'
 import { formatLocalDate } from '@/lib/time'
+import {
+  BALANCE_PREVIEW_BODY,
+  BALANCE_PREVIEW_CTA,
+  BALANCE_PREVIEW_TITLE,
+  getBalancePreviewNotificationKey,
+  getLatestLockedPreviewExpiry,
+  isVisibleToUser,
+} from '@/app/lib/balancePreview'
 
 type LedgerEntry = {
   id: number
@@ -21,6 +29,9 @@ type LedgerEntry = {
   memo?: string | null
   meta?: any
   created_at: string
+  preview_expires_at?: string | null
+  is_preview_expired?: boolean
+  visible_to_user?: boolean
 }
 
 type Balance = {
@@ -28,6 +39,9 @@ type Balance = {
   currency: string
   balance: string
   as_of: string
+  preview_expires_at?: string | null
+  is_preview_expired?: boolean
+  visible_to_user?: boolean
 }
 
 type ScheduledEntry = {
@@ -132,6 +146,7 @@ export default function LedgerPanel({
   const [scheduleWhen, setScheduleWhen] = useState('')
   const [freeTierStatus, setFreeTierStatus] = useState<FreeTierStatus | null>(null)
   const [nowTick, setNowTick] = useState(Date.now())
+  const [balancePreviewAlertDismissed, setBalancePreviewAlertDismissed] = useState(false)
   const canPost = isVerified !== false
   const router = useRouter()
   const { me } = useAuth()
@@ -312,6 +327,16 @@ export default function LedgerPanel({
   }, [isPremium])
 
   useEffect(() => {
+    if (isPremium || typeof window === 'undefined' || !balance || isVisibleToUser(balance)) return
+    const key = getBalancePreviewNotificationKey(`ledger:${accountId}`, balance.preview_expires_at)
+    if (!key || window.localStorage.getItem(key) === 'dismissed') {
+      setBalancePreviewAlertDismissed(true)
+      return
+    }
+    setBalancePreviewAlertDismissed(false)
+  }, [accountId, balance, isPremium])
+
+  useEffect(() => {
     if (!selectedEntry) return
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
@@ -326,6 +351,56 @@ export default function LedgerPanel({
   const previewEntries = visibleEntries.slice(0, 3)
   const hasMoreEntries = visibleEntries.length > previewEntries.length
   const runningBalances = computeRunningBalances(entries, balance?.balance)
+  const balanceVisible = isVisibleToUser(balance)
+  const newestLockedExpiry = getLatestLockedPreviewExpiry([balance ?? {}])
+  function dismissBalancePreviewAlert() {
+    setBalancePreviewAlertDismissed(true)
+    if (typeof window === 'undefined') return
+    const key = getBalancePreviewNotificationKey(`ledger:${accountId}`, newestLockedExpiry)
+    if (key) window.localStorage.setItem(key, 'dismissed')
+  }
+
+  function renderLockedPreviewCard(context: string) {
+    return (
+      <div
+        data-testid={`balance-preview-locked-${context}`}
+        style={{
+          marginTop: 12,
+          padding: 16,
+          borderRadius: 18,
+          border: '1px solid rgba(168, 131, 102, 0.35)',
+          background:
+            'linear-gradient(145deg, rgba(255,255,255,0.9), rgba(243,234,226,0.94)), radial-gradient(circle at top left, rgba(201, 161, 122, 0.22), transparent 48%)',
+          boxShadow: '0 18px 36px rgba(61, 42, 31, 0.12)',
+        }}
+      >
+        <div style={{ fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.68 }}>
+          Balance Preview Vault™ 🗝️
+        </div>
+        <div style={{ marginTop: 6, fontFamily: 'var(--font-serif)', fontSize: 20, fontWeight: 600 }}>
+          {BALANCE_PREVIEW_TITLE}
+        </div>
+        <div style={{ marginTop: 8, fontSize: 13, lineHeight: 1.6, color: '#5c4336' }}>{BALANCE_PREVIEW_BODY}</div>
+        <button
+          type="button"
+          onClick={() => openPaywall('Unlock full balance history with ManifestBank™ Signature.')}
+          style={{
+            marginTop: 14,
+            border: '1px solid rgba(95, 74, 62, 0.28)',
+            background: 'linear-gradient(135deg, rgba(182, 121, 103, 0.98), rgba(211, 164, 144, 0.98))',
+            color: '#fffaf6',
+            borderRadius: 999,
+            padding: '10px 14px',
+            fontSize: 12,
+            fontWeight: 700,
+            cursor: 'pointer',
+          }}
+        >
+          {BALANCE_PREVIEW_CTA}
+        </button>
+      </div>
+    )
+  }
 
   return (
     <>
@@ -388,10 +463,63 @@ export default function LedgerPanel({
         </div>
       ) : null}
 
+      {!isPremium && !balanceVisible && !balancePreviewAlertDismissed ? (
+        <div
+          data-testid="balance-preview-alert"
+          style={{
+            marginBottom: 10,
+            padding: '14px 16px',
+            borderRadius: 18,
+            border: '1px solid rgba(168, 131, 102, 0.35)',
+            background:
+              'linear-gradient(145deg, rgba(255,255,255,0.92), rgba(246,238,231,0.96)), radial-gradient(circle at top left, rgba(201, 161, 122, 0.18), transparent 48%)',
+            boxShadow: '0 18px 36px rgba(61, 42, 31, 0.12)',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'start' }}>
+            <div>
+              <div style={{ fontFamily: 'var(--font-serif)', fontSize: 18, fontWeight: 600 }}>
+                Balance Preview Locked 🗝️
+              </div>
+              <div style={{ marginTop: 6, fontSize: 13, lineHeight: 1.6, color: '#5c4336' }}>
+                Your 12-hour Balance Preview Vault™ window has ended. Your balances are safely stored and ready to unlock anytime with ManifestBank™ Signature.
+              </div>
+            </div>
+            <button
+              type="button"
+              aria-label="Dismiss balance preview alert"
+              onClick={dismissBalancePreviewAlert}
+              style={{ border: 'none', background: 'transparent', cursor: 'pointer', opacity: 0.65, fontSize: 18 }}
+            >
+              ×
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={() => openPaywall('Unlock full history')}
+            style={{
+              marginTop: 12,
+              border: '1px solid rgba(95, 74, 62, 0.28)',
+              background: 'linear-gradient(135deg, rgba(182, 121, 103, 0.98), rgba(211, 164, 144, 0.98))',
+              color: '#fffaf6',
+              borderRadius: 999,
+              padding: '10px 14px',
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            Unlock Full History
+          </button>
+        </div>
+      ) : null}
+
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
         <div style={{ fontSize: 13, opacity: 0.85 }}>
           Balance:{' '}
-          <b>{balance ? formatCurrency(balance.balance, balance.currency) : '—'}</b>
+          <b data-testid="ledger-balance-value">
+            {balance ? (balanceVisible ? formatCurrency(balance.balance, balance.currency) : 'Locked') : '—'}
+          </b>
         </div>
 
         <div style={{ flex: 1 }} />
@@ -423,12 +551,15 @@ export default function LedgerPanel({
       </div>
 
       <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
-        {previewEntries.length === 0 ? (
+        {!balanceVisible && previewEntries.length > 0 ? (
+          renderLockedPreviewCard('entries')
+        ) : previewEntries.length === 0 ? (
           <div style={{ fontSize: 13, opacity: 0.75 }}>No entries yet.</div>
         ) : (
           previewEntries.map((e) => (
             <div
               key={e.id}
+              data-testid={e.visible_to_user === false ? `ledger-entry-locked-${e.id}` : `ledger-entry-${e.id}`}
               style={{
                 padding: 12,
                 borderRadius: 16,
@@ -441,7 +572,7 @@ export default function LedgerPanel({
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
                 <div style={{ fontWeight: 800 }}>
                   {formatDirectionLabel(e)}{' '}
-                  {formatCurrency(e.amount, e.currency)}
+                  {e.visible_to_user === false ? 'Locked' : formatCurrency(e.amount, e.currency)}
                 </div>
                   <div style={{ fontSize: 12, opacity: 0.75 }}>#{e.id}</div>
                 </div>
@@ -617,7 +748,14 @@ export default function LedgerPanel({
             <div style={{ opacity: 0.7, marginTop: 4 }}>Private ledger confirmation</div>
 
             <div style={{ display: 'grid', gap: 10, marginTop: 16 }}>
-              <DetailRow label="Amount" value={formatCurrency(selectedEntry.amount, selectedEntry.currency)} />
+              <DetailRow
+                label="Amount"
+                value={
+                  selectedEntry.visible_to_user === false
+                    ? 'Locked'
+                    : formatCurrency(selectedEntry.amount, selectedEntry.currency)
+                }
+              />
               <DetailRow label="Reference" value={selectedEntry.reference || '—'} />
               <DetailRow label="Memo" value={selectedEntry.memo || '—'} />
               <DetailRow label="Date / Time" value={formatLocalDate(selectedEntry.created_at)} />
@@ -625,7 +763,7 @@ export default function LedgerPanel({
               <DetailRow label="Entry ID" value={`#${selectedEntry.id}`} />
               <DetailRow
                 label="Running Balance"
-                value={runningBalances[selectedEntry.id] ?? '—'}
+                value={selectedEntry.visible_to_user === false ? 'Locked' : runningBalances[selectedEntry.id] ?? '—'}
               />
             </div>
 

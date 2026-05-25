@@ -3,21 +3,33 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { api } from '@/lib/api'
-import { PREMIUM_TIER_NAME, PREMIUM_CTA, PREMIUM_ANNUAL_NOTE, PREMIUM_ANNUAL_PRICE, PREMIUM_MONTHLY_PRICE } from '@/app/lib/premium'
+import {
+  PREMIUM_TIER_NAME,
+  PREMIUM_CTA,
+  PREMIUM_ANNUAL_NOTE,
+  PREMIUM_ANNUAL_PRICE,
+  PREMIUM_MONTHLY_PRICE,
+  SIGNATURE_PROMO_CODE,
+  SIGNATURE_PROMO_DISCOUNTED_PRICE,
+  SIGNATURE_PROMO_PRICE_ID,
+} from '@/app/lib/premium'
 
 export default function PremiumPaywall({
   open,
   onClose,
   reason,
   isVerified,
+  campaign,
 }: {
   open: boolean
   onClose: () => void
   reason?: string
   isVerified?: boolean
+  campaign?: 'signature50' | null
 }) {
   const [loadingPlan, setLoadingPlan] = useState<'annual' | 'monthly' | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const isPromoCampaign = campaign === 'signature50'
 
   async function startCheckout(plan: 'annual' | 'monthly') {
     if (!isVerified) {
@@ -27,7 +39,11 @@ export default function PremiumPaywall({
     try {
       setError(null)
       setLoadingPlan(plan)
-      const res = await api.post('/billing/checkout-session', { plan })
+      const payload =
+        plan === 'annual' && isPromoCampaign
+          ? { plan, price_id: SIGNATURE_PROMO_PRICE_ID }
+          : { plan }
+      const res = await api.post('/billing/checkout-session', payload)
       const url = res.data?.url
       if (url) {
         window.location.href = url
@@ -131,6 +147,22 @@ export default function PremiumPaywall({
           </div>
         ) : null}
         <div style={{ marginTop: 12, fontSize: 13, opacity: 0.9 }}>{PREMIUM_ANNUAL_NOTE}</div>
+        {isPromoCampaign ? (
+          <div
+            style={{
+              marginTop: 12,
+              padding: '12px 14px',
+              borderRadius: 16,
+              background: 'rgba(255,255,255,0.72)',
+              border: '1px solid rgba(95, 74, 62, 0.2)',
+              fontSize: 12,
+              lineHeight: 1.6,
+            }}
+          >
+            Limited-time offer: use code <strong>{SIGNATURE_PROMO_CODE}</strong> at checkout to bring the annual
+            Signature membership from <s>$72</s> to <strong>{SIGNATURE_PROMO_DISCOUNTED_PRICE}</strong>.
+          </div>
+        ) : null}
         <div style={{ marginTop: 16, display: 'grid', gap: 10 }}>
           <div
             style={{
@@ -141,8 +173,22 @@ export default function PremiumPaywall({
             }}
           >
             <div style={{ fontWeight: 700 }}>Annual</div>
-            <div style={{ fontSize: 18, fontWeight: 700 }}>{PREMIUM_ANNUAL_PRICE}</div>
+            {isPromoCampaign ? (
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+                <div style={{ fontSize: 15, fontWeight: 700, opacity: 0.55, textDecoration: 'line-through' }}>
+                  {PREMIUM_ANNUAL_PRICE}
+                </div>
+                <div style={{ fontSize: 20, fontWeight: 800 }}>{SIGNATURE_PROMO_DISCOUNTED_PRICE}</div>
+              </div>
+            ) : (
+              <div style={{ fontSize: 18, fontWeight: 700 }}>{PREMIUM_ANNUAL_PRICE}</div>
+            )}
             <div style={{ fontSize: 12, opacity: 0.75 }}>$6/mo equivalent</div>
+            {isPromoCampaign ? (
+              <div style={{ marginTop: 6, fontSize: 12, opacity: 0.85 }}>
+                Enter code <strong>{SIGNATURE_PROMO_CODE}</strong> on the Stripe page.
+              </div>
+            ) : null}
             <button
               type="button"
               data-testid="paywall-annual-button"
