@@ -1412,6 +1412,7 @@ export default function DashboardPage() {
   const expenseSymbol = getCurrencySymbol(expenseCurrency)
   const transactionsLocked = !isVerified
   const hasLockedBalancePreview = !isPremium && accountBalances.some((item) => !isVisibleToUser(item))
+  const hasVisibleBalancePreview = isPremium || accountBalances.some((item) => isVisibleToUser(item))
   const previewStatusText = !isPremium
     ? hasLockedBalancePreview
       ? 'Balance preview locked'
@@ -2094,12 +2095,19 @@ export default function DashboardPage() {
                     textShadow: '0 0 18px rgba(140, 82, 64, 0.75), 0 0 34px rgba(140, 82, 64, 0.45)',
                   }}
                 >
-                  {hasLockedBalancePreview ? 'Locked' : formatCurrencyAmount(portfolioRaw.totalAssets, aggregateDisplayCurrency)}
+                  {!hasVisibleBalancePreview && hasLockedBalancePreview
+                    ? 'Locked'
+                    : formatCurrencyAmount(portfolioRaw.totalAssets, aggregateDisplayCurrency)}
                 </div>
                 {null}
                 <div style={{ marginTop: 4, fontSize: 11, opacity: 0.6 }}>
                   Displayed in {aggregateDisplayCurrency.toUpperCase()}
                 </div>
+                {!isPremium && hasLockedBalancePreview && hasVisibleBalancePreview ? (
+                  <div style={{ marginTop: 4, fontSize: 11, opacity: 0.7 }}>
+                    Previewing currently unlocked balances only
+                  </div>
+                ) : null}
                 {false && process.env.NODE_ENV === 'development' && aggregateDebug ? (
                   <div style={{ marginTop: 6, fontSize: 10, opacity: 0.6, lineHeight: 1.5 }}>
                     <div>

@@ -8,6 +8,7 @@ import { useAuth } from '@/app/providers'
 import InstallAppButton from '@/app/components/InstallAppButton'
 import { Button } from '@/app/components/ui'
 import { api } from '@/lib/api'
+import { isVisibleToUser, type PreviewVisibility } from '@/app/lib/balancePreview'
 import { PREMIUM_CTA } from '@/app/lib/premium'
 import { validateUsername } from '@/app/lib/username'
 
@@ -38,7 +39,7 @@ function EtherNavbar({
   const accountsRef = useRef<HTMLDivElement | null>(null)
   const [accountsMenuRect, setAccountsMenuRect] = useState<DOMRect | null>(null)
   const accountsMenuRef = useRef<HTMLDivElement | null>(null)
-  const [accounts, setAccounts] = useState<any[]>([])
+  const [accounts, setAccounts] = useState<(PreviewVisibility & Record<string, any>)[]>([])
   const [accountsLoaded, setAccountsLoaded] = useState(false)
   const [accountsLoading, setAccountsLoading] = useState(false)
   const [accountsMsg, setAccountsMsg] = useState('')
@@ -190,7 +191,14 @@ function EtherNavbar({
             const currency = (acct.currency || 'USD').toUpperCase()
             try {
               const balanceRes = await api.get(`/accounts/${acct.id}/balance?currency=${currency}`)
-              return { id: acct.id, balance: Number(balanceRes.data?.balance ?? 0), currency }
+              return {
+                id: acct.id,
+                balance: Number(balanceRes.data?.balance ?? 0),
+                currency,
+                visible_to_user: balanceRes.data?.visible_to_user,
+                preview_expires_at: balanceRes.data?.preview_expires_at,
+                is_preview_expired: balanceRes.data?.is_preview_expired,
+              }
             } catch {
               return { id: acct.id, balance: 0, currency }
             }
@@ -399,7 +407,7 @@ function EtherNavbar({
                         >
                           <div style={{ fontWeight: 600 }}>{account.name}</div>
                           <div style={{ opacity: 0.8 }}>
-                            {formatMoney(account.balance, account.currency)} •{' '}
+                            {isVisibleToUser(account) ? formatMoney(account.balance, account.currency) : 'Locked'} •{' '}
                             {(account.currency || 'USD').toUpperCase()}
                           </div>
                         </div>

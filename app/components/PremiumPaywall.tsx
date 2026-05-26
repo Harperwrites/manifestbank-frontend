@@ -11,7 +11,6 @@ import {
   PREMIUM_MONTHLY_PRICE,
   SIGNATURE_PROMO_CODE,
   SIGNATURE_PROMO_DISCOUNTED_PRICE,
-  SIGNATURE_PROMO_PRICE_ID,
 } from '@/app/lib/premium'
 
 export default function PremiumPaywall({
@@ -39,10 +38,7 @@ export default function PremiumPaywall({
     try {
       setError(null)
       setLoadingPlan(plan)
-      const payload =
-        plan === 'annual' && isPromoCampaign
-          ? { plan, price_id: SIGNATURE_PROMO_PRICE_ID }
-          : { plan }
+      const payload = plan === 'annual' && isPromoCampaign ? { plan, campaign: 'signature50' } : { plan }
       const res = await api.post('/billing/checkout-session', payload)
       const url = res.data?.url
       if (url) {

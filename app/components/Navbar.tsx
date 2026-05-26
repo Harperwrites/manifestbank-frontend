@@ -12,10 +12,11 @@ import MyJournalIcon from '@/app/components/MyJournalIcon'
 import MyChecksSignatureIcon from '@/app/components/MyChecksSignatureIcon'
 import MyStatementsIcon from '@/app/components/MyStatementsIcon'
 import { api } from '@/lib/api'
+import { isVisibleToUser, type PreviewVisibility } from '@/app/lib/balancePreview'
 import { PREMIUM_CTA } from '@/app/lib/premium'
 import { validateUsername } from '@/app/lib/username'
 
-type AccountItem = {
+type AccountItem = PreviewVisibility & {
   id: number
   name?: string
   balance?: number
@@ -126,7 +127,14 @@ export default function Navbar({
             const currency = (acct.currency || 'USD').toUpperCase()
             try {
               const balanceRes = await api.get(`/accounts/${acct.id}/balance?currency=${currency}`)
-              return { id: acct.id, balance: Number(balanceRes.data?.balance ?? 0), currency }
+              return {
+                id: acct.id,
+                balance: Number(balanceRes.data?.balance ?? 0),
+                currency,
+                visible_to_user: balanceRes.data?.visible_to_user,
+                preview_expires_at: balanceRes.data?.preview_expires_at,
+                is_preview_expired: balanceRes.data?.is_preview_expired,
+              }
             } catch {
               return { id: acct.id, balance: 0, currency }
             }
@@ -371,7 +379,7 @@ export default function Navbar({
                           >
                             <div style={{ fontWeight: 600 }}>{account.name}</div>
                             <div style={{ opacity: 0.85 }}>
-                              {formatMoney(account.balance, account.currency)} •{' '}
+                              {isVisibleToUser(account) ? formatMoney(account.balance, account.currency) : 'Locked'} •{' '}
                               {(account.currency || 'USD').toUpperCase()}
                             </div>
                           </div>
