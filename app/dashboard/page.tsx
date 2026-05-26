@@ -1413,22 +1413,25 @@ export default function DashboardPage() {
   const transactionsLocked = !isVerified
   const hasLockedBalancePreview = !isPremium && accountBalances.some((item) => !isVisibleToUser(item))
   const hasVisibleBalancePreview = isPremium || accountBalances.some((item) => isVisibleToUser(item))
+  const isFullyLockedBalancePreview = !isPremium && !hasVisibleBalancePreview && hasLockedBalancePreview
   const previewStatusText = !isPremium
-    ? hasLockedBalancePreview
+    ? hasVisibleBalancePreview
+      ? formatPreviewCountdown(getSoonestPreviewExpiry(accountBalances), Date.now())
+      : hasLockedBalancePreview
       ? 'Balance preview locked'
-      : formatPreviewCountdown(getSoonestPreviewExpiry(accountBalances), Date.now())
+      : ''
     : ''
   const latestLockedPreviewExpiry = getLatestLockedPreviewExpiry(accountBalances)
 
   useEffect(() => {
-    if (isPremium || typeof window === 'undefined' || !hasLockedBalancePreview) return
+    if (isPremium || typeof window === 'undefined' || !isFullyLockedBalancePreview) return
     const key = getBalancePreviewNotificationKey('dashboard', latestLockedPreviewExpiry)
     if (!key || window.localStorage.getItem(key) === 'dismissed') {
       setBalancePreviewAlertDismissed(true)
       return
     }
     setBalancePreviewAlertDismissed(false)
-  }, [hasLockedBalancePreview, isPremium, latestLockedPreviewExpiry])
+  }, [isFullyLockedBalancePreview, isPremium, latestLockedPreviewExpiry])
 
   function dismissDashboardBalancePreviewAlert() {
     setBalancePreviewAlertDismissed(true)
@@ -1984,7 +1987,7 @@ export default function DashboardPage() {
           </div>
         ) : null}
 
-        {!isPremium && hasLockedBalancePreview && !balancePreviewAlertDismissed ? (
+        {!isPremium && isFullyLockedBalancePreview && !balancePreviewAlertDismissed ? (
           <div
             data-testid="dashboard-balance-preview-alert"
             style={{
