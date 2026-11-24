@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import { usePathname } from 'next/navigation'
 import { api } from '@/lib/api'
 import PremiumPaywall from '@/app/components/PremiumPaywall'
+import NovemberOffer from '@/app/components/NovemberOffer'
 import TierComparisonModal from '@/app/components/TierComparisonModal'
 import {
   SIGNATURE_PROMO_CODE,
@@ -541,6 +542,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }}
         />
       ) : null}
+      <NovemberOffer user={me} suspended={legalRequired || devPaywallOpen || tierCompareOpen || legalReadOnlyPath || pathname === '/november-offer'}/>
       {children}
       {legalRequired && !legalReadOnlyPath ? (
         <div
