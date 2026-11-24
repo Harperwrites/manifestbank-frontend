@@ -34,7 +34,7 @@ export default function NovemberOffer({ user, suspended = false, standalone = fa
 
   useEffect(() => {
     setOffer(null); setOpen(false); setReady(false); setError('')
-    setFinished(false); setMediaError(false); setProgress(0); watched.current = 0
+    setFinished(false); setMediaError(false); setProgress(0); setMuted(false); watched.current = 0
     if (!user || user.is_premium) { setReady(true); return }
     let canceled = false
     api.get('/promotions/november').then(({ data }) => { if (!canceled) setOffer(data) }).catch(() => { if (!canceled && standalone) setError('We couldn’t check this offer. Please refresh and try again.') }).finally(() => { if (!canceled) setReady(true) })
@@ -56,15 +56,15 @@ export default function NovemberOffer({ user, suspended = false, standalone = fa
     return () => window.clearTimeout(timer)
   }, [offer])
 
-  async function playVideo() {
+  async function playVideo(withSound = false) {
     const player = video.current
     if (!player) return
+    if (withSound) { player.muted = false; player.volume = 1; setMuted(false) }
     lastTick.current = performance.now()
     try { await player.play() } catch {
-      // Safari/mobile may require a gesture for sound. Keep the video moving with captions.
-      player.muted = true; setMuted(true)
-      if (player.textTracks[0]) { player.textTracks[0].mode = 'showing'; setCaptions(true) }
-      try { await player.play() } catch { setPlaying(false) }
+      // Browsers can require a tap for audible playback. Keep sound enabled and
+      // show the play button instead of silently switching to muted playback.
+      setPlaying(false)
     }
   }
 
@@ -72,7 +72,7 @@ export default function NovemberOffer({ user, suspended = false, standalone = fa
     if (standalone) return
     const element = dialog.current
     if (open && !suspended && element && !element.open) {
-      element.showModal(); heading.current?.focus(); void playVideo()
+      element.showModal(); heading.current?.focus(); void playVideo(true)
     }
     if ((!open || suspended) && element?.open) { video.current?.pause(); element.close() }
     return () => { video.current?.pause(); if (element?.open) element.close() }
@@ -132,7 +132,7 @@ export default function NovemberOffer({ user, suspended = false, standalone = fa
     <h2 ref={heading} tabIndex={-1} id={standalone ? 'november-page-title' : 'november-dialog-title'}>A year of possibility.</h2>
     {!standalone && <>
       <div className="november-video-frame">
-        <video ref={video} playsInline preload="auto" poster={POSTER} disablePictureInPicture disableRemotePlayback controlsList="nodownload noremoteplayback noplaybackrate" aria-label="November Signature promo with voiceover and music" onContextMenu={e => e.preventDefault()}
+        <video ref={video} muted={muted} playsInline preload="auto" poster={POSTER} disablePictureInPicture disableRemotePlayback controlsList="nodownload noremoteplayback noplaybackrate" aria-label="November Signature promo with voiceover and music" onContextMenu={e => e.preventDefault()}
           onLoadedMetadata={() => { if (video.current && Number.isFinite(video.current.duration)) setDuration(video.current.duration) }}
           onPlay={() => { lastTick.current = performance.now(); setPlaying(true) }} onPause={() => setPlaying(false)}
           onTimeUpdate={updateProgress} onSeeking={() => { const p = video.current; if (p && p.currentTime > watched.current + 0.5) p.currentTime = watched.current }}
@@ -140,7 +140,7 @@ export default function NovemberOffer({ user, suspended = false, standalone = fa
           onEnded={finishVideo} onError={() => { setMediaError(true); setPlaying(false) }}>
           <source src={VIDEO} type="video/mp4" /><track kind="captions" src={CAPTIONS} srcLang="en" label="English" />
         </video>
-        {!playing && !finished && !mediaError && <button type="button" className="november-play" onClick={() => void playVideo()}>▶ Play November promo</button>}
+        {!playing && !finished && !mediaError && <button type="button" className="november-play" onClick={() => void playVideo(true)}>▶ Play promo with sound</button>}
       </div>
       <div className="november-player-controls">
         <button type="button" onClick={() => { if (video.current?.paused) void playVideo(); else video.current?.pause() }} disabled={mediaError}>{playing ? 'Pause' : finished ? 'Replay' : 'Play'}</button>
