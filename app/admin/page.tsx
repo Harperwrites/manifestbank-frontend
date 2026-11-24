@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Navbar from '@/app/components/Navbar'
 import { useAuth } from '@/app/providers'
 import { api } from '@/lib/api'
+import Link from 'next/link'
 
 export default function AdminPage() {
   const router = useRouter()
@@ -44,6 +45,7 @@ export default function AdminPage() {
         >
           Test Admin Endpoint
         </button>
+        {me?.role === 'admin' && <p><Link href="/admin/email-center">Open the email center</Link></p>}
       </div>
     </main>
   )
