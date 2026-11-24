@@ -20,7 +20,7 @@ export default function NovemberOffer({ user, suspended = false, standalone = fa
 
   useEffect(() => {
     setOffer(null); setOpen(false); setReady(false); setError('')
-    if (!user || user.is_premium || user.role === 'admin') { setReady(true); return }
+    if (!user || user.is_premium) { setReady(true); return }
     let canceled = false
     api.get('/promotions/november').then(({ data }) => { if (!canceled) setOffer(data) }).catch(() => { if (!canceled && standalone) setError('We couldn’t check this offer. Please refresh and try again.') }).finally(() => { if (!canceled) setReady(true) })
     return () => { canceled = true }
@@ -77,9 +77,9 @@ export default function NovemberOffer({ user, suspended = false, standalone = fa
     <ul><li>Unlimited accounts, checks, deposits, and expenses</li><li>Saved affirmations, statements, and ongoing balance visibility</li><li>Fortune, your AI manifestation teller</li></ul>
     <p className="november-terms">Promo code <strong>1111</strong> is applied automatically to eligible annual purchases.</p>
     <p className="november-deadline">Available through {offer?.end_label || 'November 30, 2026 at 11:59 p.m. Central Time'}.</p>
-    <p id="november-renewal" className="november-terms">{offer?.renewal_copy || '$22.22 for your first year; then $72/year, renewing automatically unless you cancel.'} For nonmembers only. Current monthly and annual subscribers are excluded. Taxes, if applicable, appear at checkout.</p>
+    <p id="november-renewal" className="november-terms">{offer?.renewal_copy || '$22.22 for your first year; then $72/year, renewing automatically unless you cancel.'} For anyone without a current Signature membership. Existing monthly and annual Signature subscribers are excluded. Taxes, if applicable, appear at checkout.</p>
     {error && <p className="november-error" role="alert">{error}</p>}
-    {user && offer?.eligible && offer.active ? <><button className="november-cta" disabled={loading || !offer.checkout_ready} onClick={() => void checkout()}>{loading ? 'Opening secure checkout…' : offer.checkout_ready ? 'Get my first year for $22.22' : 'Offer checkout is not available yet'}</button>{!offer.checkout_ready && <p className="november-terms">The payment configuration is being prepared. No payment has been taken.</p>}</> : !user ? <Link className="november-cta" href="/auth?next=%2Fnovember-offer">Sign in to view your offer</Link> : !ready ? <p role="status">Checking your eligibility…</p> : <p role="status">{offer && !offer.active ? 'This November offer has ended.' : 'This offer is available to nonmembers only. If you already subscribe, your current membership stays unchanged.'}</p>}
+    {user && offer?.eligible && offer.active ? <><button className="november-cta" disabled={loading || !offer.checkout_ready} onClick={() => void checkout()}>{loading ? 'Opening secure checkout…' : offer.checkout_ready ? 'Get my first year for $22.22' : 'Offer checkout is not available yet'}</button>{!offer.checkout_ready && <p className="november-terms">The payment configuration is being prepared. No payment has been taken.</p>}</> : !user ? <Link className="november-cta" href="/auth?next=%2Fnovember-offer">Sign in to view your offer</Link> : !ready ? <p role="status">Checking your eligibility…</p> : <p role="status">{offer && !offer.active ? 'This November offer has ended.' : 'This offer is for anyone without a current Signature membership, including existing free accounts. Current Signature subscribers keep their existing membership.'}</p>}
     {!standalone && <button className="november-later" onClick={() => setOpen(false)}>Maybe later</button>}
     <p className="november-footnote">ManifestBank is a reflection and wealth visualization platform. Financial activity in the app is simulated.</p>
   </div>
