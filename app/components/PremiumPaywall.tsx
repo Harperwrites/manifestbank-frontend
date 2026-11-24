@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { api } from '@/lib/api'
 import {
@@ -29,6 +29,21 @@ export default function PremiumPaywall({
   const [loadingPlan, setLoadingPlan] = useState<'annual' | 'monthly' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const isPromoCampaign = campaign === 'signature50'
+  const [novemberOffer, setNovemberOffer] = useState<{ campaign: string; ends_at: string; renewal_copy: string; first_year_cents: number } | null>(null)
+  useEffect(() => {
+    if (!open || isPromoCampaign) return
+    let canceled = false
+    setNovemberOffer(null)
+    api.get('/promotions/november').then(({ data }) => {
+      if (!canceled && data.active && data.eligible && data.checkout_ready && Date.now() < Date.parse(data.ends_at)) setNovemberOffer(data)
+    }).catch(() => {})
+    return () => { canceled = true }
+  }, [open, isPromoCampaign])
+  useEffect(() => {
+    if (!novemberOffer) return
+    const timer = window.setTimeout(() => setNovemberOffer(null), Math.max(0, Math.min(Date.parse(novemberOffer.ends_at) - Date.now(), 2147483647)))
+    return () => window.clearTimeout(timer)
+  }, [novemberOffer])
 
   async function startCheckout(plan: 'annual' | 'monthly') {
     if (!isVerified) {
@@ -38,7 +53,7 @@ export default function PremiumPaywall({
     try {
       setError(null)
       setLoadingPlan(plan)
-      const payload = plan === 'annual' && isPromoCampaign ? { plan, campaign: 'signature50' } : { plan }
+      const payload = plan === 'annual' && novemberOffer ? { plan, campaign: novemberOffer.campaign, promo_code: '1111' } : plan === 'annual' && isPromoCampaign ? { plan, campaign: 'signature50' } : { plan }
       const res = await api.post('/billing/checkout-session', payload)
       const url = res.data?.url
       if (url) {
@@ -169,7 +184,7 @@ export default function PremiumPaywall({
             }}
           >
             <div style={{ fontWeight: 700 }}>Annual</div>
-            {isPromoCampaign ? (
+            {novemberOffer ? <div><s>{PREMIUM_ANNUAL_PRICE}</s> <strong style={{ fontSize: 22 }}>${(novemberOffer.first_year_cents / 100).toFixed(2)} for your first year</strong></div> : isPromoCampaign ? (
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
                 <div style={{ fontSize: 15, fontWeight: 700, opacity: 0.55, textDecoration: 'line-through' }}>
                   {PREMIUM_ANNUAL_PRICE}
@@ -179,7 +194,7 @@ export default function PremiumPaywall({
             ) : (
               <div style={{ fontSize: 18, fontWeight: 700 }}>{PREMIUM_ANNUAL_PRICE}</div>
             )}
-            <div style={{ fontSize: 12, opacity: 0.75 }}>$6/mo equivalent</div>
+            {novemberOffer ? <div style={{ marginTop: 6, fontSize: 12 }}>Code <strong>1111</strong> applied automatically. {novemberOffer.renewal_copy} Ends November 30, 2026 at 11:59 p.m. Central. Current monthly and annual subscribers excluded.</div> : <div style={{ fontSize: 12, opacity: 0.75 }}>$6/mo equivalent</div>}
             {isPromoCampaign ? (
               <div style={{ marginTop: 6, fontSize: 12, opacity: 0.85 }}>
                 Enter code <strong>{SIGNATURE_PROMO_CODE}</strong> on the Stripe page.
