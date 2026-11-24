@@ -542,7 +542,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }}
         />
       ) : null}
-      <NovemberOffer user={me} suspended={legalRequired || devPaywallOpen || tierCompareOpen || legalReadOnlyPath || pathname === '/november-offer'}/>
+      <NovemberOffer user={me} suspended={legalRequired || devPaywallOpen || tierCompareOpen || legalReadOnlyPath}/>
       {children}
       {legalRequired && !legalReadOnlyPath ? (
         <div
